@@ -1,5 +1,5 @@
 # arctos-dev
-Current public releases for the Arctos collection management platform and list of next implementation tasks. We aim to summarize discussion of issues and prioritize implementations as milestones.
+Current public releases for the Arctos collection management platform and [list of next implementation tasks](https://github.com/ArctosDB/arctos-dev/issues). We aim to summarize discussion of issues and prioritize implementations as milestones.
 
 ## Usage
 
