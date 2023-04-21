@@ -1,13 +1,15 @@
 # arctos-dev
-A place to summarize pre-discussed issues and potentially prioritize developments.
+Current public releases for the Arctos collection management platform and list of next implementation tasks. We aim to summarize discussion of issues and prioritize implementations as milestones.
 
 ## Usage
 
-After an issue has been discussed and is ready for development, summarize it here. (Do not move Issues.)
+After an issue has been discussed in the community ([Issues](https://github.com/ArctosDB/arctos/issues) and in Meetings) and is ready for implementation, it will be summarized here and scheduled. (Do not move Issues.)
 
 All Issues here should reference one or more Issues in another repository.
 
 ## Do Not
+continue to discuss Issues here. All discussion will be redirected to the source Issue(s). Issues needing further discussion do not belong here and will be closed. Issues in this repo have already been in discussion rounds, and decisions have made by the AWG or Arctos officers.
 
-Issues here should not be discused. And discussion should be redirected to the source Issue(s). Issues needing further discussion do not belong here and should be closed.
+## Do
+use this repo as a roadmap for near-term development
 
