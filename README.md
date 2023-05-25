@@ -8,7 +8,7 @@ After an issue has been discussed in the community ([Issues](https://github.com/
 All Issues here should reference one or more Issues in another repository.
 
 ## Do Not
-continue to discuss Issues here. All discussion will be redirected to the source Issue(s). Issues needing further discussion do not belong here and will be closed. Issues in this repo have already been in discussion rounds, and decisions have made by the AWG or Arctos officers.
+Do not continue to discuss Issues here. All discussion will be redirected to the source Issue(s). Issues needing further discussion do not belong here and will be closed. Issues in this repo have already been in discussion rounds, and decisions have made by the AWG or Arctos officers.
 
 ## Do
 use this repo as a roadmap for near-term development
