@@ -1,0 +1,17 @@
+#header_color, #collection_specific_header {
+	background:url("/images/DMNSHeaderBg2.png") repeat-x scroll 0 0 #1C3664;
+}
+
+
+
+.headerInstitutionText, .headerCollectionText, #collection_specific_header{
+	color:white;
+}
+
+#headerLinks, #headerLinks a, c#ollection_specific_header a {
+	color:white;
+	size:small;
+}
+#headerLinks a:hover, #collection_specific_header a:over {
+	color:red;
+}

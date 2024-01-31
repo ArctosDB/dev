@@ -1,0 +1,51 @@
+
+#collection_specific_header,#collection_specific_header a {
+  color:white;
+  text-decoration: none;
+}
+
+.headerInstitutionText, .headerCollectionText{
+color:white;
+}
+
+#headerLinks, #headerLinks a {
+color:white;
+size:small;
+}
+#headerLinks a:hover {
+color:gray;
+}
+
+
+.headerInstitutionText a:link { color:white }
+.headerInstitutionText a:visited { color:white; }
+.headerInstitutionText a:hover { color:gray}
+.headerInstitutionText a:active { color:white }
+
+
+.headerCollectionText a:link { color:white }
+.headerCollectionText a:visited { color:white; }
+.headerCollectionText a:hover { color:gray}
+.headerCollectionText a:active { color:white }
+
+#header-link-cell{text-align:center;}
+
+#headerCollectionLicenseText,
+#headerCollectionLicenseText a { color:white; }
+#headerCollectionLicenseText a:hover { color:lightgray; }
+
+#headerDataTermsText,
+#headerDataTermsText a { color:white; }
+#headerDataTermsText a:hover { color:lightgray; }
+
+#headerCollectionMetaText,
+#headerCollectionMetaText a { color:white; }
+#headerCollectionMetaText a:hover { color:lightgray; }
+
+#headerCollectionLoanPolText,
+#headerCollectionLoanPolText a { color:white; }
+#headerCollectionLoanPolText a:hover { color:lightgray; }
+
+#headerCollectionLinkText,
+#headerCollectionLinkText a { color:white; }
+#headerCollectionLinkText a:hover { color:lightgray; }
