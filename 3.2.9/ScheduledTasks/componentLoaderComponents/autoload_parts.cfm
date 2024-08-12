@@ -29,42 +29,47 @@
 				<cfif len(d.guid) gt 0>
 					<cfquery name="cid" datasource="uam_god">
 						select
-							cataloged_item.collection_object_id,
-							collection.guid_prefix
+							flat.collection_object_id,
+							flat.guid_prefix
 						from
-							cataloged_item
-							inner join collection on cataloged_item.collection_id=collection.collection_id
+							flat
 						where
-							concat(collection.guid_prefix,':',cataloged_item.cat_num)=<cfqueryparam value="#d.guid#" CFSQLType="CF_SQL_VARCHAR">
+							guid = stripArctosGuidURL(<cfqueryparam value="#d.guid#" CFSQLType="CF_SQL_VARCHAR">)
 					</cfquery>
-				<cfelseif len(d.guid_prefix) gt 0 and len(d.other_id_type) gt 0 and len(d.other_id_number) gt 0>
+					<cfif debug>
+						<cfdump var="#cid#">
+					</cfif>
+				<cfelseif len(d.guid_prefix) gt 0 and len(d.other_id_number) gt 0 or len(d.other_id_issuedby) gt 0 or len(d.other_id_type) gt 0>
 					<cfquery name="cid" datasource="uam_god">
 						select
-							cataloged_item.collection_object_id,
-							collection.guid_prefix
+							flat.collection_object_id,
+							flat.guid_prefix
 						from
-							cataloged_item
-							inner join collection on cataloged_item.collection_id=collection.collection_id
-							inner join coll_obj_other_id_num on cataloged_item.collection_object_id=coll_obj_other_id_num.collection_object_id
+							flat
+							inner join coll_obj_other_id_num on flat.collection_object_id=coll_obj_other_id_num.collection_object_id
 						where
-							collection.guid_prefix=<cfqueryparam value="#d.guid_prefix#" CFSQLType="CF_SQL_VARCHAR"> and
-							coll_obj_other_id_num.other_id_type=<cfqueryparam value="#d.other_id_type#" CFSQLType="CF_SQL_VARCHAR"> and
-							coll_obj_other_id_num.display_value=<cfqueryparam value="#d.other_id_number#" CFSQLType="CF_SQL_VARCHAR">
+							1=1
+							<cfif len(d.guid_prefix) gt 0>
+								and flat.guid_prefix=<cfqueryparam value="#d.guid_prefix#" CFSQLType="CF_SQL_VARCHAR">
+							</cfif>
+							<cfif len(d.other_id_type) gt 0>
+								 and coll_obj_other_id_num.other_id_type=<cfqueryparam value="#d.other_id_type#" CFSQLType="CF_SQL_VARCHAR">
+							</cfif>
+							<cfif len(d.other_id_number) gt 0>
+								and coll_obj_other_id_num.display_value=<cfqueryparam value="#d.other_id_number#" CFSQLType="CF_SQL_VARCHAR">
+							</cfif>
+							<cfif len(d.other_id_issuedby) gt 0>
+								and coll_obj_other_id_num.issued_by_agent_id=getAgentId(<cfqueryparam value="#d.other_id_issuedby#" CFSQLType="CF_SQL_VARCHAR">)
+							</cfif>
 					</cfquery>
-				<cfelseif len(d.other_id_type) gt 0 and len(d.other_id_number) gt 0>
-					<cfquery name="cid" datasource="uam_god">
-						select
-							coll_obj_other_id_num.collection_object_id,
-							collection.guid_prefix
-						from
-							cataloged_item
-							inner join collection on cataloged_item.collection_id=collection.collection_id
-							inner join coll_obj_other_id_num on cataloged_item.collection_object_id=coll_obj_other_id_num.collection_object_id
-						where
-							coll_obj_other_id_num.other_id_type=<cfqueryparam value="#d.other_id_type#" CFSQLType="CF_SQL_VARCHAR"> and
-							coll_obj_other_id_num.display_value=<cfqueryparam value="#d.other_id_number#" CFSQLType="CF_SQL_VARCHAR">
-					</cfquery>
+					<cfif debug>
+						<cfdump var="#cid#">
+					</cfif>
+
 				<cfelse>
+					<cfif debug>
+						not enough info
+					</cfif>
 					<cfset errs="autoload:catalog record not resolved">
 					<cfquery name="cleanupf" datasource="uam_god">
 						update cf_temp_parts set last_ts=current_timestamp,status=<cfqueryparam value="#errs#" CFSQLType="CF_SQL_VARCHAR"> where key=#val(d.key)#

@@ -1,8 +1,6 @@
 <cfinclude template="/includes/_header.cfm">
 
-
 <cfif action is "multiinsert">
-	<cfdump var=#form#>
 	<cfoutput>
 		<cfquery name="theList" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			select collection_object_id from #table_name#
@@ -35,9 +33,7 @@
 			</cfloop>
 		</cftransaction>
 		<cflocation url="multiAttribute.cfm?table_name=#table_name#" addtoken="no">
-
 	</cfoutput>
-
 </cfif>
 <!--------------------------------------------------------------------------------------------------->
 <cfif Action is "nothing">
@@ -45,59 +41,115 @@
 	<!--- no security --->
 	<cfset title = "Manage Attributes">
 	<script>
-		$(document).ready(function () {
-			$("#determined_date").datepicker();
-
-
-	// modified copypasta from specimensearch because this doesn't have any particular collection_cde
-	$(document).on("change", '#attribute_type', function(){
-			$.ajax({
-				url: "/component/SpecimenResults.cfc",
-				type: "GET",
-				dataType: "json",
-				data: {
-					method:  "getAttributeSearchValues",
-					attribute : this.value
+		function populateRecordAttribute(typ) {
+			// copypasta from enter/sharedconfig, modified to work here
+			var valueObjName="attribute_value";
+			var unitObjName="attribute_units";
+			var unitsCellName="attunitcell";
+			var valueCellName="attvalcell";
+			if (typ.length==0){
+				//console.log('zero-length type; resetting');
+				var s='<input  type="hidden" name="'+unitObjName+'" id="'+unitObjName+'" value="">';
+				$("#"+unitsCellName).html(s);
+				var s='<input  type="hidden" name="'+valueObjName+'" id="'+valueObjName+'" value="">';
+				$("#"+valueCellName).html(s);
+				return false;
+			}
+			var currentValue=$("#" + valueObjName).val();
+			var currentUnits=$("#" + unitObjName).val();
+			jQuery.getJSON("/component/DataEntry.cfc",
+				{
+					method : "getAttributeCodeTable",
+					attribute : typ,
+					guid_prefix : $("#guid_prefix").val(),
+					element : '',
+					returnformat : "json",
+					queryformat : 'column'
 				},
-				success: function(r) {
-					if (r.CONTROL_TYPE=='value'){
-						var val_ctl = $('<select id="attribute_value" name="attribute_value"/>');
-						val_ctl.append($("<option>").attr('value','').text(''));
-						$(r.DATA).each(function(index,value) {
-							val_ctl.append($("<option>").attr('value',value).text(value));
+				function (r) {
+					//console.log(r);
+					if (r.RESULT_TYPE=='units'){
+						var dv=(r.VALUES);
+						//console.log(dv);
+						var s='<select required class="reqdClr" name="'+unitObjName+'" id="'+unitObjName+'">';
+						s+='<option></option>';
+						$.each(dv, function( index, value ) {
+							//console.log(value[0]);
+							s+='<option value="' + value + '">' + value + '</option>';
 						});
-						$("#attvalcell").html(val_ctl);
-						$("#attunitcell").html('<input type="hidden" id="attribute_units" name="attribute_units" value="">');
-					} else if (r.CONTROL_TYPE=='units'){
-						var unt_ctl = $('<select id="attribute_units" name="attribute_units"/>');
-						unt_ctl.append($("<option>").attr('value','').text(''));
-						$(r.DATA).each(function(index,value) {
-							unt_ctl.append($("<option>").attr('value',value).text(value));
+						s+='</select>';
+						//console.log(s);
+						$("#"+unitsCellName).html(s);
+						$("#"+unitObjName).val(currentUnits);
+						var s='<input required class="reqdClr" type="number" step="any" name="'+valueObjName+'" id="'+valueObjName+'" class="reqdClr">';
+						$("#"+valueCellName).html(s);
+						$("#"+valueObjName).val(currentValue);
+					} else if (r.RESULT_TYPE=='values'){
+						var dv=(r.VALUES);
+						var s='<select required class="reqdClr" name="'+valueObjName+'" id="'+valueObjName+'">';
+						s+='<option></option>';
+						$.each(dv, function( index, value ) {
+							//console.log(index);
+							//console.log(value);
+							s+='<option value="' + value + '">' + value + '</option>';
 						});
-						$("#attunitcell").html(unt_ctl);
-						var val_ctl = $('<input type="text" id="attribute_value" name="attribute_value">');
-						$("#attvalcell").html(val_ctl);
+						s+='</select>';
+						$("#"+valueCellName).html(s);
+						$("#"+valueObjName).val(currentValue);
+						var s='<input  type="hidden" name="'+unitObjName+'" id="'+unitObjName+'" value="">';
+						$("#"+unitsCellName).html(s);
+					} else if (r.RESULT_TYPE=='freetext'){
+						var s='<textarea required class="reqdClr" name="'+valueObjName+'" id="'+valueObjName+'"></textarea>';
+						$("#"+valueCellName).html(s);
+						$("#"+valueObjName).val(currentValue);
+
+						var s='<input  type="hidden" name="'+unitObjName+'" id="'+unitObjName+'" value="">';
+						$("#"+unitsCellName).html(s);
 					} else {
-						var val_ctl = $('<input type="text" id="attribute_value" name="attribute_value">');
-						$("#attvalcell").html(val_ctl);
-						$("#attunitcell").html('<input type="hidden" id="attribute_units" name="attribute_units" value="">');
+						alert('Attribute lookup failure: Make sure the attribute type is available for this colleciton.');
 					}
 				}
-			});
-		});
-		});
+			);
+		}
 	</script>
-
-	<cfquery name="ctAttributeType" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-		select distinct(attribute_type) from ctattribute_type order by attribute_type
+	<cfquery name="raw" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+		 SELECT
+		 	flat.guid,
+		 	flat.guid_prefix,
+			concatSingleOtherId(flat.collection_object_id,'#session.CustomOtherIdentifier#') AS CustomID,
+			flat.scientific_name,
+			flat.higher_geog,
+			attributes.attribute_id,
+			attributes.determined_by_agent_id,
+			getPreferredAgentName(attributes.determined_by_agent_id) attributeDeterminer,
+			attributes.attribute_type,
+			attributes.attribute_value,
+			attributes.attribute_units,
+			attributes.attribute_remark,
+			attributes.determination_method,
+			attributes.determined_date
+		FROM
+			#table_name#
+			inner join flat on #table_name#.collection_object_id=flat.collection_object_id
+			left outer join attributes on flat.collection_object_id=attributes.collection_object_id
 	</cfquery>
-	<cfoutput>
-		<h3>Add an Attribute to ALL records in the table below</h3>
-
-		<div class="friendlyNotification">
-			This form works for arbitrary datasets. Not all attributes are usable in all collections. Do not use this form unless you're sure you know what you're doing; you can
-			very quickly make very large messes here.
+	<cfquery name="ugp" dbtype="query">
+		select guid_prefix from raw group by guid_prefix
+	</cfquery>
+	<cfif ugp.recordcount neq 1>
+		<div class="importantNotification">
+			This form can only work with one collection.
 		</div>
+		<cfabort>
+	</cfif>
+	<cfoutput>
+		<input type="hidden" name="guid_prefix" id="guid_prefix" value="#ugp.guid_prefix#">
+		<cfquery name="ctattribute_type" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
+			SELECT attribute_type FROM ctattribute_type where
+			<cfqueryparam value="#ugp.guid_prefix#" cfsqltype="cf_sql_varchar">=any(collections)
+			 order by attribute_type
+		</cfquery>
+		<h3>Add an Attribute to ALL records in the table below</h3>
 		<form name="na" method="post" action="multiAttribute.cfm">
 			<input type="hidden" name="action" value="multiinsert">
 			<input type="hidden" name="table_name" value="#table_name#">
@@ -114,10 +166,10 @@
 				</tr>
 				<tr>
 					<td>
-						<select name="attribute_type" id="attribute_type" size="1">
+						<select name="attribute_type" id="attribute_type" size="1" onchange="populateRecordAttribute(this.value)">
 							<option selected value="">[ pick an attribute ]</option>
-								<cfloop query="ctAttributeType">
-									<option value="#ctAttributeType.attribute_type#">#ctAttributeType.attribute_type#</option>
+								<cfloop query="ctattribute_type">
+									<option value="#ctattribute_type.attribute_type#">#ctattribute_type.attribute_type#</option>
 								</cfloop>
 						  </select>
 					</td>
@@ -128,7 +180,7 @@
 						<input type="text" name="attribute_units" id="attribute_units">
 					</td>
 					<td>
-						<input type="text" name="determined_date" id="determined_date">
+						<input type="datetime" name="determined_date" id="determined_date">
 					</td>
 					<td>
 						<input type="hidden" name="determined_by_agent_id" id="determined_by_agent_id">
@@ -145,33 +197,10 @@
 					<td>
 						<input class="insBtn" type="submit" value="insert for all">
 					</td>
-
-
 				</tr>
 			</table>
-
-
 		</form>
-		<cfquery name="raw" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			 SELECT
-			 	flat.guid,
-				concatSingleOtherId(flat.collection_object_id,'#session.CustomOtherIdentifier#') AS CustomID,
-				flat.scientific_name,
-				flat.higher_geog,
-				attributes.attribute_id,
-				attributes.determined_by_agent_id,
-				getPreferredAgentName(attributes.determined_by_agent_id) attributeDeterminer,
-				attributes.attribute_type,
-				attributes.attribute_value,
-				attributes.attribute_units,
-				attributes.attribute_remark,
-				attributes.determination_method,
-				attributes.determined_date
-			FROM
-				#table_name#
-				inner join flat on #table_name#.collection_object_id=flat.collection_object_id
-				left outer join attributes on flat.collection_object_id=attributes.collection_object_id
-		</cfquery>
+		
 		<cfquery name="specimenList" dbtype="query">
 			select
 				guid,

@@ -1,3 +1,15 @@
+<!---------------------- begin log --------------------->
+<cfset jid=CreateUUID()>
+<cfset jStrtTm=now()>
+<cfset args = StructNew()>
+<cfset args.log_type = "scheduler_log">
+<cfset args.jid = jid>
+<cfset args.call_type = "cf_scheduler">
+<cfset args.logged_action = "start">
+<cfset args.logged_time = "">
+<cfinvoke component="component.internal" method="logThis" args="#args#">
+<!---------------------- /begin log --------------------->
+
 <cfsetting requestTimeOut = "600">
 <cfquery name="jobs" datasource="uam_god">
 	select * from cf_temp_async_job where 
@@ -83,3 +95,15 @@
 		update cf_temp_async_job set status='ready_notification' where job_id=<cfqueryparam value="#jobs.job_id#" cfsqltype="cf_sql_int">
 	</cfquery>
 </cfloop>
+
+
+<!---------------------- end log --------------------->
+<cfset jtim=datediff('s',jStrtTm,now())>
+<cfset args = StructNew()>
+<cfset args.log_type = "scheduler_log">
+<cfset args.jid = jid>
+<cfset args.call_type = "cf_scheduler">
+<cfset args.logged_action = "stop">
+<cfset args.logged_time = jtim>
+<cfinvoke component="component.internal" method="logThis" args="#args#">
+<!---------------------- /end log --------------------->

@@ -52,7 +52,6 @@ function runGeolocate(method='',lat='',lng='',errm='',state='',country='',county
 	cDiv.setAttribute('onclick','closeGeoLocate("clicked closed")');
 	$("#GLpopDiv").append(cDiv);
 	var hDiv=document.createElement('div');
-	//hDiv.className = 'fancybox-help';
 	hDiv.id='hDiv';
 	var txt='<div style="white-space: nowrap;font-size:small;text-align:center">';
 	txt+='Location data from the form is passed to GeoLocate.';

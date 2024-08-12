@@ -21,9 +21,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedheader/3.1.7/css/fixedHeader.dataTables.min.css"/>
 <script type="text/javascript" src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/select/1.7.0/css/select.dataTables.min.css"/>
-<cfquery name="ak" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-	select api_key from api_key inner join agent on api_key.issued_to=agent.agent_id where preferred_agent_name='arctos_api_user'
-</cfquery>
+<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
 <script src="/includes/jquery/jquery-autocomplete/jquery.autocomplete.pack.js" language="javascript" type="text/javascript"></script>
 <cfset obj = CreateObject("component","component.functions")>
 <cfset murl=obj.googleSignURL(urlPath="/maps/api/js",urlParams="libraries=places,geometry,drawing")>
@@ -61,6 +59,15 @@ https://github.com/ArctosDB/arctos/issues/7291
 			//console.log('got oidtype');
 			$("#si_otheridsrchtbl").show();
 		}
+		// turn the reciprocal table on for any component
+		if (
+			$("#related_id_references").val().length>0 ||
+			$("#related_item_identification").val().length>0 ||
+			$("#related_item_taxonomy").val().length>0 
+		){
+			//console.log('got oidtype');
+			$("#si_relateditemsrchtbl").show();
+		}
 		if ($("#tax_trm_1").val().length>0 || $("#tax_trm_2").val().length>0){
 			$("#si_taxonomysearchtable").show();
 		}
@@ -81,7 +88,20 @@ https://github.com/ArctosDB/arctos/issues/7291
 	  		map.fitBounds(thePoly.getBounds());
 			poly_overlays.push(thePoly);
 		}
-
+		// turn the table on for at least one attribute
+		if (
+			$("#attribute_type_1").val().length>0 ||
+			$("#attribute_value_1").val().length>0 ||
+			$("#attribute_units_1").val().length>0 ||
+			$("#attribute_determiner_1").val().length>0 ||
+			$("#attribute_method_1").val().length>0 ||
+			$("#attribute_remark_1").val().length>0 ||
+			$("#attribute_date_min_1").val().length>0 ||
+			$("#attribute_date_max_1").val().length>0 
+		){
+			console.log('aadsfasdv');
+			$("#si_recordattributesearchtable").show();
+		}
 		$("input[type='reset']").closest('form').on('reset', function(event) {
 			// https://github.com/ArctosDB/arctos/issues/4269
 			// request to clear, not just reset
@@ -114,6 +134,8 @@ https://github.com/ArctosDB/arctos/issues/7291
 				} else {
 					openOverlay('/form/catRecordSearchAsyncRequest.cfm?rc=' + results_columns + '&so=' + search_term_obj,'Request data asynchronously.');
 				}
+			} else if (opn=='flat_refresh'){
+				openOverlay('/form/catRecordFlatRefresh.cfm?table_name=' + $("#tbl").val(),'Request Cache Refresh');
 			} else if (opn=='reloadAtURL'){
 				reloadAtURL();
 			} else if (opn=='login'){
@@ -133,7 +155,6 @@ https://github.com/ArctosDB/arctos/issues/7291
 					}
 				} else {
 					///console.log('not a redirect....');
-					
 					if (opn=='annotateall'){
 						openAnnotation('table_name=' + $("#tbl").val());
 					} else if (opn=='savsearch'){
@@ -199,10 +220,10 @@ https://github.com/ArctosDB/arctos/issues/7291
 				scrollHeight: 300
 			});
 		});
-		$(document).on("change", '[id^="locality_attribute_type_"]', function(){
+		$(document).on("change", '[id^="locality_attribute_"]', function(){
 			var i =  this.id;
-			i=i.replace("locality_attribute_type_", "");
-			var thisURL="/ajax/tData.cfm?action=suggestLocAttVal&att_type=" + $("#locality_attribute_type_" + i).val();
+			i=i.replace("locality_attribute_", "");
+			var thisURL="/ajax/tData.cfm?action=suggestLocAttVal&att_type=" + $("#locality_attribute_" + i).val();
 			//console.log(thisURL);
 			jQuery("#locality_attribute_value_" + i).autocomplete(thisURL , {
 				width: 320,
@@ -214,7 +235,6 @@ https://github.com/ArctosDB/arctos/issues/7291
 				scrollHeight: 300
 			});
 		});
-
 		jQuery('[id^="tax_src_"]').autocomplete("/ajax/tData.cfm?action=suggestTaxSrc", {
 			width: 320,
 			max: 50,
@@ -465,12 +485,18 @@ https://github.com/ArctosDB/arctos/issues/7291
 
 	function toggleJSON(){
 		$(".jsonCell").each(function(){
+			try{
 			if (!($(this).is(":empty"))){
 				if ($(this).hasClass('noshrink')){
 					$(this).removeClass('noshrink').addClass('jsonCollapsed');
 				} else if ($(this).hasClass('jsonCollapsed')){
 					$(this).removeClass('jsonCollapsed').addClass('noshrink');
 				}
+			}
+			} catch(e){
+				// whatever
+				console.log('toggleJSON failed');
+				console.log(e);
 			}
 		});
 
@@ -608,6 +634,10 @@ https://github.com/ArctosDB/arctos/issues/7291
 		max-height: none;
 		max-width: none;
 	}
+	.reclimithit {
+		border:10px solid red;
+		font-weight: bold;
+	}
 </style>
 <cfparam name="add_to_trans_id" default="">
 <cfif len(add_to_trans_id) gt 0>
@@ -690,7 +720,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 	select taxon_status from cttaxon_status order by taxon_status
 </cfquery>
 <cfquery name="ctcoll_other_id_type" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-  select distinct other_id_type,sort_order FROM ctcoll_other_id_type group by other_id_type,sort_order ORDER BY sort_order,other_id_type
+  select distinct other_id_type FROM ctcoll_other_id_type group by other_id_type,sort_order ORDER BY other_id_type
 </cfquery>
 <cfquery name="ctplace_term_type" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 	select term_type from place_terms group by term_type order by term_type
@@ -819,7 +849,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 					<div class="pglayout">
 						<cfparam name="guid_prefix" default="">
 						<div class="schitem noshow dontwrap" id="si_guid_prefix">
-							<label for="guid_prefix" class="helpLink" id="_collection">
+							<label for="guid_prefix" class="helpLink" data-helplink="collection">
 								Collection
 							</label>
 							<input type="text" name="guid_prefix" id="guid_prefix" value="#guid_prefix#" placeholder="guid_prefix, comma-list" list="guid_prefix_list">
@@ -827,18 +857,18 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="cat_num" default="">
 						<div class="schitem noshow" id="si_cat_num">
-							<label class="helpLink" id="_cat_num" for="cat_num">Catalog Number</label>
+							<label class="helpLink" data-helplink="cat_num" for="cat_num">Catalog Number</label>
 							<input type="text" name="cat_num" id="cat_num" value="#cat_num#" placeholder="catalog number">
 						</div>
 						<cfparam name="guid" default="">
 						<div class="schitem noshow" id="si_guid">
-							<label class="helpLink" id="_guid">GUID ("DarwinCore Triplet")</label>
-							<input type="text" name="guid" id="guid" value="#guid#" placeholder="GUID (DarwinCore Triplet)">
+							<label class="helpLink" data-helplink="guid">GUID</label>
+							<input type="text" name="guid" id="guid" value="#guid#" placeholder="GUID">
 						</div>
 
 						<cfparam name="anyid" default="">
 						<div class="schitem noshow" id="si_anyid">
-							<label class="helpLink" id="_anyid" for="anyid">Any Identifier</label>
+							<label class="helpLink" data-helplink="anyid" for="anyid">Any Identifier</label>
 							<input type="text" name="anyid" id="anyid" value="#anyid#" placeholder="any identifier">
 						</div>
 						
@@ -846,7 +876,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 							<cfparam name="session.customoidoper" default="IS">
 							<cfparam name="customidentifiervalue" default="">
 							<div class="schitem noshow" id="si_custom_identifier">
-								<label class="helpLink" id="_custom_identifier" for="custom_identifier">#replace(session.customotheridentifier," ","&nbsp;","all")#</label>
+								<label class="helpLink" data-helplink="custom_identifier" for="custom_identifier">#replace(session.customotheridentifier," ","&nbsp;","all")#</label>
 								<div class="dontwrap">
 									<select name="customoidoper" id="customoidoper" size="1" onchange="setSessionCustomID(this.value);" class="constrained_select">
 										<option value=""></option>
@@ -858,8 +888,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 									<input type="text" class="short_input" name="customidentifiervalue" id="customidentifiervalue" value="#customidentifiervalue#" placeholder="Custom ID">
 								</div>
 							</div>
-						</cfif>
-						
+						</cfif>						
 					</div>
 					<cfparam name="oidtype" default="">
 					<cfparam name="oidnum" default="">
@@ -942,14 +971,19 @@ https://github.com/ArctosDB/arctos/issues/7291
 							</tr>
 						</tbody>
 					</table>
+					<!---- https://github.com/ArctosDB/arctos/issues/7725#issuecomment-2093857711 - add some stuff, remove some stuff ---->
+					<!----
 					<cfparam name="related_id_issuedby" default="">
 					<cfparam name="related_id_type" default="">
 					<cfparam name="related_id_value" default="">
+					---->
 					<cfparam name="related_id_references" default="">
 					<cfparam name="related_item_identification" default="">
+					<cfparam name="related_item_taxonomy" default="">
 					<table id="si_relateditemsrchtbl" class="wideCollapseTable noshow">
 						<thead>
 							<tr>
+								<!----
 								<th scope="col">
 									Related Items Identifier IssuedBy
 									<span title="Prefix with = for exact match" class="likeLink" onclick="var e=document.getElementById('related_id_issuedby');e.value='='+e.value;">[=]</span>
@@ -969,17 +1003,28 @@ https://github.com/ArctosDB/arctos/issues/7291
 										[=]
 									</span>
 								</th>
+								---->
 								<th scope="col">
-									Related Items Identifier References
+									<span class="helpLink" data-helplink="related_id_references">
+										Related Items Identifier References
+									</span>
 									<span class="likeLink" onclick="getCtDoc('ctid_references',cat_rec_sch_frm.related_id_references.value);">Define</span>
 								</th>
 								<th scope="col">
-									Related Item Identification
+									<span class="helpLink" data-helplink="related_item_identification">
+										Related Item Identification
+									</span>
+								</th>
+								<th scope="col">
+									<span class="helpLink" data-helplink="related_item_taxonomy">
+										Related Item Taxonomy
+									</span>
 								</th>
 							</tr>
 						</thead>
 						<tbody>
 							<tr>
+								<!----
 								<td data-label="RelatedIdIssuedBy">
 									<input type="text" name="related_id_issuedby" id="related_id_issuedby" value="#related_id_issuedby#" placeholder="Issued By">
 								</td>
@@ -997,6 +1042,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 								<td data-label="value">
 									<input type="text" name="related_id_value" id="related_id_value" value="#related_id_value#" placeholder="related_id_value">     	
 								</td>
+								---->
 								<td data-label="References">
 									<cfset x=related_id_references>
 									<select name="related_id_references" id="related_id_references" size="1">
@@ -1009,9 +1055,17 @@ https://github.com/ArctosDB/arctos/issues/7291
 								<td data-label="related_item_identification">
 									<input type="text" name="related_item_identification" id="related_item_identification" value="#related_item_identification#" placeholder="Related Identification">
 								</td>
+								<td data-label="related_item_taxonomy">
+									<input type="text" name="related_item_taxonomy" id="related_item_taxonomy" value="#related_item_taxonomy#" placeholder="Related Taxonomy">
+								</td>
 							</tr>
 						</tbody>
-					</table>				
+					</table>
+					<cfparam name="genbank_fragment" default="">
+					<div class="schitem noshow" id="si_genbank_fragment">
+						<label class="helpLink" data-helplink="genbank_fragment" for="genbank_fragment">GenBank Fragment</label>
+						<input type="text" name="genbank_fragment" id="genbank_fragment" value="#genbank_fragment#" placeholder="genbank fragment, list OK">
+					</div>
 				</div>
 			</div><!---- /identifiers --->
 			<div id="identification" class="srch_section">
@@ -1025,7 +1079,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="taxon_name" default="">
 						<div class="schitem noshow" id="si_taxon_name">
 							<label for="anyid">
-								<span class="helpLink" id="_anyid" >Any taxon, ID, common name</span>
+								<span class="helpLink" data-helplink="anyid" >Any taxon, ID, common name</span>
 								<span title="Prefix with = for exact match" class="likeLink" onclick="var e=document.getElementById('taxon_name');e.value='='+e.value;">[=]</span>
 							</label>
 							<input type="text" name="taxon_name" id="taxon_name" value="#taxon_name#" placeholder="identification; classification + related term; common name" title="Consider using Identification, Family, Class, etc. for better performance.">
@@ -1061,36 +1115,30 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="identification_order" default="">
 						<div class="schitem noshow" id="si_identification_order">
-							<label class="helpLink" id="_identification_order" for="identification_order">ID Order</label>
+							<label class="helpLink" data-helplink="identification_order" for="identification_order">ID Order</label>
 							<input type="text" name="identification_order" id="identification_order" value="#identification_order#" placeholder="ID Order">
-						</div>
-						<cfparam name="common_name" default="">
-						<div class="schitem noshow" id="si_common_name">
-							<label class="helpLink" id="_common_name" for="common_name">Common Name</label>
-							<input type="text" name="common_name" id="common_name" value="#common_name#" placeholder="Common Name">
-						</div>
-						
+						</div>						
 						<cfparam name="identification_publication" default="">
 						<div class="schitem noshow" id="si_identification_publication">
-							<label class="helpLink" id="_identification_publication" for="identification_publication">ID Sensu (publication)</label>
+							<label class="helpLink" data-helplink="identification_publication" for="identification_publication">ID Sensu (publication)</label>
 							<input type="text" name="identification_publication" id="identification_publication" value="#identification_publication#" placeholder="ID Sensu (publication)">
 						</div>
 						<cfparam name="identified_agent" default="">
 						<div class="schitem noshow" id="si_identified_agent">
-							<label class="helpLink" id="_identified_agent" for="identified_agent">ID Determiner</label>
+							<label class="helpLink" data-helplink="identified_agent" for="identified_agent">ID Determiner</label>
 							<input type="text" name="identified_agent" id="identified_agent" value="#identified_agent#" placeholder="ID Determiner">
 						</div>
 						<cfparam name="begin_made_date" default="">
 						<cfparam name="end_made_date" default="">
 						<div class="schitem noshow" id="si_made_date">
-							<label class="helpLink" id="_made_date" for="made_date">ID Made Date</label>
+							<label class="helpLink" data-helplink="made_date" for="made_date">ID Made Date</label>
 							<input type="datetime" name="begin_made_date" id="begin_made_date" value="#begin_made_date#" placeholder="Min Date" size="12">
 							<input type="datetime" name="end_made_date" id="end_made_date" value="#end_made_date#" placeholder="Max Date" size="12">
 						</div>
 						<cfparam name="taxa_formula" default="">			
 						<div class="schitem noshow" id="si_taxa_formula">
 							<label for="taxa_formula">
-								<span class="helpLink" id="_taxa_formula">ID Taxa Formula</span>
+								<span class="helpLink" data-helplink="taxa_formula">ID Taxa Formula</span>
 								<span class="likeLink" onclick="getCtDoc('cttaxa_formula', cat_rec_sch_frm.taxa_formula.value);">Define</span>
 							</label>
 							<cfset x=taxa_formula>
@@ -1103,7 +1151,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="identification_remarks" default="">
 						<div class="schitem noshow" id="si_identification_remarks">
-							<label class="helpLink" id="_identification_remarks" for="identification_remarks">ID Remarks</label>
+							<label class="helpLink" data-helplink="identification_remarks" for="identification_remarks">ID Remarks</label>
 							<input type="text" name="identification_remarks" id="identification_remarks" value="#identification_remarks#" placeholder="ID Remarks">
 						</div>
 
@@ -1111,9 +1159,9 @@ https://github.com/ArctosDB/arctos/issues/7291
 							<table id="si_taxonomysearchtable" class="wideCollapseTable noshow">
 								<thead>
 									<tr>
-										<th scope="col"><span class="helpLink" id="_taxon_term">Taxon Term</span></th>
-										<th scope="col"><span class="helpLink" id="_taxon_rank">Type or Rank</span></th>										
-										<th scope="col"><span class="helpLink" id="_taxonomy_source">Source</span></th>										
+										<th scope="col"><span class="helpLink" data-helplink="taxon_term">Taxon Term</span></th>
+										<th scope="col"><span class="helpLink" data-helplink="taxon_rank">Type or Rank</span></th>										
+										<th scope="col"><span class="helpLink" data-helplink="taxonomy_source">Source</span></th>										
 									</tr>
 								</thead>
 								<tbody>
@@ -1143,7 +1191,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="kingdom" default="">
 						<div class="schitem noshow" id="si_kingdom">
 							<label  for="kingdom">
-								<span class="helpLink" id="_kingdom">Kingdom</span>
+								<span class="helpLink" data-helplink="kingdom">Kingdom</span>
 								<span class="likeLink" onclick="var e=document.getElementById('kingdom');e.value='='+e.value;">[ exact ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('kingdom');e.value='NULL';">[ NULL ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('kingdom');e.value='!'+e.value;">[ NOT ]</span>
@@ -1153,7 +1201,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="phylum" default="">
 						<div class="schitem noshow" id="si_phylum">
 							<label for="phylum">
-								<span class="helpLink" id="_phylum">Phylum</span>
+								<span class="helpLink" data-helplink="phylum">Phylum</span>
 								<span class="likeLink" onclick="var e=document.getElementById('phylum');e.value='='+e.value;">[ exact ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('phylum');e.value='NULL';">[ NULL ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('phylum');e.value='!'+e.value;">[ NOT ]</span>
@@ -1163,7 +1211,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="phylclass" default="">
 						<div class="schitem noshow" id="si_phylclass">
 							<label for="phylclass">
-								<span class="helpLink" id="_phylclass">Class</span>
+								<span class="helpLink" data-helplink="phylclass">Class</span>
 								<span class="likeLink" onclick="var e=document.getElementById('phylclass');e.value='='+e.value;">[ exact ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('phylclass');e.value='NULL';">[ NULL ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('phylclass');e.value='!'+e.value;">[ NOT ]</span>
@@ -1173,7 +1221,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="phylorder" default="">
 						<div class="schitem noshow" id="si_phylorder">
 							<label for="phylorder">
-								<span class="helpLink" id="_phylorder">Order</span>
+								<span class="helpLink" data-helplink="phylorder">Order</span>
 								<span class="likeLink" onclick="var e=document.getElementById('phylorder');e.value='='+e.value;">[ exact ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('phylorder');e.value='NULL';">[ NULL ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('phylorder');e.value='!'+e.value;">[ NOT ]</span>
@@ -1183,7 +1231,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="superfamily" default="">
 						<div class="schitem noshow" id="si_superfamily">
 							<label for="superfamily">
-								<span class="helpLink" id="_superfamily">Superfamily</span>
+								<span class="helpLink" data-helplink="superfamily">Superfamily</span>
 								<span class="likeLink" onclick="var e=document.getElementById('superfamily');e.value='='+e.value;">[ exact ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('superfamily');e.value='NULL';">[ NULL ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('superfamily');e.value='!'+e.value;">[ NOT ]</span>
@@ -1194,7 +1242,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="family" default="">
 						<div class="schitem noshow" id="si_family">
 							<label for="family">
-								<span class="helpLink" id="_family">Family</span>
+								<span class="helpLink" data-helplink="family">Family</span>
 								<span class="likeLink" onclick="var e=document.getElementById('family');e.value='='+e.value;">[ exact ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('family');e.value='NULL';">[ NULL ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('family');e.value='!'+e.value;">[ NOT ]</span>
@@ -1204,7 +1252,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="subfamily" default="">
 						<div class="schitem noshow" id="si_subfamily">
 							<label for="subfamily">
-								<span class="helpLink" id="_subfamily">Subfamily</span>
+								<span class="helpLink" data-helplink="subfamily">Subfamily</span>
 								<span class="likeLink" onclick="var e=document.getElementById('subfamily');e.value='='+e.value;">[ exact ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('subfamily');e.value='NULL';">[ NULL ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('subfamily');e.value='!'+e.value;">[ NOT ]</span>
@@ -1214,7 +1262,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="tribe" default="">
 						<div class="schitem noshow" id="si_tribe">
 							<label for="tribe">
-								<span class="helpLink" id="_tribe">Tribe</span>
+								<span class="helpLink" data-helplink="tribe">Tribe</span>
 								<span class="likeLink" onclick="var e=document.getElementById('tribe');e.value='='+e.value;">[ exact ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('tribe');e.value='NULL';">[ NULL ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('tribe');e.value='!'+e.value;">[ NOT ]</span>
@@ -1224,7 +1272,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="subtribe" default="">
 						<div class="schitem noshow" id="si_subtribe">
 							<label for="subtribe">
-								<span class="helpLink" id="_subtribe">Subtribe</span>
+								<span class="helpLink" data-helplink="subtribe">Subtribe</span>
 								<span class="likeLink" onclick="var e=document.getElementById('subtribe');e.value='='+e.value;">[ exact ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('subtribe');e.value='NULL';">[ NULL ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('subtribe');e.value='!'+e.value;">[ NOT ]</span>
@@ -1234,7 +1282,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="genus" default="">
 						<div class="schitem noshow" id="si_genus">
 							<label for="genus">
-								<span class="helpLink" id="_genus">Genus</span>
+								<span class="helpLink" data-helplink="genus">Genus</span>
 								<span class="likeLink" onclick="var e=document.getElementById('genus');e.value='='+e.value;">[ exact ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('genus');e.value='NULL';">[ NULL ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('genus');e.value='!'+e.value;">[ NOT ]</span>
@@ -1244,7 +1292,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="species" default="">
 						<div class="schitem noshow" id="si_species">
 							<label for="species">
-								<span class="helpLink" id="_species">Species</span>
+								<span class="helpLink" data-helplink="species">Species</span>
 								<span class="likeLink" onclick="var e=document.getElementById('species');e.value='='+e.value;">[ exact ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('species');e.value='NULL';">[ NULL ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('species');e.value='!'+e.value;">[ NOT ]</span>
@@ -1255,7 +1303,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="subspecies" default="">
 						<div class="schitem noshow" id="si_subspecies">
 							<label for="subspecies">
-								<span class="helpLink" id="_subspecies">Subspecies</span>
+								<span class="helpLink" data-helplink="subspecies">Subspecies</span>
 								<span class="likeLink" onclick="var e=document.getElementById('subspecies');e.value='='+e.value;">[ exact ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('subspecies');e.value='NULL';">[ NULL ]</span>
 								<span class="likeLink" onclick="var e=document.getElementById('subspecies');e.value='!'+e.value;">[ NOT ]</span>
@@ -1263,85 +1311,80 @@ https://github.com/ArctosDB/arctos/issues/7291
 							<input type="text" name="subspecies" id="subspecies" value="#subspecies#" placeholder="Collection's classification">
 						</div>
 					</div>
-
-
 					<div class="schitem twocols tworows">
-							<table id="si_identificationattributesearchtable" class="wideCollapseTable noshow">
-								<thead>
+						<table id="si_identificationattributesearchtable" class="wideCollapseTable noshow">
+							<thead>
+								<tr>
+									<th scope="col">
+										<span class="helpLink" data-helplink="identification_attribute_type">Identification Attribute</span>
+										<span class="likeLink" onclick="getCtDoc('ctidentification_attribute_type');">Define</span>
+									</th>
+									<th scope="col" title="">
+										<span class="helpLink" data-helplink="identification_attribute_value">
+											Attribute Value
+										</span>
+									</th>
+									<th scope="col"><span class="helpLink" data-helplink="identification_attribute_units">Attribute Units</span></th>
+									<th scope="col"><span class="helpLink" data-helplink="identification_attribute_determiner">Attribute Determiner</span></th>
+									<th scope="col"><span class="helpLink" data-helplink="identification_attribute_method">Attribute Method</span></th>
+									<th scope="col"><span class="helpLink" data-helplink="identification_attribute_remark">Attribute Remark</span></th>
+									<th scope="col"><span class="helpLink" data-helplink="identification_attribute_date">Attribute Date (earliest)</span></th>
+									<th scope="col"><span class="helpLink" data-helplink="identification_attribute_date">Attribute Date (latest)</span></th>
+								</tr>
+							</thead>
+							<tbody>
+								<cfloop from="1" to="5" index="i">
+									<cfparam name="identification_attribute_type_#i#" default="">
+									<cfparam name="identification_attribute_value_#i#" default="">
+									<cfparam name="identification_attribute_units_#i#" default="">
+									<cfparam name="identification_attribute_determiner_#i#" default="">
+									<cfparam name="identification_attribute_method_#i#" default="">
+									<cfparam name="identification_attribute_remark_#i#" default="">
+									<cfparam name="identification_attribute_date_min_#i#" default="">
+									<cfparam name="identification_attribute_date_max_#i#" default="">
+									<cfset thisAttTyp=evaluate("identification_attribute_type_" & i)>
+									<cfset thisAttVal=evaluate("identification_attribute_value_" & i)>
+									<cfset thisAttUnt=evaluate("identification_attribute_units_" & i)>
+									<cfset thisAttDtr=evaluate("identification_attribute_determiner_" & i)>
+									<cfset thisAttMth=evaluate("identification_attribute_method_" & i)>
+									<cfset thisAttRmk=evaluate("identification_attribute_remark_" & i)>
+									<cfset thisAttDMin=evaluate("identification_attribute_date_min_" & i)>
+									<cfset thisAttDMax=evaluate("identification_attribute_date_max_" & i)>
 									<tr>
-										<th scope="col">
-											<span class="helpLink" id="_identification_attribute_type">Identification Attribute</span>
-											<span class="likeLink" onclick="getCtDoc('ctidentification_attribute_type');">Define</span>
-										</th>
-										<th scope="col" title="">
-											<span class="helpLink" id="_identification_attribute_value">
-												Attribute Value
-											</span>
-										</th>
-										<th scope="col"><span class="helpLink" id="_identification_attribute_units">Attribute Units</span></th>
-										<th scope="col"><span class="helpLink" id="_identification_attribute_determiner">Attribute Determiner</span></th>
-										<th scope="col"><span class="helpLink" id="_identification_attribute_method">Attribute Method</span></th>
-										<th scope="col"><span class="helpLink" id="_identification_attribute_remark">Attribute Remark</span></th>
-										<th scope="col"><span class="helpLink" id="_identification_attribute_date">Attribute Date (earliest)</span></th>
-										<th scope="col"><span class="helpLink" id="_identification_attribute_date">Attribute Date (latest)</span></th>
+										<td data-label="Attr. Type">
+											<select name="identification_attribute_type_#i#" id="identification_attribute_type_#i#" size="1" class="">
+												<option value=""></option>
+												<cfloop query="ctidentification_attribute_type">
+													<option <cfif ctidentification_attribute_type.attribute_type is thisAttTyp > selected="selected" </cfif> value="#ctidentification_attribute_type.attribute_type#">#ctidentification_attribute_type.attribute_type#</option>
+												</cfloop>
+											  </select>				
+										</td>
+										<td data-label="Attr. Value">
+											<input type="text" name="identification_attribute_value_#i#" id="identification_attribute_value_#i#" placeholder="value; prefix with = for exact" value="#thisAttVal#" class="table_value">
+										</td>
+										<td data-label="Attr. Units">
+											<input type="text" name="identification_attribute_units_#i#"  id="identification_attribute_units_#i#" placeholder="units" value="#thisAttUnt#" class="table_value">     	
+										</td>
+										<td data-label="Attr. Determiner">
+											<input type="text" name="identification_attribute_determiner_#i#"  id="identification_attribute_determiner_#i#" placeholder="determiner" value="#thisAttDtr#" class="table_value">
+										</td>
+										<td data-label="Attr. Method">
+											<input type="text" name="identification_attribute_method_#i#"  id="identification_attribute_method_#i#" placeholder="method" value="#thisAttMth#" class="table_value">
+										</td>
+										<td data-label="Attr. Remark">
+											<input type="text" name="identification_attribute_remark_#i#"  id="identification_attribute_remark_#i#" placeholder="remark" value="#thisAttRmk#" class="table_value"> 
+										</td>
+										<td data-label="Attr. Date">
+											<input type="text" name="identification_attribute_date_min_#i#"  id="identification_attribute_date_min_#i#" placeholder="min" value="#thisAttDMin#" class="table_value">
+										</td>
+										<td data-label="Attr. Date">
+											<input type="text" name="identification_attribute_date_max_#i#"  id="identification_attribute_date_max_#i#" placeholder="max" value="#thisAttDMax#" class="table_value">
+										</td>
 									</tr>
-								</thead>
-								<tbody>
-									<cfloop from="1" to="5" index="i">
-										<cfparam name="identification_attribute_type_#i#" default="">
-										<cfparam name="identification_attribute_value_#i#" default="">
-										<cfparam name="identification_attribute_units_#i#" default="">
-										<cfparam name="identification_attribute_determiner_#i#" default="">
-										<cfparam name="identification_attribute_method_#i#" default="">
-										<cfparam name="identification_attribute_remark_#i#" default="">
-										<cfparam name="identification_attribute_date_min_#i#" default="">
-										<cfparam name="identification_attribute_date_max_#i#" default="">
-										<cfset thisAttTyp=evaluate("identification_attribute_type_" & i)>
-										<cfset thisAttVal=evaluate("identification_attribute_value_" & i)>
-										<cfset thisAttUnt=evaluate("identification_attribute_units_" & i)>
-										<cfset thisAttDtr=evaluate("identification_attribute_determiner_" & i)>
-										<cfset thisAttMth=evaluate("identification_attribute_method_" & i)>
-										<cfset thisAttRmk=evaluate("identification_attribute_remark_" & i)>
-										<cfset thisAttDMin=evaluate("identification_attribute_date_min_" & i)>
-										<cfset thisAttDMax=evaluate("identification_attribute_date_max_" & i)>
-										<tr>
-											<td data-label="Attr. Type">
-												<select name="identification_attribute_type_#i#" id="identification_attribute_type_#i#" size="1" class="">
-													<option value=""></option>
-													<cfloop query="ctidentification_attribute_type">
-														<option <cfif ctidentification_attribute_type.attribute_type is thisAttTyp > selected="selected" </cfif> value="#ctidentification_attribute_type.attribute_type#">#ctidentification_attribute_type.attribute_type#</option>
-													</cfloop>
-												  </select>				
-											</td>
-											<td data-label="Attr. Value">
-												<input type="text" name="identification_attribute_value_#i#" id="identification_attribute_value_#i#" placeholder="value; prefix with = for exact" value="#thisAttVal#" class="table_value">
-											</td>
-											<td data-label="Attr. Units">
-												<input type="text" name="identification_attribute_units_#i#"  id="identification_attribute_units_#i#" placeholder="units" value="#thisAttUnt#" class="table_value">     	
-											</td>
-											<td data-label="Attr. Determiner">
-												<input type="text" name="identification_attribute_determiner_#i#"  id="identification_attribute_determiner_#i#" placeholder="determiner" value="#thisAttDtr#" class="table_value">
-											</td>
-											<td data-label="Attr. Method">
-												<input type="text" name="identification_attribute_method_#i#"  id="identification_attribute_method_#i#" placeholder="method" value="#thisAttMth#" class="table_value">
-											</td>
-											<td data-label="Attr. Remark">
-												<input type="text" name="identification_attribute_remark_#i#"  id="identification_attribute_remark_#i#" placeholder="remark" value="#thisAttRmk#" class="table_value"> 
-											</td>
-											<td data-label="Attr. Date">
-												<input type="text" name="identification_attribute_date_min_#i#"  id="identification_attribute_date_min_#i#" placeholder="min" value="#thisAttDMin#" class="table_value">
-											</td>
-											<td data-label="Attr. Date">
-												<input type="text" name="identification_attribute_date_max_#i#"  id="identification_attribute_date_max_#i#" placeholder="max" value="#thisAttDMax#" class="table_value">
-											</td>
-										</tr>
-									</cfloop>
-								</tbody>
-							</table>
-						</div>
-
-
-
+								</cfloop>
+							</tbody>
+						</table>
+					</div>
 				</div>
 			</div><!---- /identification ---->
 
@@ -1356,20 +1399,20 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<thead>
 							<tr>
 								<th scope="col">
-									<span class="helpLink" id="_attribute_type">Record Attribute</span>
+									<span class="helpLink" data-helplink="attribute_type">Record Attribute</span>
 									<span class="likeLink" onclick="getCtDoc('ctattribute_type');">Define</span>
 								</th>
 								<th scope="col" title="Numeric attributes may be prefixed with =,&lt, or %gt.">
-									<span class="helpLink" id="_attribute_value">
+									<span class="helpLink" data-helplink="attribute_value">
 										Attribute Value
 									</span>
 								</th>
-								<th scope="col"><span class="helpLink" id="_attribute_units">Attribute Units</span></th>
-								<th scope="col"><span class="helpLink" id="_attribute_determiner">Attribute Determiner</span></th>
-								<th scope="col"><span class="helpLink" id="_attribute_method">Attribute Method</span></th>
-								<th scope="col"><span class="helpLink" id="_attribute_remark">Attribute Remark</span></th>
-								<th scope="col"><span class="helpLink" id="_attribute_date">Attribute Date (earliest)</span></th>
-								<th scope="col"><span class="helpLink" id="_attribute_date">Attribute Date (latest)</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="attribute_units">Attribute Units</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="attribute_determiner">Attribute Determiner</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="attribute_method">Attribute Method</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="attribute_remark">Attribute Remark</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="attribute_date">Attribute Date (earliest)</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="attribute_date">Attribute Date (latest)</span></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -1430,13 +1473,14 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="coll_role" default="">
 						<div class="schitem noshow" id="si_collector">
 							<label for="collector">
-								<span class="helpLink" id="_collector">Agents (collector)</span>
+								<span class="helpLink" data-helplink="collector">Agents (collector)</span>
 								<span class="likeLink" onclick="getCtDoc('ctcollector_role',cat_rec_sch_frm.coll_role.value);">Define</span>
 							</label>
 							<div class="dontwrap">
 								<cfset x=coll_role>
 								<select name="coll_role" id="coll_role" size="1" class="constrained_select">
 									<option value="" selected="selected">[ Agent Role ]</option>
+									<option value="any">(any non-verbatim)</option>
 									<cfloop query="ctcollector_role">
 										<option 
 											<cfif ctcollector_role.collector_role is x> selected="selected" </cfif> 
@@ -1449,54 +1493,54 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="entered_by" default="">
 						<div class="schitem noshow" id="si_entered_by">
-							<label class="helpLink" id="_entered_by" for="entered_by">Entered By</label>
+							<label class="helpLink" data-helplink="entered_by" for="entered_by">Entered By</label>
 							<input type="text" name="entered_by" id="entered_by" value="#entered_by#" placeholder="Entered By">
 						</div>
 						<cfparam name="beg_entered_date" default="">
 						<cfparam name="end_entered_date" default="">
 						<div class="schitem noshow" id="si_entered_date">
 							<div class="dontwrap">
-								<label class="helpLink" id="_entered_date" for="beg_entered_date">Entered Date</label>
+								<label class="helpLink" data-helplink="entered_date" for="beg_entered_date">Entered Date</label>
 								<input type="datetime" name="beg_entered_date" id="beg_entered_date" size="12" value="#beg_entered_date#" placeholder="earliest">
 								<input type="datetime" name="end_entered_date" id="end_entered_date" size="12" value="#end_entered_date#" placeholder="latest">
 							</div>
 						</div>
 						<cfparam name="remark" default="">
 						<div class="schitem noshow" id="si_remark">
-							<label class="helpLink" id="_remark" for="remark">Remarks</label>
+							<label class="helpLink" data-helplink="remark" for="remark">Remarks</label>
 							<input type="text" name="remark" id="remark" value="#remark#" placeholder="Remarks">
 						</div>
 						<cfparam name="culture_of_origin" default="">
 						<div class="schitem noshow" id="si_culture_of_origin">
-							<label class="helpLink" id="_culture_of_origin" for="culture_of_origin">Culture of Origin</label>
+							<label class="helpLink" data-helplink="culture_of_origin" for="culture_of_origin">Culture of Origin</label>
 							<input type="text" name="culture_of_origin" id="culture_of_origin" value="#culture_of_origin#" placeholder="Culture of Origin">
 						</div>
 						<cfparam name="culture_of_use" default="">
 						<div class="schitem noshow" id="si_culture_of_use">
-							<label class="helpLink" id="_culture_of_use" for="culture_of_use">Culture of Use</label>
+							<label class="helpLink" data-helplink="culture_of_use" for="culture_of_use">Culture of Use</label>
 							<input type="text" name="culture_of_use" id="culture_of_use" value="#culture_of_use#" placeholder="Culture of Use">
 						</div>
 						<cfparam name="description" default="">
 						<div class="schitem noshow" id="si_description">
-							<label class="helpLink" id="_description" for="description">Description</label>
+							<label class="helpLink" data-helplink="description" for="description">Description</label>
 							<input type="text" name="description" id="description" value="#description#" placeholder="Description">
 						</div>
 
 						<cfparam name="materials" default="">
 						<div class="schitem noshow" id="si_materials">
-							<label class="helpLink" id="_materials" for="materials">Materials</label>
+							<label class="helpLink" data-helplink="materials" for="materials">Materials</label>
 							<input type="text" name="materials" id="materials" value="#materials#" placeholder="Materials">
 						</div>
 						<cfparam name="subject_matter" default="">
 						<div class="schitem noshow" id="si_subject_matter">
-							<label class="helpLink" id="_subject_matter" for="subject_matter">Subject Matter</label>
+							<label class="helpLink" data-helplink="subject_matter" for="subject_matter">Subject Matter</label>
 							<input type="text" name="subject_matter" id="subject_matter" value="#subject_matter#" placeholder="subject_matter">
 						</div>
 
 
 						<cfparam name="portfolio_or_series" default="">
 						<div class="schitem noshow" id="si_portfolio_or_series">
-							<label class="helpLink" id="_portfolio_or_series" for="portfolio_or_series">portfolio or series</label>
+							<label class="helpLink" data-helplink="portfolio_or_series" for="portfolio_or_series">portfolio or series</label>
 							<input type="text" name="portfolio_or_series" id="portfolio_or_series" value="#portfolio_or_series#" placeholder="portfolio_or_series">
 						</div>
 
@@ -1504,7 +1548,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="media_type" default="">
 						<div class="schitem noshow" id="si_media_type">
 							<label for="media_type">
-								<span class="helpLink" id="_media_type">Media Type</span>
+								<span class="helpLink" data-helplink="media_type">Media Type</span>
 								<span class="likeLink" onclick="getCtDoc('ctmedia_type', cat_rec_sch_frm.media_type.value);">Define</span>
 							</label>
 							<cfset x=media_type>
@@ -1518,13 +1562,13 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="media_keywords" default="">
 						<div class="schitem noshow" id="si_media_keywords">
-							<label class="helpLink" id="_media_keywords" for="media_keywords">Media Keywords</label>
+							<label class="helpLink" data-helplink="media_keywords" for="media_keywords">Media Keywords</label>
 							<input type="text" name="media_keywords" id="media_keywords" value="#media_keywords#" placeholder="Media Keywords">
 						</div>
 						<cfparam name="type_status" default="">
 						<div class="schitem noshow" id="si_type_status">
 							<label for="type_status">
-								<span class="helpLink" id="_type_status">Type Status</span>
+								<span class="helpLink" data-helplink="type_status">Type Status</span>
 								<span class="likeLink" onclick="getCtDoc('ctcitation_type_status', cat_rec_sch_frm.type_status.value);">Define</span>
 							</label>
 							<cfset x=type_status>
@@ -1540,7 +1584,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="cataloged_item_type" default="">
 						<div class="schitem noshow" id="si_cataloged_item_type">
 							<label for="cataloged_item_type">
-								<span class="helpLink" id="_cataloged_item_type">Cataloged Item Type</span>
+								<span class="helpLink" data-helplink="cataloged_item_type">Cataloged Item Type</span>
 								<span class="likeLink" onclick="getCtDoc('ctcataloged_item_type', cat_rec_sch_frm.cataloged_item_type.value);">Define</span>
 							</label>
 							<cfset x=cataloged_item_type>
@@ -1554,7 +1598,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="loan_number" default="">
 						<div class="schitem noshow" id="si_loan_number">
 							<label for="loan_number">
-								<span class="helpLink" id="_loan_number">Loan Number</span>
+								<span class="helpLink" data-helplink="loan_number">Loan Number</span>
 								<span title="Prefix with = for exact match" class="likeLink" onclick="var e=document.getElementById('loan_number');e.value='='+e.value;">[=]</span>
 								<span title="* to match anything" class="likeLink" onclick="var e=document.getElementById('loan_number');e.value='*'">[*]</span>
 							</label>
@@ -1562,18 +1606,18 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="permit_issued_by" default="">
 						<div class="schitem noshow" id="si_permit_issued_by">
-							<label class="helpLink" id="_permit_issued_by" for="permit_issued_by">Permit Issued By</label>
+							<label class="helpLink" data-helplink="permit_issued_by" for="permit_issued_by">Permit Issued By</label>
 							<input type="text" name="permit_issued_by" id="permit_issued_by" value="#permit_issued_by#" placeholder="Permit Issued By">
 						</div>
 						<cfparam name="permit_issued_to" default="">
 						<div class="schitem noshow" id="si_permit_issued_to">
-							<label class="helpLink" id="_permit_issued_to" for="permit_issued_to">Permit Issued To</label>
+							<label class="helpLink" data-helplink="permit_issued_to" for="permit_issued_to">Permit Issued To</label>
 							<input type="text" name="permit_issued_to" id="permit_issued_to" value="#permit_issued_to#" placeholder="Permit Issued To">
 						</div>
 						<cfparam name="permit_type" default="">
 						<div class="schitem noshow" id="si_permit_type">
 							<label for="permit_type">
-								<span class="helpLink" id="_permit_type">Permit Type</span>
+								<span class="helpLink" data-helplink="permit_type">Permit Type</span>
 								<span class="likeLink" onclick="getCtDoc('ctPermitType', cat_rec_sch_frm.permit_type.value);">Define</span>
 							</label>
 							<cfset x=permit_type>
@@ -1586,190 +1630,166 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="permit_num" default="">
 						<div class="schitem noshow" id="si_permit_num">
-							<label class="helpLink" id="_permit_num" for="permit_num">Permit Number</label>
+							<label class="helpLink" data-helplink="permit_num" for="permit_num">Permit Number</label>
 							<input type="text" name="permit_num" id="permit_num" value="#permit_num#" placeholder="Permit Number">
 						</div>
 						<cfparam name="loan_trans_id" default="">
 						<div class="schitem noshow" id="si_loan_trans_id">
-							<label class="helpLink" id="_loan_trans_id" for="loan_trans_id">loan_trans_id</label>
+							<label class="helpLink" data-helplink="loan_trans_id" for="loan_trans_id">loan_trans_id</label>
 							<input type="text" name="loan_trans_id" id="loan_trans_id" value="#loan_trans_id#" placeholder="loan_trans_id">
 						</div>
 
 						<cfparam name="project_id" default="">
 						<div class="schitem noshow" id="si_project_id">
-							<label class="helpLink" id="_project_id" for="project_id">project_id</label>
+							<label class="helpLink" data-helplink="project_id" for="project_id">project_id</label>
 							<input type="text" name="project_id" id="project_id" value="#project_id#" placeholder="project_id">
 						</div>
 						<cfparam name="loan_project_id" default="">
 						<div class="schitem noshow" id="si_loan_project_id">
-							<label class="helpLink" id="_loan_project_id" for="loan_project_id">loan_project_id</label>
+							<label class="helpLink" data-helplink="loan_project_id" for="loan_project_id">loan_project_id</label>
 							<input type="text" name="loan_project_id" id="loan_project_id" value="#loan_project_id#" placeholder="loan_project_id">
 						</div>
 						<cfparam name="table_name" default="">
 						<div class="schitem noshow" id="si_table_name">
-							<label class="helpLink" id="_table_name" for="table_name">table_name</label>
+							<label class="helpLink" data-helplink="table_name" for="table_name">table_name</label>
 							<input type="text" name="table_name" id="table_name" value="#table_name#" placeholder="table_name">
 						</div>
 						<cfparam name="remove_row" default="">
 						<div class="schitem noshow" id="si_remove_row">
-							<label class="helpLink" id="_remove_row" for="remove_row">remove_row</label>
+							<label class="helpLink" data-helplink="remove_row" for="remove_row">remove_row</label>
 							<input type="text" name="remove_row" id="remove_row" value="#remove_row#" placeholder="remove_row">
 						</div>	
 						<cfparam name="data_loan_trans_id" default="">
 						<div class="schitem noshow" id="si_data_loan_trans_id">
-							<label class="helpLink" id="_data_loan_trans_id" for="data_loan_trans_id">data_loan_trans_id</label>
+							<label class="helpLink" data-helplink="data_loan_trans_id" for="data_loan_trans_id">data_loan_trans_id</label>
 							<input type="text" name="data_loan_trans_id" id="data_loan_trans_id" value="#data_loan_trans_id#" placeholder="data_loan_trans_id">
 						</div>
 
 						<cfparam name="cited_taxon_name_id" default="">
 						<div class="schitem noshow" id="si_cited_taxon_name_id">
-							<label class="helpLink" id="_cited_taxon_name_id" for="cited_taxon_name_id">cited_taxon_name_id</label>
+							<label class="helpLink" data-helplink="cited_taxon_name_id" for="cited_taxon_name_id">cited_taxon_name_id</label>
 							<input type="text" name="cited_taxon_name_id" id="cited_taxon_name_id" value="#cited_taxon_name_id#" placeholder="cited_taxon_name_id">
 						</div>
 						<cfparam name="locality_id" default="">
 						<div class="schitem noshow" id="si_locality_id">
-							<label class="helpLink" id="_locality_id" for="locality_id">locality_id</label>
+							<label class="helpLink" data-helplink="locality_id" for="locality_id">locality_id</label>
 							<input type="text" name="locality_id" id="locality_id" value="#locality_id#" placeholder="locality_id">
 						</div>
 
 						<cfparam name="collecting_event_id" default="">
 						<div class="schitem noshow" id="si_collecting_event_id">
-							<label class="helpLink" id="_collecting_event_id" for="collecting_event_id">collecting_event_id</label>
+							<label class="helpLink" data-helplink="collecting_event_id" for="collecting_event_id">collecting_event_id</label>
 							<input type="text" name="collecting_event_id" id="collecting_event_id" value="#collecting_event_id#" placeholder="collecting_event_id">
 						</div>
 
-						<cfparam name="collector_agent_id" default="">
-						<div class="schitem noshow" id="si_collector_agent_id">
-							<label class="helpLink" id="_collector_agent_id" for="collector_agent_id">collector_agent_id</label>
-							<input type="text" name="collector_agent_id" id="collector_agent_id" value="#collector_agent_id#" placeholder="collector_agent_id">
-						</div>
-
-
-
 						<cfparam name="taxon_name_id" default="">
 						<div class="schitem noshow" id="si_taxon_name_id">
-							<label class="helpLink" id="_taxon_name_id" for="taxon_name_id">taxon_name_id</label>
+							<label class="helpLink" data-helplink="taxon_name_id" for="taxon_name_id">taxon_name_id</label>
 							<input type="text" name="taxon_name_id" id="taxon_name_id" value="#taxon_name_id#" placeholder="taxon_name_id">
 						</div>
 
 						<cfparam name="collection_id" default="">
 						<div class="schitem noshow" id="si_collection_id">
-							<label class="helpLink" id="_collection_id" for="collection_id">collection_id</label>
+							<label class="helpLink" data-helplink="collection_id" for="collection_id">collection_id</label>
 							<input type="text" name="collection_id" id="collection_id" value="#collection_id#" placeholder="collection_id">
 						</div>
 
 						<cfparam name="encumbrance_id" default="">
 						<div class="schitem noshow" id="si_encumbrance_id">
-							<label class="helpLink" id="_encumbrance_id" for="encumbrance_id">encumbrance_id</label>
+							<label class="helpLink" data-helplink="encumbrance_id" for="encumbrance_id">encumbrance_id</label>
 							<input type="text" name="encumbrance_id" id="encumbrance_id" value="#encumbrance_id#" placeholder="encumbrance_id">
 						</div>
 
 						<cfparam name="transaction_id" default="">
 						<div class="schitem noshow" id="si_transaction_id">
-							<label class="helpLink" id="_transaction_id" for="transaction_id">transaction_id</label>
+							<label class="helpLink" data-helplink="transaction_id" for="transaction_id">transaction_id</label>
 							<input type="text" name="transaction_id" id="transaction_id" value="#transaction_id#" placeholder="transaction_id">
 						</div>
 						<cfparam name="geog_auth_rec_id" default="">
 						<div class="schitem noshow" id="si_geog_auth_rec_id">
-							<label class="helpLink" id="_geog_auth_rec_id" for="geog_auth_rec_id">geog_auth_rec_id</label>
+							<label class="helpLink" data-helplink="geog_auth_rec_id" for="geog_auth_rec_id">geog_auth_rec_id</label>
 							<input type="text" name="geog_auth_rec_id" id="geog_auth_rec_id" value="#geog_auth_rec_id#" placeholder="geog_auth_rec_id">
 						</div>
-
-
 						<cfparam name="coordinates" default="">
 						<div class="schitem noshow" id="si_coordinates">
-							<label class="helpLink" id="_coordinates" for="coordinates">coordinates</label>
+							<label class="helpLink" data-helplink="coordinates" for="coordinates">coordinates</label>
 							<input type="text" name="coordinates" id="coordinates" value="#coordinates#" placeholder="coordinates">
 						</div>
 						<cfparam name="coordslist" default="">
 						<div class="schitem noshow" id="si_coordslist">
-							<label class="helpLink" id="_coordslist" for="coordslist">coordslist</label>
+							<label class="helpLink" data-helplink="coordslist" for="coordslist">coordslist</label>
 							<input type="text" name="coordslist" id="coordslist" value="#coordslist#" placeholder="coordslist">
 						</div>
-
-
-
-
 						<cfparam name="identified_agent_id" default="">
 						<div class="schitem noshow" id="si_identified_agent_id">
-							<label class="helpLink" id="_identified_agent_id" for="identified_agent_id">identified_agent_id</label>
+							<label class="helpLink" data-helplink="identified_agent_id" for="identified_agent_id">identified_agent_id</label>
 							<input type="text" name="identified_agent_id" id="identified_agent_id" value="#identified_agent_id#" placeholder="identified_agent_id">
 						</div>
-
 						<cfparam name="id_pub_id" default="">
 						<div class="schitem noshow" id="si_id_pub_id">
-							<label class="helpLink" id="_id_pub_id" for="id_pub_id">id_pub_id</label>
+							<label class="helpLink" data-helplink="id_pub_id" for="id_pub_id">id_pub_id</label>
 							<input type="text" name="id_pub_id" id="id_pub_id" value="#id_pub_id#" placeholder="id_pub_id">
 						</div>
 
 						<cfparam name="entered_by_id" default="">
 						<div class="schitem noshow" id="si_entered_by_id">
-							<label class="helpLink" id="_entered_by_id" for="entered_by_id">entered_by_id</label>
+							<label class="helpLink" data-helplink="entered_by_id" for="entered_by_id">entered_by_id</label>
 							<input type="text" name="entered_by_id" id="entered_by_id" value="#entered_by_id#" placeholder="entered_by_id">
 						</div>
 						<cfparam name="attributed_determiner_agent_id" default="">
 						<div class="schitem noshow" id="si_attributed_determiner_agent_id">
-							<label class="helpLink" id="_attributed_determiner_agent_id" for="attributed_determiner_agent_id">attributed_determiner_agent_id</label>
+							<label class="helpLink" data-helplink="attributed_determiner_agent_id" for="attributed_determiner_agent_id">attributed_determiner_agent_id</label>
 							<input type="text" name="attributed_determiner_agent_id" id="attributed_determiner_agent_id" value="#attributed_determiner_agent_id#" placeholder="attributed_determiner_agent_id">
 						</div>
 						<cfparam name="encumbering_agent_id" default="">
 						<div class="schitem noshow" id="si_encumbering_agent_id">
-							<label class="helpLink" id="_encumbering_agent_id" for="encumbering_agent_id">encumbering_agent_id</label>
+							<label class="helpLink" data-helplink="encumbering_agent_id" for="encumbering_agent_id">encumbering_agent_id</label>
 							<input type="text" name="encumbering_agent_id" id="encumbering_agent_id" value="#encumbering_agent_id#" placeholder="encumbering_agent_id">
 						</div>
-
-
 						<cfparam name="cited_scientific_name" default="">
 						<div class="schitem noshow" id="si_cited_scientific_name">
-							<label class="helpLink" id="_cited_scientific_name" for="cited_scientific_name">cited_scientific_name</label>
+							<label class="helpLink" data-helplink="cited_scientific_name" for="cited_scientific_name">cited_scientific_name</label>
 							<input type="text" name="cited_scientific_name" id="cited_scientific_name" value="#cited_scientific_name#" placeholder="cited_scientific_name">
 						</div>
-
-
-
-
 						<cfparam name="publication_id" default="">
 						<div class="schitem noshow" id="si_publication_id">
-							<label class="helpLink" id="_publication_id" for="publication_id">publication_id</label>
+							<label class="helpLink" data-helplink="publication_id" for="publication_id">publication_id</label>
 							<input type="text" name="publication_id" id="publication_id" value="#publication_id#" placeholder="publication_id">
 						</div>
-
-
 						<cfparam name="accn_trans_id" default="">
 						<div class="schitem noshow" id="si_accn_trans_id">
-							<label class="helpLink" id="_accn_trans_id" for="accn_trans_id">accn_trans_id</label>
+							<label class="helpLink" data-helplink="accn_trans_id" for="accn_trans_id">accn_trans_id</label>
 							<input type="text" name="accn_trans_id" id="accn_trans_id" value="#accn_trans_id#" placeholder="accn_trans_id">
 						</div>
-
 						<cfparam name="project_name" default="">
 						<div class="schitem noshow" id="si_project_name">
-							<label class="helpLink" id="_project_name" for="project_name">Contributed by Project</label>
+							<label class="helpLink" data-helplink="project_name" for="project_name">Contributed by Project</label>
 							<input type="text" name="project_name" id="project_name" value="#project_name#" placeholder="Contributed by Project">
 						</div>
 
 						<cfparam name="loan_project_name" default="">
 						<div class="schitem noshow" id="si_loan_project_name">
-							<label class="helpLink" id="_loan_project_name" for="loan_project_name">Used by Project</label>
+							<label class="helpLink" data-helplink="loan_project_name" for="loan_project_name">Used by Project</label>
 							<input type="text" name="loan_project_name" id="loan_project_name" value="#loan_project_name#" placeholder="Used by Project">
 						</div>
 						<cfparam name="project_sponsor" default="">
 						<div class="schitem noshow" id="si_project_sponsor">
-							<label class="helpLink" id="_project_sponsor" for="project_sponsor">Project Sponsor</label>
+							<label class="helpLink" data-helplink="project_sponsor" for="project_sponsor">Project Sponsor</label>
 							<input type="text" name="project_sponsor" id="project_sponsor" value="#project_sponsor#" placeholder="Project Sponsor">
 						</div>
 						<cfparam name="publication_title" default="">
 						<div class="schitem noshow" id="si_publication_title">
-							<label class="helpLink" id="_publication_title" for="publication_title">Cited in Publication (title)</label>
+							<label class="helpLink" data-helplink="publication_title" for="publication_title">Cited in Publication (title)</label>
 							<input type="text" name="publication_title" id="publication_title" value="#publication_title#" placeholder="Cited in Publication (title)">
 						</div>
 						<cfparam name="publication_doi" default="">
 						<div class="schitem noshow" id="si_publication_doi">
-							<label class="helpLink" id="_publication_doi" for="publication_doi">Cited in Publication (DOI)</label>
+							<label class="helpLink" data-helplink="publication_doi" for="publication_doi">Cited in Publication (DOI)</label>
 							<input type="text" name="publication_doi" id="publication_doi" value="#publication_doi#" placeholder="Cited in Publication (DOI)">
 						</div>
 						<cfparam name="is_peer_reviewed" default="">
 						<div class="schitem noshow" id="si_is_peer_reviewed">
-							<label class="helpLink" id="_is_peer_reviewed" for="is_peer_reviewed">Peer Reviewed Cited?</label>
+							<label class="helpLink" data-helplink="is_peer_reviewed" for="is_peer_reviewed">Peer Reviewed Cited?</label>
 							<select name="is_peer_reviewed" id="is_peer_reviewed" size="1">
 								<option value=""></option>
 								<option <cfif is_peer_reviewed is '1'> selected="selected" </cfif> value="1">true</option>
@@ -1778,28 +1798,28 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="archive_name" default="">
 						<div class="schitem noshow" id="si_archive_name">
-							<label class="helpLink" id="_archive_name" for="archive_name">in Archive</label>
+							<label class="helpLink" data-helplink="archive_name" for="archive_name">in Archive</label>
 							<input type="text" name="archive_name" id="archive_name" value="#archive_name#" placeholder="in Archive">
 						</div>
 
 						<cfparam name="accn_number" default="">
 						<div class="schitem noshow" id="si_accn_number">
 							<label for="accn_number">
-								<span class="helpLink" id="_accn_number">Accession</span>
+								<span class="helpLink" data-helplink="accn_number">Accession</span>
 								<span class="likeLink" title="Add = for exact match" onclick="var e=document.getElementById('accn_number');e.value='='+e.value;">[=]</span>
 							</label>
 							<input type="text" name="accn_number" id="accn_number" value="#accn_number#" placeholder="accn_number">
 						</div>
 						<cfparam name="accession_agency" default="">
 						<div class="schitem noshow" id="si_accession_agency">
-							<label class="helpLink" id="_accession_agency" for="accession_agency">Accession Agency</label>
+							<label class="helpLink" data-helplink="accession_agency" for="accession_agency">Accession Agency</label>
 							<input type="text" name="accession_agency" id="accession_agency" value="#accession_agency#" placeholder="accession_agency">
 						</div>
 						<!--- cannot be turned on, but necessary for linking --->
 
 						<cfparam name="collection_object_id" default="">
 						<div class="schitem noshow" id="si_collection_object_id">
-							<label class="helpLink" id="_collection_object_id" for="collection_object_id">collection_object_id</label>
+							<label class="helpLink" data-helplink="collection_object_id" for="collection_object_id">collection_object_id</label>
 							<input type="text" name="collection_object_id" id="collection_object_id" value="#collection_object_id#" placeholder="collection_object_id">
 						</div>
 					</div>
@@ -1816,13 +1836,13 @@ https://github.com/ArctosDB/arctos/issues/7291
 					<div class="pglayout">
 						<cfparam name="part_search" default="">
 						<div class="schitem noshow" id="si_part_search">
-							<label class="helpLink" id="_part_search" for="part_search">Part Search</label>
+							<label class="helpLink" data-helplink="part_search" for="part_search">Part Search</label>
 							<input type="text" name="part_search" id="part_search" value="#part_search#" placeholder="parts, attributes, remarks">
 						</div>
 						<cfparam name="part_name" default="">
 						<div class="schitem noshow" id="si_partname">
 							<label for="part_name">
-								<span class="helpLink" id="_part_name">Part Name</span>
+								<span class="helpLink" data-helplink="part_name">Part Name</span>
 								<span class="helpLink" onclick="getCtDoc('ctspecimen_part_name',cat_rec_sch_frm.part_name.value);">Define</span>
 								<span class="helpLink" onclick="var e=document.getElementById('part_name');e.value='='+e.value;" title="Add = for exact match">[ = ]</span>
 							</label>
@@ -1830,7 +1850,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="is_tissue" default="">
 						<div class="schitem noshow" id="si_is_tissue">
-							<label class="helpLink" id="_is_tissue" for="is_tissue">Is Tissue?</label>
+							<label class="helpLink" data-helplink="is_tissue" for="is_tissue">Is Tissue?</label>
 							<select name="is_tissue" id="is_tissue" size="1">
 								<option value=""></option>
 								<option <cfif is_tissue is 1> selected="selected" </cfif>  value="1">yes</option>
@@ -1839,7 +1859,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="part_remark" default="">
 						<div class="schitem noshow" id="si_part_remark">
 							<label for="part_remark">
-								<span class="helpLink" id="_part_remark">Part Remark</span>
+								<span class="helpLink" data-helplink="part_remark">Part Remark</span>
 								<span class="likeLink" onclick="var e=document.getElementById('part_remark');e.value='='+e.value;" title="Add = for exact match">[ = ]</span>
 							</label>
 							<input type="text" name="part_remark" id="part_remark" value="#part_remark#" placeholder="part_remark">
@@ -1847,7 +1867,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="barcode" default="">
 						<div class="schitem noshow" id="si_barcode">
 							<label for="barcode">
-								<span class="helpLink" id="_barcode">Barcode</span>
+								<span class="helpLink" data-helplink="barcode">Barcode</span>
 								<span class="likeLink" onclick="document.getElementById('barcode').value='NULL'">NULL</span>
 								<span class="likeLink" onclick="document.getElementById('barcode').value='NOTNULL'">NOTNULL</span>
 							</label>
@@ -1855,27 +1875,27 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="anyContainerId" default="">
 						<div class="schitem noshow" id="si_anyContainerId">
-							<label class="helpLink" id="_anyContainerId" for="anyContainerId">anyContainerId</label>
+							<label class="helpLink" data-helplink="anyContainerId" for="anyContainerId">anyContainerId</label>
 							<input type="text" name="anyContainerId" id="anyContainerId" value="#anyContainerId#" placeholder="anyContainerId">
 						</div>
 						<cfparam name="beg_part_ctr_last_date" default="">
 						<cfparam name="end_part_ctr_last_date" default="">
 						<div class="schitem noshow" id="si_part_ctr_last_date">
 							<div class="dontwrap">
-								<label class="helpLink" id="_pbcscan_date" for="beg_part_ctr_last_date">Container Last Date</label>
+								<label class="helpLink" data-helplink="pbcscan_date" for="beg_part_ctr_last_date">Container Last Date</label>
 								<input type="datetime" name="beg_part_ctr_last_date" id="beg_part_ctr_last_date" size="12" value="#beg_part_ctr_last_date#" placeholder="earliest">
 								<input type="datetime" name="end_part_ctr_last_date" id="end_part_ctr_last_date" size="12" value="#end_part_ctr_last_date#" placeholder="latest">
 							</div>
 						</div>
 						<cfparam name="anybarcode" default="">
 						<div class="schitem noshow" id="si_anybarcode">
-							<label class="helpLink" id="_anybarcode" for="anybarcode">Any Barcode</label>
+							<label class="helpLink" data-helplink="anybarcode" for="anybarcode">Any Barcode</label>
 							<input type="text" name="anybarcode" id="anybarcode" value="#anybarcode#" placeholder="Any Barcode">
 						</div>
 						<cfparam name="part_container_type" default="">
 						<div class="schitem noshow" id="si_part_container_type">
 							<label for="part_container_type">
-								<span class="helpLink" id="_part_container_type">Part-container type</span>
+								<span class="helpLink" data-helplink="part_container_type">Part-container type</span>
 								<span class="likeLink" onclick="getCtDoc('ctcontainer_type', cat_rec_sch_frm.part_container_type.value);">Define</span>
 							</label>
 							<cfset x=part_container_type>
@@ -1889,7 +1909,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="disposition" default="">
 						<div class="schitem noshow" id="si_part_disposition">
 							<label for="disposition">
-								<span class="helpLink" id="_part_disposition">Part Disposition</span>
+								<span class="helpLink" data-helplink="part_disposition">Part Disposition</span>
 								<span class="likeLink" onclick="getCtDoc('ctCollObjDisp', cat_rec_sch_frm.disposition.value);">Define</span>
 							</label>
 							<cfset x=disposition>
@@ -1902,7 +1922,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="condition" default="">
 						<div class="schitem noshow" id="si_condition">
-							<label class="helpLink" id="_condition" for="condition">Condition</label>
+							<label class="helpLink" data-helplink="condition" for="condition">Condition</label>
 							<input type="text" name="condition" id="condition" value="#condition#" placeholder="Condition">
 						</div>
 					</div>
@@ -1919,16 +1939,16 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<thead>
 							<tr>
 								<th scope="col">
-									<span class="helpLink" id="_part_attribute">Part Attribute Type</span>
+									<span class="helpLink" data-helplink="part_attribute">Part Attribute Type</span>
 									<span class="likeLink" onclick="getCtDoc('ctspecpart_attribute_type',cat_rec_sch_frm.part_attribute.value);">Define</span>
 								</th>
-								<th scope="col"><span class="helpLink" id="_part_attribute_value">Attribute Value</span></th>
-								<th scope="col"><span class="helpLink" id="_part_attribute_units">Attribute Units</span></th>
-								<th scope="col"><span class="helpLink" id="_part_attribute_determiner">Attribute Determiner</span></th>
-								<th scope="col"><span class="helpLink" id="_part_attribute_method">Attribute Method</span></th>
-								<th scope="col"><span class="helpLink" id="_part_attribute_remark">Attribute Remark</span></th>
-								<th scope="col"><span class="helpLink" id="_part_attribute_date">Attribute Date (earliest)</span></th>
-								<th scope="col"><span class="helpLink" id="_part_attribute_date">Attribute Date (latest)</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="part_attribute_value">Attribute Value</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="part_attribute_units">Attribute Units</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="part_attribute_determiner">Attribute Determiner</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="part_attribute_method">Attribute Method</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="part_attribute_remark">Attribute Remark</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="part_attribute_date">Attribute Date (earliest)</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="part_attribute_date">Attribute Date (latest)</span></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -1979,7 +1999,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="specimen_event_type" default="">
 						<div class="schitem noshow" id="si_specimen_event_type">
 							<label for="specimen_event_type">
-								<span class="helpLink" id="_specimen_event_type">Record/Event Type</span>
+								<span class="helpLink" data-helplink="specimen_event_type">Record/Event Type</span>
 								<span class="likeLink" onclick="getCtDoc('ctspecimen_event_type', cat_rec_sch_frm.specimen_event_type.value);">Define</span>
 							</label>
 							<cfset x=specimen_event_type>
@@ -1992,13 +2012,13 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="specimen_event_remark" default="">
 						<div class="schitem noshow" id="si_specimen_event_remark">
-							<label class="helpLink" id="_coll_event_remarks" for="coll_event_remarks">Record/Event Remark</label>
+							<label class="helpLink" data-helplink="coll_event_remarks" for="coll_event_remarks">Record/Event Remark</label>
 							<input type="text" name="specimen_event_remark" id="specimen_event_remark" value="#specimen_event_remark#" placeholder="Record/Event Remark">
 						</div>
 						<cfparam name="collecting_source" default="">
 						<div class="schitem noshow" id="si_collecting_source">
 							<label for="collecting_source">
-								<span class="helpLink" id="_collecting_source">Collecting Source</span>
+								<span class="helpLink" data-helplink="collecting_source">Collecting Source</span>
 								<span class="likeLink" onclick="getCtDoc('ctcollecting_source', cat_rec_sch_frm.collecting_source.value);">Define</span>
 							</label>
 							<cfset x=collecting_source>
@@ -2012,19 +2032,20 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="collecting_method" default="">
 						<div class="schitem noshow" id="si_collecting_method">
-							<label class="helpLink" id="_coll_event_remarks" for="coll_event_remarks">Collecting Method</label>
+							<label class="helpLink" data-helplink="coll_event_remarks" for="coll_event_remarks">Collecting Method</label>
 							<input type="text" name="collecting_method" id="collecting_method" value="#collecting_method#" placeholder="Collecting Method">
 						</div>
 						<cfparam name="verificationstatus" default="">
 						<div class="schitem noshow" id="si_verificationstatus">
 							<label for="verificationstatus">
-								<span class="helpLink" id="_verificationstatus">Verification Status</span>
+								<span class="helpLink" data-helplink="verificationstatus">Verification Status</span>
 								<span class="likeLink" onclick="getCtDoc('ctverificationstatus', cat_rec_sch_frm.verificationstatus.value);">Define</span>
 							</label>
 							<cfset x=verificationstatus>
 							<select name="verificationstatus" id="verificationstatus" size="1">
 								<option value="">[ Verification Status ]</option>
-								<option value="!unaccepted">NOT unaccepted</option>
+								<option <cfif x is "NULL"> selected="selected" </cfif> value="NULL">NULL</option>
+								<option <cfif x is "NOTNULL"> selected="selected" </cfif> value="NOTNULL">NOT NULL</option>
 								<cfloop query="ctverificationstatus">
 									<option <cfif ctverificationstatus.verificationstatus is x> selected="selected" </cfif> value="#ctverificationstatus.verificationstatus#">#ctverificationstatus.verificationstatus#</option>
 								</cfloop>
@@ -2032,64 +2053,75 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="began_date" default="">
 						<div class="schitem noshow" id="si_began_date">
-							<label class="helpLink" id="_began_date" for="began_date">Began Date</label>
+							<label class="helpLink" data-helplink="began_date" for="began_date">Began Date</label>
 							<input type="text" name="began_date" id="began_date" value="#began_date#" placeholder="Began Date" class="short_input">
 						</div>
 						<cfparam name="ended_date" default="">
 						<div class="schitem noshow" id="si_ended_date">
-							<label class="helpLink" id="_ended_date" for="ended_date">Ended Date</label>
+							<label class="helpLink" data-helplink="ended_date" for="ended_date">Ended Date</label>
 							<input type="text" name="ended_date" id="ended_date" value="#ended_date#" placeholder="Ended Date" class="short_input">
 						</div>
 						<cfparam name="verbatim_date" default="">
 						<div class="schitem noshow" id="si_verbatim_date">
-							<label class="helpLink" id="_verbatim_date" for="verbatim_date">Verbatim Date</label>
+							<label class="helpLink" data-helplink="verbatim_date" for="verbatim_date">Verbatim Date</label>
 							<input type="text" name="verbatim_date" id="verbatim_date" value="#verbatim_date#" placeholder="verbatim date">
 						</div>
 						<cfparam name="collecting_event_name" default="">
 						<div class="schitem noshow" id="si_collecting_event_name">
-							<label class="helpLink" id="_collecting_event_name" for="collecting_event_name">Collecting Event Name</label>
+							<label class="helpLink" data-helplink="collecting_event_name" for="collecting_event_name">Collecting Event Name</label>
 							<input type="text" name="collecting_event_name" id="collecting_event_name" value="#collecting_event_name#" placeholder="Collecting Event Name">
 						</div>
 						<cfparam name="coll_event_remarks" default="">
 						<div class="schitem noshow" id="si_coll_event_remarks">
-							<label class="helpLink" id="_coll_event_remarks" for="coll_event_remarks">Collecting Event Remarks</label>
+							<label class="helpLink" data-helplink="coll_event_remarks" for="coll_event_remarks">Collecting Event Remarks</label>
 							<input type="text" name="coll_event_remarks" id="coll_event_remarks" value="#coll_event_remarks#" placeholder="Collecting Event Remarks">
 						</div>
 						<cfparam name="chronological_extent" default="">
 						<div class="schitem noshow" id="si_chronological_extent">
-							<label class="helpLink" id="_chronological_extent" for="chronological_extent">Chronological Extent</label>
+							<label class="helpLink" data-helplink="chronological_extent" for="chronological_extent">Chronological Extent</label>
 							<input type="text" name="chronological_extent" id="chronological_extent" value="#chronological_extent#" placeholder="Chronological Extent">
 						</div>
 						<cfparam name="verbatim_locality" default="">
 						<div class="schitem noshow" id="si_verbatim_locality">
-							<label class="helpLink" id="_verbatim_locality" for="verbatim_locality">Verbatim Locality</label>
+							<label class="helpLink" data-helplink="verbatim_locality" for="verbatim_locality">Verbatim Locality</label>
 							<input type="text" name="verbatim_locality" id="verbatim_locality" value="#verbatim_locality#" placeholder="Verbatim Locality">
 						</div>
 						<cfparam name="habitat" default="">
 						<div class="schitem noshow" id="si_habitat">
-							<label class="helpLink" id="_habitat" for="habitat">Habitat</label>
+							<label class="helpLink" data-helplink="habitat" for="habitat">Habitat</label>
 							<input type="text" name="habitat" id="habitat" value="#habitat#" placeholder="Habitat">
 						</div>
 						<cfparam name="month" default="">
 						<div class="schitem noshow" id="si_month">
-							<label class="helpLink" id="_month" for="month">month</label>
+							<label class="helpLink" data-helplink="month" for="month">month</label>
 							<input type="text" name="month" id="month" value="#month#" placeholder="month">
 						</div>
 						<cfparam name="day" default="">
 						<div class="schitem noshow" id="si_day">
-							<label class="helpLink" id="_day" for="day">day</label>
+							<label class="helpLink" data-helplink="day" for="day">day</label>
 							<input type="text" name="day" id="day" value="#day#" placeholder="day">
+						</div>
+
+						<cfparam name="event_assigned_by_agent" default="">
+						<div class="schitem noshow" id="si_event_assigned_by_agent">
+							<label class="helpLink" data-helplink="event_assigned_by_agent" for="event_assigned_by_agent">event_assigned_by_agent</label>
+							<input type="text" name="event_assigned_by_agent" id="event_assigned_by_agent" value="#event_assigned_by_agent#" placeholder="event_assigned_by_agent">
+						</div>
+						<cfparam name="event_verified_by_agent" default="">
+						<div class="schitem noshow" id="si_event_verified_by_agent">
+							<label class="helpLink" data-helplink="event_verified_by_agent" for="event_verified_by_agent">event_verified_by_agent</label>
+							<input type="text" name="event_verified_by_agent" id="event_verified_by_agent" value="#event_verified_by_agent#" placeholder="event_verified_by_agent">
 						</div>
 					</div>
 					<table id="si_evtattributesearchtable" class="wideCollapseTable noshow">
 						<thead>
 							<tr>
-								<th scope="col"><span class="helpLink" id="_event_attribute_type">Event Attribute Type</span></th>
-								<th scope="col"><span class="helpLink" id="_event_attribute_value">Event Attribute Value</span></th>
-								<th scope="col"><span class="helpLink" id="_event_attribute_unit">Event Attribute Units</span></th>
-								<th scope="col"><span class="helpLink" id="_event_attribute_determiner">Event Attribute Determiner</span></th>
-								<th scope="col"><span class="helpLink" id="_event_attribute_method">Event Attribute Method</span></th>
-								<th scope="col"><span class="helpLink" id="_event_attribute_remark">Event Attribute Remark</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="event_attribute_type">Event Attribute Type</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="event_attribute_value">Event Attribute Value</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="event_attribute_unit">Event Attribute Units</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="event_attribute_determiner">Event Attribute Determiner</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="event_attribute_method">Event Attribute Method</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="event_attribute_remark">Event Attribute Remark</span></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -2147,13 +2179,13 @@ https://github.com/ArctosDB/arctos/issues/7291
 					<div class="pglayout">
 						<cfparam name="any_geog" default="">
 						<div class="schitem noshow" id="si_any_geog">
-							<label class="helpLink" id="_anyid" for="anyid">Any&nbsp;Geographic&nbsp;Element</label>
+							<label class="helpLink" data-helplink="anyid" for="anyid">Any&nbsp;Geographic&nbsp;Element</label>
 							<input type="text" name="any_geog" id="any_geog" value="#any_geog#" title="Consider using Country, State, County, etc. for better performance." placeholder="geography, locality, derived">
 						</div>
 
 						<cfparam name="geog_shape" default="">
 						<div class="schitem noshow dontwrap" id="si_geog_shape">
-							<label class="helpLink" id="_geog_shape" for="geog_shape">Geography Shape Name (exact, case-sensitive)</label>
+							<label class="helpLink" data-helplink="geog_shape" for="geog_shape">Geography Shape Name (exact, case-sensitive)</label>
 							<input name="geog_shape" id="geog_shape" 
 								placeholder="type to select a geography with an associated shape" value="#geog_shape#">
 						</div>
@@ -2161,7 +2193,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="place_term_type" default="">
 						<cfparam name="place_term" default="">
 						<div class="schitem noshow dontwrap" id="si_place_term">
-							<label class="helpLink" id="_placeterm" for="place_term_type">
+							<label class="helpLink" data-helplink="placeterm" for="place_term_type">
 								Place Terms
 							</label>
 							<cfset x=place_term_type>
@@ -2176,25 +2208,25 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="attribute_meta_age_min" default="">
 						<cfparam name="attribute_meta_age_max" default="">
 						<div class="schitem noshow dontwrap" id="si_attribute_meta_age">
-							<label class="helpLink" id="_attribute_meta_age" for="attribute_meta_age_min" title="Age and Attribute Search Term include indirect assertions; Quaternary finds Pliestocene by association rather than assertion.">Age (Mya)</label>
+							<label class="helpLink" data-helplink="attribute_meta_age" for="attribute_meta_age_min" title="Age and Attribute Search Term include indirect assertions; Quaternary finds Pliestocene by association rather than assertion.">Age (Mya)</label>
 							<input type="text" name="attribute_meta_age_min" id="attribute_meta_age_min" size="12" value="#attribute_meta_age_min#" placeholder="Age (Mya) min">
 							<input type="text" name="attribute_meta_age_max" id="attribute_meta_age_max" size="12" value="#attribute_meta_age_max#" placeholder="Age (Mya) max">
 						</div>
 						<cfparam name="attribute_meta_term" default="">
 						<div class="schitem noshow" id="si_attribute_meta_term">
-							<label class="helpLink" id="_ttribute_meta_term" for="ttribute_meta_term">Chronostratigraphy</label>
+							<label class="helpLink" data-helplink="attribute_meta_term" for="attribute_meta_term">Chronostratigraphy</label>
 							<input type="text" name="attribute_meta_term" id="attribute_meta_term" value="#attribute_meta_term#" placeholder="Chronostratigraphy">
 						</div>
 						<cfparam name="spec_locality" default="">
 						<div class="schitem noshow" id="si_spec_locality">
-							<label class="helpLink" id="_spec_locality" for="spec_locality">Specific Locality</label>
+							<label class="helpLink" data-helplink="spec_locality" for="spec_locality">Specific Locality</label>
 							<input type="text" name="spec_locality" id="spec_locality" value="#spec_locality#" placeholder="Specific Locality">
 						</div>
 
 						<cfparam name="locality_name" default="">
 						<div class="schitem noshow" id="si_locality_name">
 							<label for="locality_name">
-								<span class="helpLink"  id="_locality_name" title="value (substring match) =value (exact match), NULL, or value1|value2">
+								<span class="helpLink"  data-helplink="locality_name" title="value (substring match) =value (exact match), NULL, or value1|value2">
 									Locality Name
 								</span>
 								<span class="likeLink" onclick="var e=document.getElementById('locality_name');e.value='='+e.value;">[ exact ]</span>
@@ -2204,12 +2236,12 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="feature" default="">
 						<div class="schitem noshow" id="si_feature">
-							<label class="helpLink" id="_feature" for="feature">Feature</label>
+							<label class="helpLink" data-helplink="feature" for="feature">Feature</label>
 							<input type="text" name="feature" id="feature" value="#feature#" placeholder="Feature">
 						</div>
 						<cfparam name="quad" default="">
 						<div class="schitem noshow" id="si_quad">
-							<label class="helpLink" id="_quad" for="quad">Quad</label>
+							<label class="helpLink" data-helplink="quad" for="quad">Quad</label>
 							<input type="text" name="quad" id="quad" value="#quad#" placeholder="Quad">
 						</div>
 						<cfparam name="minimum_elevation" default="">
@@ -2248,25 +2280,25 @@ https://github.com/ArctosDB/arctos/issues/7291
 						<cfparam name="min_max_error" default="">
 						<cfparam name="max_max_error" default="">
 						<div class="schitem noshow dontwrap" id="si_coordinateprecision">
-							<label class="helpLink" id="_max_error" for="coordinateprecision">Coordinate Precision</label>
+							<label class="helpLink" data-helplink="max_error" for="coordinateprecision">Coordinate Precision</label>
 							<input type="text" name="min_max_error" id="min_max_error" size="5" placeholder="more than">
 							<input type="text" name="max_max_error" id="max_max_error" size="5" placeholder="less than">
 						</div>
 						<cfparam name="locality_remarks" default="">
 						<div class="schitem noshow" id="si_locality_remarks">
-							<label class="helpLink" id="_locality_remarks" for="locality_remarks">Locality Remark</label>
+							<label class="helpLink" data-helplink="locality_remarks" for="locality_remarks">Locality Remark</label>
 							<input type="text" name="locality_remarks" id="locality_remarks" value="#locality_remarks#" placeholder="Locality Remark">
 						</div>
 					</div>
 					<table id="si_locattributesearchtable" class="wideCollapseTable noshow">
 						<thead>
 							<tr>
-								<th scope="col"><span class="helpLink" id="_locality_attribute">Locality Attribute Type</span></th>
-								<th scope="col"><span class="helpLink" id="_locality_attribute_value">Locality Attribute Value</span></th>
-								<th scope="col"><span class="helpLink" id="_locality_attribute_unit">Locality Attribute Units</span></th>
-								<th scope="col"><span class="helpLink" id="_locality_attribute_determiner">Locality Attribute Determiner</span></th>
-								<th scope="col"><span class="helpLink" id="_locality_attribute_method">Locality Attribute Method</span></th>
-								<th scope="col"><span class="helpLink" id="_locality_attribute_remark">Locality Attribute Remark</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="locality_attribute">Locality Attribute Type</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="locality_attribute_value">Locality Attribute Value</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="locality_attribute_unit">Locality Attribute Units</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="locality_attribute_determiner">Locality Attribute Determiner</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="locality_attribute_method">Locality Attribute Method</span></th>
+								<th scope="col"><span class="helpLink" data-helplink="locality_attribute_remark">Locality Attribute Remark</span></th>
 							</tr>
 						</thead>
 						<tbody>
@@ -2315,7 +2347,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 					<div class="pglayout">
 						<cfparam name="continent_ocean" default="">
 						<div class="schitem noshow" id="si_continent_ocean">
-							<label class="helpLink" id="_continent_ocean" for="continent_ocean">Asserted Continent/Ocean</label>
+							<label class="helpLink" data-helplink="continent_ocean" for="continent_ocean">Asserted Continent/Ocean</label>
 							<cfset x=continent_ocean>
 							<select name="continent_ocean" id="continent_ocean" size="1" >
 								<option value=""></option>
@@ -2327,7 +2359,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="sea" default="">
 						<div class="schitem noshow" id="si_sea">
-							<label class="helpLink" id="_sea" for="sea">Asserted Sea</label>
+							<label class="helpLink" data-helplink="sea" for="sea">Asserted Sea</label>
 							<cfset x=sea>
 							<select name="sea" id="sea" size="1">
 								<option value=""></option>
@@ -2339,7 +2371,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="country" default="">
 						<div class="schitem noshow" id="si_country">
-							<label class="helpLink" id="_country" for="country">Asserted Country</label>
+							<label class="helpLink" data-helplink="country" for="country">Asserted Country</label>
 							<cfset x=country>
 							<select name="country" id="country" size="1">
 								<option value=""></option>
@@ -2351,25 +2383,16 @@ https://github.com/ArctosDB/arctos/issues/7291
 						</div>
 						<cfparam name="state_prov" default="">
 						<div class="schitem noshow" id="si_state_prov">
-							<label class="helpLink" id="_state_prov" for="state_prov">Asserted State/Province</label>
+							<label class="helpLink" data-helplink="state_prov" for="state_prov">Asserted State/Province</label>
 							<input type="text" name="state_prov" id="state_prov" value="#state_prov#" placeholder="Asserted State/Province">
 						</div>
 						<cfparam name="county" default="">
 						<div class="schitem noshow" id="si_county">
-							<label class="helpLink" id="_county" for="county">Asserted County</label>
+							<label class="helpLink" data-helplink="county" for="county">Asserted County</label>
 							<input type="text" name="county" id="county" value="#county#" placeholder="Asserted County">
 						</div>
 					</div>
-				</div>
 
-			</div><!---- /locality ---->
-			<div id="spatial" class="srch_section">
-				<div class="section_label">
-					<div class="section_label_title">
-						Map
-					</div>
-				</div>
-				<div class="section_content">	
 					<div class="noshow" id="si_map">
 						<a class="external" href="https://handbook.arctosdb.org/how_to/How-to-Search-for-Specimens.html##spatial">Spatial Tools Documentation and How-to</a>
 						<label for="map_canvas">Click the polygon on the top of the map to draw a shape. Doubleclick to close the polygon.</label>
@@ -2380,7 +2403,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 					<div class="pglayout">
 						<cfparam name="geog_srch_type" default="">
 						<div class="schitem noshow dontwrap" id="si_geog_srch_type">
-							<label class="helpLink" id="_geog_srch_type" for="geog_srch_type">Spatial Match Type ("not" options will time out if not coupled with other limiting parameters)</label>
+							<label class="helpLink" data-helplink="geog_srch_type" for="geog_srch_type">Spatial Match Type ("not" options will time out if not coupled with other limiting parameters)</label>
 							<select name="geog_srch_type" id="geog_srch_type">
 								<option value="">Find records contained by the polygon</option>
 								<option  <cfif geog_srch_type is 'intersects'> selected="selected" </cfif> value="intersects">Find records that intersect the polygon</option>
@@ -2398,7 +2421,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 						---->
 					</div>
 				</div>
-			</div><!---- sptial ---->
+			</div><!---- /locality ---->
 		</div><!---- cat_rec_srch_frm_wrap ---->
 		<div class="cat_rec_sch_frm_ctl_ctr">
 			<div class="cat_rec_sch_frm_ctl_itm">
@@ -2445,7 +2468,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 	</cfif>
 	<input form="cat_rec_sch_frm" type="hidden" id="cols" name="cols" value="#catrec_rslt_cols#">
 	<cfset results_flds="">
-	<cfset jsoncols='partdetail,json_locality,attributedetail,identifiers,id_history'>
+	<cfset jsoncols='partdetail,json_locality,attributedetail,identifiers,id_history,related_record_summary,rights,citation_data,media_tags,collector_agents'>
 	<cfset hasjson=false>
 	<cfloop list="#catrec_rslt_cols#" index="ix">
 		<cfquery name="getThisOne" dbtype="query">
@@ -2461,21 +2484,31 @@ https://github.com/ArctosDB/arctos/issues/7291
 	<!--- try not to let people overload things and melt browsers and etc. ---->
 	<cfif len(session.username) lt 1 and listFindNoCase(catrec_rslt_cols, 'media')>
 		<!---- public user with media on ---->
-		<cfset pagination="10, 25">
+		<cfset pagination="10,25">
 	<cfelseif len(session.username) lt 1 and not listFindNoCase(catrec_rslt_cols, 'media')>
 		<!---- public user without media ---->
-		<cfset pagination="10, 25, 50, 100">
+		<cfset pagination="10,25,50,100">
 	<cfelseif len(session.username) gt 0 and listFindNoCase(catrec_rslt_cols, 'media')>
 		<!---- us with media ---->
-		<cfset pagination="10, 25, 50, 100">
+		<cfset pagination="10,25,50,100">
 	<cfelseif len(session.username) gt 0 and not listFindNoCase(catrec_rslt_cols, 'media')>
 		<!---- us without media ---->
-		<cfset pagination="10, 25, 50, 100, 1000, 5000">
+		<cfset pagination="10,25,50,100,1000">
 	<cfelse>
-		<cfset pagination="10, 25, 50, 100">
+		<cfset pagination="10,25,50,100">
 	</cfif>
 	<input form="cat_rec_sch_frm" type="hidden" id="catrec_srch_cols" value="#catrec_srch_cols#">
-	<input form="cat_rec_sch_frm" type="hidden" id="displayrows" value="#session.displayrows#">
+	<!----- 
+		https://github.com/ArctosDB/arctos/issues/7637
+		things get very confused and do apparently-random stuf when there's a discrepancy
+		This probably always happens when the user has previously selected a larger value
+			than this can support, so give them the largest possible if they can't use their previous
+	---->
+	<cfset dr=session.displayrows>
+	<cfif not listfind(pagination,dr)>
+		<cfset dr=listlast(pagination)>
+	</cfif>
+	<input form="cat_rec_sch_frm" type="hidden" id="displayrows" value="#dr#">
 	<cfif listfindnocase(catrec_rslt_cols,'remove_row')>
 		<cfset paramRemoveRow=true>
 	<cfelse>
@@ -2541,7 +2574,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 					}
 				 },
 				"ajax": {
-					"url": "/component/api/v2/catalog.cfc?method=getCatalogData&api_key=#ak.api_key#&queryformat=struct",
+					"url": "/component/api/v2/catalog.cfc?method=getCatalogData&api_key=#api_key#&queryformat=struct",
 					"type": "post",
 					"dataSrc": "DATA",
 					"data": function(d) {
@@ -2585,12 +2618,12 @@ https://github.com/ArctosDB/arctos/issues/7291
 			        }
 			        if (response && response.hasOwnProperty('row_limit')){
 			        	if (response.hasOwnProperty('recordsTotal') && response.row_limit==response.recordsTotal){
-			        		$("##dv_record_limit").html('record limit: ' + response.row_limit.toLocaleString() + ': adjust query or results to return all records.');
+			        		$("##dv_record_limit").removeClass().addClass('reclimithit').html('record limit: ' + response.row_limit.toLocaleString() + ': adjust query or results to return all records.');
 			        	} else {			        	
-			        		$("##dv_record_limit").html('record limit: ' + response.row_limit.toLocaleString());
+			        		$("##dv_record_limit").removeClass().html('record limit: ' + response.row_limit.toLocaleString());
 			        	}
 			        } else {
-			        	$("##dv_record_limit").html('');
+			        	$("##dv_record_limit").removeClass().html('');
 			        }
 			        parseMedia();
 			        highlightSearchFields();
@@ -2661,8 +2694,6 @@ https://github.com/ArctosDB/arctos/issues/7291
 		<input form="cat_rec_sch_frm"  type="button" class="lnkBtn" id="btnRemoveRows" value="Remove Selected" onclick="removeChecked();">
 		<input form="cat_rec_sch_frm"  type="button" class="lnkBtn" id="btnKeepRows" value="Keep Only Selected" onclick="keepChecked();">
 	</cfif>
-
-
 	<cfset tls = querynew("og,lbl,vl")>
 	<select form="cat_rec_sch_frm" name="tools_ctl" id="tools_ctl" size="1">
 		<option value="">[ Tools ]</option>
@@ -2676,7 +2707,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 		----------->
 
 		<cfif listfindnocase(session.roles,'coldfusion_user')>
-			<option value="/Reports/report_printer.cfm">Arctos Reporter</option>
+			<option value="/Reports/reporter.cfm">Arctos Reporter</option>
 		</cfif>
 		<option value="/bnhmMaps/bnhmMapData.cfm">BerkeleyMapper</option>
 
@@ -2708,8 +2739,8 @@ https://github.com/ArctosDB/arctos/issues/7291
 			<!---- these may contain encumbereed data and must remain "us" unless that's addressed ---->
 			<cfif listfindnocase(session.roles,'coldfusion_user')>
 				<option value="/Reports/attribute_data_download.cfm">Attributes</option>
-				<option value="/tools/identifier_download.cfm">Identifiers</option>
-				<option value="/info/part_data_download.cfm">Parts</option>
+				<option value="/Reports/identifier_download.cfm">Identifiers</option>
+				<option value="/Reports/part_data_download.cfm">Parts</option>
 			</cfif>
 			<!----https://github.com/ArctosDB/arctos/issues/6781---->
 			<option value="/info/cat_record_group.cfm">Summarize Results</option>
@@ -2743,6 +2774,7 @@ https://github.com/ArctosDB/arctos/issues/7291
 					<option value="/addAccn.cfm">Accessions</option>
 					<option value="/tools/bulkPart.cfm">Parts</option>
 					<option value="/tools/magicEntity.cfm">Entities</option>
+					<option value="flat_refresh">Request Flat Refresh</option>
 				</optgroup>
 			</cfif>
 		</cfif>

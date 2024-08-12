@@ -125,7 +125,7 @@ grant select, insert, update, delete on cf_temp_locality to manage_records;
 	</tr>
 	<tr>
 		<td>georeference_protocol</td>
-		<td>conditionally</td>
+		<td>no</td>
 		<td>Coordinates require metadata; see locality documentation.  <a href="/info/ctDocumentation.cfm?table=ctgeoreference_protocol">ctgeoreference_protocol</a> </td>
 	</tr>
 	<tr>

@@ -4,17 +4,26 @@
 		<cfparam name="api_key" type="string" default="no_api_key">
 		<cfparam name="tbl" type="string" default="">
 		<cfquery name="api_auth_key" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-			select
-				count(*) c
-			from
-				api_key
-			where
-				api_key='#api_key#' and
-				expires > current_date
+			select check_api_access(
+				<cfqueryparam cfsqltype="varchar" value="#api_key#">,
+				<cfqueryparam cfsqltype="varchar" value="#session.ipaddress#">
+			) as ipadrck
 		</cfquery>
-		<cfif api_auth_key.c lt 1>
-			<cfset result.Result="Denied: You must have an API key to access this resource. See /component/api/v1/about.cfc?method=api_map for more information.">
-			<cfreturn result>
+
+		<cfif api_auth_key.ipadrck neq 'true'>
+			<cfset r["draw"]=1>
+			<cfset r["recordsTotal"]= "null">
+			<cfset r["recordsFiltered"]="null">
+			<cfset r["Message"]='Invalid API key: #api_key# from #session.ipaddress#'>
+			<cfset r["error"]='Unauthorized'>
+			<cfset args = StructNew()>
+			<cfset args.log_type = "error_log">
+			<cfset args.error_type='API error'>
+			<cfset args.error_message=r.Message>
+			<cfset args.error_dump=trim(SerializeJSON(r))>
+			<cfinvoke component="component.internal" method="logThis" args="#args#">
+			<cfheader statuscode="401" statustext="Unauthorized">
+			<cfreturn r>
 			<cfabort>
 		</cfif>
 		<cfoutput>

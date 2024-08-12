@@ -22,7 +22,7 @@
 		select guid_prefix, collection_id FROM collection order by guid_prefix
 	</cfquery>
 	<cfquery name="ctOtherIdType" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-		select other_id_type FROM ctcoll_other_id_type order by sort_order,other_id_type
+		select other_id_type FROM ctcoll_other_id_type order by other_id_type
 	</cfquery>
 	<cfquery name="ctContType" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 		select container_type from ctcontainer_type	order by container_type

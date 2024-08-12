@@ -307,7 +307,8 @@
 				<tr>
 					<td>
 						<label for="VerificationStatus" class="helpLink" data-helplink="verification_status">Verification Status</label>
-						<select name="VerificationStatus" id="verificationstatus" size="1" class="reqdClr">
+						<select name="VerificationStatus" id="verificationstatus" size="1">
+							<option value=""></option>
 							<cfloop query="ctVerificationStatus">
 								<option <cfif l.VerificationStatus is ctVerificationStatus.VerificationStatus> selected="selected" </cfif>
 									value="#VerificationStatus#">#VerificationStatus#</option>
@@ -500,7 +501,8 @@
 			<input type="text" name="collecting_method" id="collecting_method" value="" size="75">
 
 			<label for="VerificationStatus" class="helpLink" data-helplink="verification_status">Verification Status</label>
-			<select name="VerificationStatus" id="verificationstatus" size="1" class="reqdClr">
+			<select name="VerificationStatus" id="verificationstatus" size="1">
+				<option value=""></option>
 				<cfloop query="ctVerificationStatus">
 					<option <cfif VerificationStatus is "unverified"> selected="selected"</cfif>value="#VerificationStatus#">#VerificationStatus#</option>
 				</cfloop>

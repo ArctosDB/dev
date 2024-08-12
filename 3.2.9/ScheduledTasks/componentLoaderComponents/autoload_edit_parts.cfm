@@ -29,7 +29,7 @@
 			select guid_prefix from collection 
 			inner join cataloged_item on collection.collection_id=cataloged_item.collection_id
 			inner join specimen_part on cataloged_item.collection_object_id=specimen_part.derived_from_cat_item
-			where specimen_part.collection_object_id=<cfqueryparam value="#d.part_id#" CFSQLType="cf_sql_int">
+			where specimen_part.collection_object_id=stripArctosPartGuidURL(<cfqueryparam value="#d.part_id#" CFSQLType="cf_sql_varchar">)
 		</cfquery>
 		<cfif getGuidPrefix.recordcount neq 1>
 			<cfquery name="fail" datasource="uam_god">
@@ -76,7 +76,7 @@
 							,part_remark=<cfqueryparam value="#d.remarks#" CFSQLType="cf_sql_varchar">
 						</cfif>
 					where 
-						collection_object_id=<cfqueryparam value="#d.part_id#" CFSQLType="cf_sql_int">
+						collection_object_id=stripArctosPartGuidURL(<cfqueryparam value="#d.part_id#" CFSQLType="cf_sql_varchar">)
 				</cfquery>
 				<cfquery name="cleanupf" datasource="uam_god">
 					delete from cf_temp_bulk_edit_parts  where key=#val(d.key)#

@@ -176,7 +176,7 @@
 					                 JOIN pg_auth_members m ON m.member = cte_1.oid
 					                 JOIN pg_roles pgr ON pgr.oid = m.roleid
 					            )
-					     SELECT rolname from cte where upper(rolname) in (select upper(replace(collection.guid_prefix,':','_')) from collection)
+					     SELECT rolname from cte where lower(rolname) in (select lower(replace(collection.guid_prefix,':','_')) from collection)
 					and rolname in (
 					WITH RECURSIVE cte AS (
 					             SELECT pg_roles.oid,
@@ -190,7 +190,7 @@
 					                 JOIN pg_auth_members m ON m.member = cte_1.oid
 					                 JOIN pg_roles pgr ON pgr.oid = m.roleid
 					            )
-					     SELECT rolname from cte where upper(rolname) in (select upper(replace(collection.guid_prefix,':','_')) from collection)
+					     SELECT rolname from cte where lower(rolname) in (select lower(replace(collection.guid_prefix,':','_')) from collection)
 					     )
 					    )x
  			</cfquery>

@@ -1,5 +1,10 @@
 <!---- this is the one (ish?) page on Arctos which DOES NOT need a header, and cannot operate with a header ---->
 <cfinclude template="/includes/alwaysInclude.cfm">
+<cfparam name="username" default="">
+<cfif len(username) gt 0 and username contains 'alert' or username contains 'img'>
+	nope<cfabort>
+</cfif>
+
 <cfif isdefined("session.username") and len(session.username) gt 0 and action neq "signOut">
 	<ul>
 		<li>
@@ -44,7 +49,6 @@
 <!------------------------------------------------------------>
 <cfif  action is "newUser">
 	<cfparam name="password" default="">
-	<cfparam name="username" default="">
 	<cfparam name="first_name" default="">
 	<cfparam name="middle_name" default="">
 	<cfparam name="last_name" default="">
@@ -54,7 +58,7 @@
 
 	<cfset err="">
 	<cfquery name="uUser" datasource="cf_dbuser">
-		select * from cf_users where upper(username) = <cfqueryparam value='#ucase(username)#' CFSQLType="cf_sql_varchar">
+		select * from cf_users where lower(username) = <cfqueryparam value='#lcase(username)#' CFSQLType="cf_sql_varchar">
 	</cfquery>
 	<cfif uUser.recordcount gt 0>
 		<cfset err="Username is not available.">
@@ -64,7 +68,7 @@
 	</cfif>
 	<cfquery name="dbausr" datasource="uam_god">
 		SELECT rolname as username FROM pg_roles where 
-		upper(rolname) = <cfqueryparam value='#ucase(username)#' CFSQLType="cf_sql_varchar" null="#Not Len(Trim(username))#">
+		lower(rolname) = <cfqueryparam value='#lcase(username)#' CFSQLType="cf_sql_varchar" null="#Not Len(Trim(username))#">
 	</cfquery>
 	<cfif len(dbausr.username) gt 0>
 		<cfset err="Username is not available.">
@@ -169,7 +173,7 @@
 				<cfquery name="getPrefs" datasource="cf_dbuser">
 					select pw_change_date from cf_users
 					where
-					upper(username) = <cfqueryparam value='#ucase(session.username)#' CFSQLType="cf_sql_varchar"> order by cf_users.user_id
+					lower(username) = <cfqueryparam value='#lcase(session.username)#' CFSQLType="cf_sql_varchar"> order by cf_users.user_id
 				</cfquery>
 				<cfset pwtime =  round(now() - getPrefs.pw_change_date)>
 				<cfset pwage = Application.max_pw_age - pwtime>
@@ -243,7 +247,7 @@
 			<cfif listfind(attnNeeded,'GitHub')>
 				<div class="importantNotification">
 					You do not have an address of type "GitHub." GitHub is the mechanism by which the Arctos Community communicates.
-					Please consider adding a GitHub address to your <a href="/agents.cfm?agent_id=#session.MyAgentId#">Arctos Agent profile</a>.
+					Please consider adding a GitHub address to your <a href="/agent/#session.MyAgentId#">Arctos Agent profile</a>.
 					<p>
 						Instructions for joining GitHub and participating in The Community are available from
 						<a href="https://doi.org/10.7299/X75B02M5" class="external">https://doi.org/10.7299/X75B02M5</a>
@@ -292,7 +296,7 @@
 	<form action="loginformguts.cfm" method="post" name="signIn">
 		<input name="action" value="signIn" type="hidden">
 		<label for="username">Username (case-sensitive)</label>
-		<input name="username" type="text" tabindex="1" required class="reqdClr" value="#username#" id="username">
+		<input name="username" type="text" tabindex="1" required class="reqdClr" value="#EncodeForHTML(canonicalize(username,true,true))#" id="username">
 		<label for="password">Password</label>
 		<input name="password" type="password" tabindex="2" required class="reqdClr" value="" id="password">
 		<cfif isdefined("badPW") and badPW is true>

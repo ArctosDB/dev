@@ -82,9 +82,6 @@ create index ix_taxon_refresh_log_tid on taxon_refresh_log(taxon_name_id);
 		</cfif>
 	</cfif>
 
-
-
-
 	<cfif isdefined("name") and len(name) gt 0>
 		<cfquery name="d" datasource="uam_god">
 			select * from taxon_refresh_log where TAXON_NAME=<cfqueryparam value="#name#" CFSQLType="CF_SQL_varchar">
@@ -112,6 +109,45 @@ create index ix_taxon_refresh_log_tid on taxon_refresh_log(taxon_name_id);
 			</cfquery>
 		</cfif>
 	<cfelse><!--- no-name run ---->
+
+
+		<!-------------
+
+			-- manually prioritize everything used by uam:herb
+			-- make sure their data are in the refresh log
+
+			
+			insert into taxon_refresh_log (TAXON_NAME_ID,TAXON_NAME) (
+			    select taxon_name.TAXON_NAME_ID,taxon_name.scientific_name from taxon_name
+			    inner join identification_taxonomy on taxon_name.taxon_name_id=identification_taxonomy.taxon_name_id
+			    inner join identification on identification_taxonomy.identification_id=identification.identification_id
+			    inner join flat on identification.collection_object_id=flat.collection_object_id
+			    where 
+			        taxon_name.name_type='Linnean' and 
+			        flat.guid_prefix='UAM:Herb' and
+			        not exists (
+			            select taxon_refresh_log.TAXON_NAME_ID from taxon_refresh_log where taxon_refresh_log.taxon_name_id=taxon_name.taxon_name_id
+			        )
+			    group by taxon_name.TAXON_NAME_ID,taxon_name.scientific_name
+			);
+
+			-- now make sure their data are stale-est
+
+			update taxon_refresh_log set lastfetch=current_timestamp - interval '100 years' from
+taxon_name
+inner join identification_taxonomy on taxon_name.taxon_name_id=identification_taxonomy.taxon_name_id
+inner join identification on identification_taxonomy.identification_id=identification.identification_id
+inner join flat on identification.collection_object_id=flat.collection_object_id
+where 
+taxon_name.name_type='Linnean' and 
+flat.guid_prefix='UAM:Herb' and
+taxon_name.taxon_name_id=taxon_refresh_log.taxon_name_id
+    ;
+
+
+
+
+		------------>
 		<cfparam name="numberOfNamesOneFetch" default="25">
 		<cfquery name="checknew" datasource="uam_god">
 			insert into taxon_refresh_log (TAXON_NAME_ID,TAXON_NAME) (
@@ -145,30 +181,12 @@ create index ix_taxon_refresh_log_tid on taxon_refresh_log(taxon_name_id);
   			from 
   				taxon_refresh_log
   				inner join taxon_name on taxon_refresh_log.taxon_name_id=taxon_name.taxon_name_id and name_type='Linnean'
-  			where lastfetch is null limit <cfqueryparam value="#numberOfNamesOneFetch#" CFSQLType="cf_sql_int">
+  			order by coalesce(lastfetch,current_date - interval '10 years')
+  			limit <cfqueryparam value="#numberOfNamesOneFetch#" CFSQLType="cf_sql_int">
 		</cfquery>
 
 		<cfif debug>
 			<cfdump var=#d#>
-		</cfif>
-
-		<cfif d.recordcount is 0>
-			<!---- start at old and work newer ---->
-			<cfquery name="d" datasource="uam_god">
-				select 
-					taxon_refresh_log.taxon_name_id,
-					taxon_refresh_log.taxon_name,
-					taxon_refresh_log.lastfetch
-	  			from 
-	  				taxon_refresh_log
-	  				inner join taxon_name on taxon_refresh_log.taxon_name_id=taxon_name.taxon_name_id and name_type='Linnean'
-	  			where 
-	  				taxon_refresh_log.lastfetch < current_date - interval '1 year' 
-	  			order by taxon_refresh_log.lastfetch,taxon_refresh_log.taxon_name_id limit <cfqueryparam value="#numberOfNamesOneFetch#" CFSQLType="cf_sql_int">
-			</cfquery>
-			<cfif debug>
-				<cfdump var=#d#>
-			</cfif>
 		</cfif>
 	</cfif>
 	<cfif timing>
@@ -184,11 +202,13 @@ create index ix_taxon_refresh_log_tid on taxon_refresh_log(taxon_name_id);
 	</cfif>
 
 
+<!--------
 
+	this seems to work now??
 	<cfloop condition = "theseNames contains chr(215)">
 		<cfset theseNames=listdeleteat(theseNames,ListContainsNoCase(theseNames,chr(215),'|'),"|")>
 	</cfloop>
-
+---------->
 	<cfif debug>
 		<br>theseNames: #theseNames#
 	</cfif>
@@ -201,6 +221,8 @@ create index ix_taxon_refresh_log_tid on taxon_refresh_log(taxon_name_id);
 	<cfif debug>
 		<br>theseNames: #theseNames#
 	</cfif>
+
+
 
 
 
@@ -292,7 +314,7 @@ create index ix_taxon_refresh_log_tid on taxon_refresh_log(taxon_name_id);
 
 
 	<cfset x=DeserializeJSON(cfhttp.filecontent)>
-
+		
 
 <!----
 	<cfif debug>
@@ -304,7 +326,9 @@ create index ix_taxon_refresh_log_tid on taxon_refresh_log(taxon_name_id);
 		<cfdump var=#x#>
 	</cfif>
 
-
+	<cfif not structKeyExists(x, "names")>
+		<cfthrow message="no x.names back from globalnames" detail="#cfhttp.filecontent#">
+	</cfif>
 
 
 	<cfloop from="1" to="#ArrayLen(x.names)#" index="thisResultIndex">
@@ -353,6 +377,8 @@ create index ix_taxon_refresh_log_tid on taxon_refresh_log(taxon_name_id);
 								
 								<cfif structKeyExists(x.names[thisResultIndex].results[i],"classificationIds") >
 									<cfset thisSourceID=x.names[thisResultIndex].results[i].classificationIds>
+								<cfelse>
+									<cfset thisSourceID=CreateUUID()>
 								</cfif>
 
 								<cfif len(thisSourceID) is 0>

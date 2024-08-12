@@ -347,7 +347,7 @@ function pickAgentModal(agentIdFld,agentNameFld,name){
 	}else {
 		an='';
 	}
-	var guts = "/picks/findAgentModal.cfm?agentIdFld=" + agentIdFld + '&agentNameFld=' + agentNameFld + '&name=' + an;
+	var guts = "/picks/findAgentModal.cfm?agentIdFld=" + agentIdFld + '&agentNameFld=' + agentNameFld + '&agent_name=' + an;
 	$("<iframe src='" + guts + "' id='dialog' class='popupDialog' style='width:1200px;height:600px;'></iframe>").dialog({
 		autoOpen: true,
 		closeOnEscape: true,
@@ -472,138 +472,6 @@ function addMedia(t,k){
 	});
 }
 
-/* agent editing forms */
-function loadEditAgent(aid){
-	$("#agntEditCell").html('<img src="/images/indicator.gif">');
-	var ptl="/editAllAgent.cfm?agent_id=" + aid;
-	$("#agntEditCell").load(ptl,{},function(){
-		history.pushState('data', '', '/agents.cfm?agent_id=' + aid);
-	});
-}
-
-function loadAgentSearch(q){
-	var h;
-	$("#agntRslCell").html('<img src="/images/indicator.gif">');
-	$.ajax({
-		url: "/component/api/v2/jsonutils.cfc?queryformat=column&method=findAgents&returnformat=json",
-		type: "GET",
-		dataType: "json",
-		data:  q,
-		success: function(r) {
-			if (r.substring && r.substring(0,5)=='error'){
-				$("#agntRslCell").html('<span class="importantNotification">' + r + '</span>');
-				alert(r);
-				return false;
-			}
-			if (r.ROWCOUNT===0){
-				$("#agntRslCell").html('<span class="importantNotification">Nothing Matched.</span>');
-				return false;
-			}
-			h='<div style="height:30em; overflow:auto;">';
-			for (i=0;i<r.ROWCOUNT;i++) {
-				if (r.DATA.AGENT_ID[i] >= 0) {
-					h+='<div><span class="likeLink" onclick="loadEditAgent(' + r.DATA.AGENT_ID[i] + ');">';
-					h+= r.DATA.PREFERRED_AGENT_NAME[i] + '</span><font size="-1"> (';
-					h+=r.DATA.AGENT_TYPE[i] + ': ' + r.DATA.AGENT_ID[i] + ')';
-					// no longer needed with history push
-					h+=' <a target="_blank" href="/agents.cfm?agent_id=' +r.DATA.AGENT_ID[i]+'">[new window]</a></font></div>';
-				} else {
-					h+='<div>';
-					h+= r.DATA.PREFERRED_AGENT_NAME[i] + '<font size="-1"> (';
-					h+=r.DATA.AGENT_TYPE[i] + ')';
-					h+=' <a target="_blank" href="/search.cfm?attribute_type_1=verbatim+agent&attribute_value_1==' +r.DATA.PREFERRED_AGENT_NAME[i]+'">[CatalogRecords]</a></font>';
-				}
-			}
-			h+='</div>';
-			$("#agntRslCell").html(h);
-			//console.log(h);
-			
-		},
-		error: function (xhr, textStatus, errorThrown){
-		    alert(errorThrown + ': ' + textStatus + ': ' + xhr);
-		}
-	});
-}
-function addGroupMember(){
-	var i=parseInt($("#nnga").val()) + parseInt(1);
-
-	var h='<div><input type="hidden" name="member_agent_id_new'+i+'" id="member_agent_id_new'+i+'">';
-	h+='<input type="text" name="group_member_new'+i+'" id="group_member_new'+i+'"';
-	h+=' onchange="pickAgentModal(\'member_agent_id_new'+i+'\',this.id,this.value); return false;"';
-	h+=' onKeyPress="return noenter(event);" placeholder="new group member" class="minput"></div>';
-	$('#newGroupMembers').append(h);
-	$("#nnga").val(i);
-}
-
-
-function addAgentName(){
-	var i=parseInt($("#nnan").val()) + parseInt(1);
-
-	var h='<div id="agentnamedv'+i+'"><select name="agent_name_type_new'+i+'" id="agent_name_type_new'+i+'"></select>';
-	h+='<input type="text" name="agent_name_new'+i+'" id="agent_name_new'+i+'" size="40" placeholder="new agent name" class="minput"></div>';
-	$('#agentnamedv' + $("#nnan").val()).after(h);
-	$('#agent_name_type_new1').find('option').clone().appendTo('#agent_name_type_new' + i);
-	$("#nnan").val(i);
-}
-function addAgentStatus(){
-	var i=parseInt($("#nnas").val()) + parseInt(1);
-	var h='<div id="nas'+i+'" style="display: table-row;"><div style="display:table-cell">';
-	h+='<select name="agent_status_new'+i+'" id="agent_status_new'+i+'" size="1"></select>';
-	h+='</div><div style="display:table-cell"><input type="datetime" class="sinput" placeholder="status date" name="status_date_new'+i+'" id="status_date_new'+i+'"></div>';
-	h+='<div style="display:table-cell"><textarea class="mediumtextarea" name="status_remark_new'+i+'" id="status_remark_new'+i+'" placeholder="status remark"></textarea></div></div>';
-	$('#nas' + $("#nnas").val()).after(h);
-	$('#agent_status_new1').find('option').clone().appendTo('#agent_status_new' + i);
-	$('#status_date_new'+i ).datepicker();
-	$("#nnas").val(i);
-}
-
-
-
-
-function addAgentRelationship(){
-	//console.log('I am addAgentRelationship');
-	
-	var i=parseInt($("#nnar").val()) + parseInt(1);
-	
-	var h='<tr id="nar'+i+'" class="newRec">';
-	h+='<td><select name="agent_relationship_new'+i+'" id="agent_relationship_new'+i+'" size="1"></select></td>';
-	h+='<td>';
-	h+='<input type="hidden" name="related_agent_id_new'+i+'" id="related_agent_id_new'+i+'">';
-	h+='<input type="text" name="related_agent_new'+i+'" id="related_agent_new'+i+'"';
-	h+='onchange="pickAgentModal(\'related_agent_id_new'+i+'\',this.id,this.value); return false;"';
-	h+='onKeyPress="return noenter(event);" placeholder="pick related agent" class="">';
-	h+='</td>';
-	h+='<td><input type="datetime" class="sinput" placeholder="begin date" name="relationship_began_date_new'+i+'" id="relationship_began_date_new'+i+'"></td>';
-	h+='<td><input type="datetime" class="sinput" placeholder="begin date" name="relationship_end_date_new'+i+'" id="relationship_end_date_new'+i+'"></td>';
-	h+='<td><textarea class="tinytextarea" name="relationship_remarks_new'+i+'" placeholder="relationship remark" id="relationship_remarks_new'+i+'"></textarea></td>';
-
-	h+='<td></td>';
-
-	
-	h+='</tr>';
-	$('#nar' + $("#nnar").val()).after(h);
-	$('#agent_relationship_new1').find('option').clone().appendTo('#agent_relationship_new' + i);
-	$("#nnar").val(i);
-	$("#relationship_began_date_new"+i).datepicker();
-	$("#relationship_end_date_new"+i).datepicker();
-
-}
-function addAddress(){
-	var i=parseInt($("#nnea").val()) + parseInt(1);
-	var h='<div id="eaddiv'+i+'" class="newRec">';
-	h+='<select name="address_type_new'+i+'" id="address_type_new'+i+'" size="1"></select>';
-	h+='<input type="text" class="minput" name="address_new'+i+'" id="address_new'+i+'" placeholder="add address">';
-	
-	h+='<input type="datetime" name="start_date_new'+i+'" id="start_date_new'+i+'" placeholder="start date" size="10">';
-	h+='<input type="datetime" name="end_date_new'+i+'" id="end_date_new'+i+'" placeholder="end date" size="10">';
-	
-	h+='<textarea class="smalltextarea" placeholder="remark" name="address_remark_new'+i+'" id="address_remark_new'+i+'"></textarea>';
-	h+='</div>';
-	$('#eaddiv' + $("#nnea").val()).after(h);
-	$('#address_type_new1').find('option').clone().appendTo('#address_type_new' + i);
-	$("#nnea").val(i);
-
-}
 
 function rankAgent(agent_id) {
 	var ptl="/includes/forms/agentrank.cfm?agent_id="+agent_id;			
@@ -628,33 +496,6 @@ function rankAgent(agent_id) {
 	    $(".ui-dialog-titlebar-close").trigger('click');
 	});
 }
-function editAgentAddress (aid){
-		var guts = "includes/forms/editAgentAddr.cfm?action=editAddress&addr_id=" + aid;
-		$("<div id='dialog' class='popupDialog'><img src='/images/indicator.gif'></div>").dialog({
-			autoOpen: true,
-			closeOnEscape: true,
-			height: 'auto',
-			modal: true,
-			position: ['center', 'center'],
-			title: 'Edit Address',
-			width: 'auto',
-			close: function() {
-				$( this ).remove();
-			}
-		}).load(guts, function() {
-			$(this).dialog("option", "position", ['center', 'center'] );
-		});
-		$(window).resize(function() {
-			$(".ui-dialog-content").dialog("option", "position", ['center', 'center']);
-		});
-		$(".ui-widget-overlay").click(function(){
-		    $(".ui-dialog-titlebar-close").trigger('click');
-		});
-	}
-
-/* END agent editing forms */
-
-
 /* test for URL parameters in */
 function getUrlParameter(sParam) {
     var sPageURL = window.location.search.substring(1);
@@ -817,7 +658,7 @@ function saveThisAnnotation() {
 					if (r == 'success') {
 						$("#svgol").remove();
 						alert("Your annotations have been saved, and the appropriate curator will be alerted. \n Thank you for helping improve Arctos!");
-						closeAnnotation();
+						closeOverlay('annotate');
 					} else {
 						$("#svgol").remove();
 						alert('An error occured! \n ' + r);

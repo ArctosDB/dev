@@ -54,6 +54,7 @@
 		<cfreturn r>
 		<cfabort>
 	</cfif>
+
 	<cfif len(length) is 0 or length is 0 or not isnumeric(length)>
 		<cfset length=10>
 	</cfif>
@@ -61,7 +62,11 @@
 		<cfset srtColumn=StructFind(form,"order[0][column]")>
 		<cfset orderby=StructFind(form,"columns[#srtColumn#][data]")>
 		<cfcatch>
-			<cfset orderby="guid">
+			<cfif listFindNoCase(cols, 'guid')>
+				<cfset orderby="guid">
+			<cfelse>
+				<cfset orderby=listGetAt(cols, 1)>
+			</cfif>
 		</cfcatch>
 	</cftry>
 	<cftry>
@@ -120,6 +125,12 @@
 				<!--- if they don't have proper Operator credentials this will fail so let them try ---->
 				<cfset flatTableName='flat'>
 				<cfset cacheTbleName=flatTableName>
+			</cfif>
+
+			<cfif cacheTbleName neq 'flat' and length gt 100>
+				<cfset length=100>
+			<cfelseif length gt 1000>
+				<cfset length=1000>
 			</cfif>
 			<cfif len(tbl) is 0>
 				<!--- build a table ---->
@@ -208,8 +219,6 @@
 				<cfset r.qryresults=init_query>
 				----->
 				<cfset r.qryresults=init_query>
-
-
 				<!---- log success ---->
 				<cfset args = StructNew()>
 				<cfset args.log_type = "request_log">
@@ -319,26 +328,7 @@
 <cffunction name="about" access="remote" returnformat="json" restPath="vars">
 
 
-
-
-	
-	<cfparam name="api_key" type="string" default="no_api_key">
-	<cfquery name="api_auth_key" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-		select
-			count(*) c
-		from
-			api_key
-		where
-			api_key=<cfqueryparam cfsqltype="varchar" value="#api_key#"> and
-			expires > current_date
-	</cfquery>
-	<!----
-	<cfif api_auth_key.c lt 1>
-		<cfset result.Result="Denied: You must have an API key to access this resource. See /api/rest/about for more information.">
-		<cfreturn result>
-		<cfabort>
-	</cfif>
-	---->
+	<!--- no auth ---->
 	<cftry>
 		<cfquery name="usrenv" datasource="uam_god">
 			select lower(dbusername) as dbusername,dbpwd from cf_collection where lower(dbusername)='pub_usr_all_all'
@@ -358,29 +348,31 @@
 		<cfset tmp.tbl="Cache variable name returned by initial query. Used for pagination. Queries using tbl will perform much better than those using query parameters.">
 
 		<cfset tmp.start="Postgres OFFSET; record at which to start, default: 1">
-		<cfset tmp.length="Postgres LIMIT; number of records,default: 1">
+		<cfset tmp.length="Postgres LIMIT; number of records, default 10 ceiling 100">
 
 		<cfset tmp.orderDir="Ordering direction: asc or desc">
-		<cfset tmp.orderby="Specifies columns by which to sort. Columns must be defaults or passed in with cols in the initial query. Default guid.">
-		<cfset tmp.cols="Columns; list of columns to return with data. May be omitted for default columns.">
+		<cfset tmp.orderby="Specifies columns by which to sort. Columns must be passed in with cols in the initial query.">
+		<cfset tmp.cols="Columns; list of columns to return with data.">
 
 		<cfset dc.admin_parameters=tmp>
 
+
+
 		<cfset tmp=[=]>
 		<cfset tmp.example_query="/component/api/v2/catalog.cfc?method=getCatalogData&api_key={apikey}&scientific_name=Equus&guid_prefix=ALMNH:ES">
-		<cfset tmp.purpose="initial query for Equus in the ALMNH:ES collection, using default parameters">
+		<cfset tmp.purpose="initial query for Equus in the ALMNH:ES collection, returning default columns">
 
 		<cfset dc.usage_example_1=tmp>
 
 		<cfset tmp=[=]>
-		<cfset tmp.example_query="/component/api/v2/catalog.cfc?method=getCatalogData&api_key={apikey}&tbl={tbl}&srt=guid&pgsz=2&pg=3">
+		<cfset tmp.example_query="/component/api/v2/catalog.cfc?method=getCatalogData&api_key={apikey}&tbl={tbl}&srt=guid&start=30&length=10">
 		<cfset tmp.purpose="subsequent query, after receiving {tbl} parameter from example_1. This is a request for the third set of two records sorted by guid.">
 
 		<cfset dc.usage_example_2=tmp>
 
 		<cfset tmp=[=]>
-		<cfset tmp.example_query="/component/api/v2/catalog.cfc?method=getCatalogData&api_key={apikey}&scientific_name=Equus&guid_prefix=ALMNH:ES&cols=othercatalognumbers,media,identified_by">
-		<cfset tmp.purpose="initial query for Equus in the ALMNH:ES collection, returning othercatalognumbers, media, and identified_by in addition to the defaults.">
+		<cfset tmp.example_query="/component/api/v2/catalog.cfc?method=getCatalogData&api_key={apikey}&scientific_name=Equus&guid_prefix=ALMNH:ES&cols=guid,othercatalognumbers,media,identified_by">
+		<cfset tmp.purpose="initial query for Equus in the ALMNH:ES collection, returning guid, othercatalognumbers, media, and identified_by.">
 
 
 
@@ -389,7 +381,7 @@
 		<cfset result.usage_documentation=dc>
 
 		<cfset tmp=[=]>
-		<cfset tmp.recordsTotal="total number of records found by the search. It is usually necessary to use tbl and pg to incrementally retrieve them all.">
+		<cfset tmp.recordsTotal="total number of records found by the search. It is usually necessary to use tbl and start/length to incrementally retrieve them all.">
 		<cfset tmp.tbl="Created cache name for use in subsequent paging queries.">
 		<cfset tmp.DATA="JSON object containing data records.">
 
@@ -399,16 +391,17 @@
 
 		<cfset dc=[=]>
 
-		<cfset dc.documentation="Controlled_vocabulary,definition,documentation_link, placeholder_text,search_hint may be useful for documentation or UI.">
+		<cfset dc.documentation="Metadata may be useful for documentation or UI.">
 
 		<cfset tmp=[=]>
 
-		<cfset tmp.cf_variable="Name of input variable and/or return key.">
-		<cfset tmp.category="`Required' are always returned, others may be useful for organization or grouping.">
+		<cfset tmp.obj_name="Name of input variable and/or return key.">
+		<cfset tmp.display="May be useful for standardizing UI.">
+		<cfset tmp.category="May be useful for organization or grouping.">
+		<cfset tmp.subcategory="May be useful for organization or grouping.">
 		<cfset tmp.disp_order="Ordering in Arctos and API.">
-		<cfset tmp.display_text="May be useful for standardizing UI.">
-		<cfset tmp.specimen_results_col="When (1), can be used in cols (and returned as a key)">
-		<cfset tmp.specimen_query_term="When (1), can be used to find records.">
+
+
 
 		<cfset dc.columns=tmp>
 

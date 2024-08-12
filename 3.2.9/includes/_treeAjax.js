@@ -275,7 +275,7 @@ function printLabels () {
 		var cutAr=cidAr.slice(1);
 		var cid=cutAr.join(",");
 		post();
-		window.open('Reports/report_printer.cfm?container_id=' + cid);
+		window.open('Reports/reporter.cfm?container_id=' + cid);
 	} catch(err){
 		post(1,'Error: No tree?');
 	}

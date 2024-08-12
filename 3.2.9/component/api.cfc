@@ -110,25 +110,6 @@
 	</cfif>
 	<!------------------- END standard-issue welcome mat -------->
 	<cfargument name="sch_node" type="string" required="false" default="collecting_event">
-	<!------<cfquery name="auth" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-		select
-			getPreferredAgentName(issued_to) as isto
-		from
-			api_key
-			left outer join agent_name on api_key.issued_to=agent_name.agent_name_id and agent_name_type='login'
-		where
-			api_key=<cfqueryparam value="#auth_key#" CFSQLType="CF_SQL_VARCHAR"> and
-			expires>current_date
-	</cfquery>
-	<cfif len(auth.isto) is 0>
-		<cfset r.status='fail'>
-		<cfset r.message="authorization failed">
-		<cfheader statuscode="500">
-		<cfreturn r>
-		<cfabort>
-	</cfif>
-	----------->
-
 	<cfset theAppendix="">
 	<cfset qp=[]>
 	<cfparam name="orderby" default="higher_geog">
@@ -462,11 +443,15 @@
 							<cfset arrayappend(qp,thisrow)>
 						</cfif>
 						<cfif len(thisAttrDetr) gt 0>
-							<cfset tbls = " #tbls# INNER JOIN agent_name evt_att_detr_#i# on ( collecting_event_attributes_#i#.determined_by_agent_id=evt_att_detr_#i#.agent_id)">
+							<cfset tbls = " #tbls# INNER JOIN 
+								agent_attribute evt_att_detr_#i# on collecting_event_attributes_#i#.determined_by_agent_id=evt_att_detr_#i#.agent_id and 
+								evt_att_detr_#i#.deprecation_type is null 
+								inner join ctagent_attribute_type ctattrtyp#i# on evt_att_detr_#i#.attribute_type=ctattrtyp#i#.attribute_type and
+								ctattrtyp#i#.purpose='name' ">
 							<cfset thisrow={}>
 							<cfset thisrow.l="false">
 							<cfset thisrow.d="cf_sql_varchar">
-							<cfset thisrow.t="evt_att_detr_#i#.agent_name">
+							<cfset thisrow.t="evt_att_detr_#i#.attribute_value">
 							<cfset thisrow.o="ilike">
 							<cfset thisrow.v='%#thisAttrDetr#%'>
 							<cfset arrayappend(qp,thisrow)>
@@ -562,13 +547,18 @@
 							<cfset arrayappend(qp,thisrow)>
 						</cfif>
 						<cfif len(thisLocAttrDetr) gt 0>
-							<cfset tbls = " #tbls# INNER JOIN agent_name loc_att_detr_#i# on ( locality_attributes_#i#.determined_by_agent_id=loc_att_detr_#i#.agent_id)">
+							<cfset tbls = " #tbls# INNER JOIN 
+								agent_attribute loc_att_detr_#i# on locality_attributes_#i#.determined_by_agent_id=loc_att_detr_#i#.agent_id and 
+								loc_att_detr_#i#.deprecation_type is null 
+								inner join ctagent_attribute_type ctlattrtyp#i# on loc_att_detr_#i#.attribute_type=ctlattrtyp#i#.attribute_type and
+								ctlattrtyp#i#.purpose='name' ">
+
 							<cfset thisrow={}>
 							<cfset thisrow.l="false">
 							<cfset thisrow.d="cf_sql_varchar">
-							<cfset thisrow.t="upper(loc_att_detr_#i#.agent_name)">
-							<cfset thisrow.o="like">
-							<cfset thisrow.v='%#ucase(thisLocAttrDetr)#%'>
+							<cfset thisrow.t="loc_att_detr_#i#.attribute_value">
+							<cfset thisrow.o="ilike">
+							<cfset thisrow.v='%#thisLocAttrDetr#%'>
 							<cfset arrayappend(qp,thisrow)>
 						</cfif>
 						<cfif len(thisLocAttrMeth) gt 0>

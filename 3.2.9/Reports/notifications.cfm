@@ -335,10 +335,10 @@
 							</select>
 						</td>
 						<td valign="top">#generated_date#</td>
-						<td valign="top">#encodeforhtml(subject)#</td>
+						<td valign="top">#SanitizeHtml(subject)#</td>
 						<td valign="top">
 							<div class="notificationContentDiv">
-								#content#
+								#SanitizeHtml(content)#
 							</div>
 						</td>
 						<td valign="top">

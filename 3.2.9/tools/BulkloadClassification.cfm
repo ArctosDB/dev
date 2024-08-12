@@ -21,7 +21,7 @@
 
 -- get code from /Admin/generateDDL.cfm
 -- IMPORTANT: checkfreetext is necessary so the inserts can skip checking
-	-- no non-demo table should be this liberal
+
 	grant insert,update,select,delete on cf_temp_classification to manage_taxonomy;
 
 	grant select, usage on cf_temp_classification_key_seq to public;
@@ -54,7 +54,7 @@ update cf_component_loader set rec_per_run='1000' ,remark='1000 running in test 
 <cfset thisDownloadName="bulkloadClassificationData.csv">
 
 
-<cfset numberNoClass=20>
+<cfset numberNoClass=60>
 <cfset numberYesClass=60>
 <!--------------- Settings END::this section will need customized for individual loaders ----------------------------->
 

@@ -351,17 +351,17 @@
 			select
 				trans_agent_id,
 				trans_agent.agent_id,
-				agent_name,
+				preferred_agent_name,
 				trans_agent_role
 			from
 				trans_agent
-				inner join preferred_agent_name on trans_agent.agent_id = preferred_agent_name.agent_id 
+				inner join agent on trans_agent.agent_id = agent.agent_id 
 			where
 				trans_agent_role != 'entered by' and
 				trans_agent.transaction_id=<cfqueryparam value = "#transaction_id#" CFSQLType="cf_sql_int">
 			order by
 				trans_agent_role,
-				agent_name
+				preferred_agent_name
 		</cfquery>
 	<h2>Create a Borrow</h2>
     <table><tr><td valign="top">
@@ -383,7 +383,7 @@
 						<cfloop query="transAgents">
 							<tr>
 								<td>
-									<input type="text" name="trans_agent_#trans_agent_id#" id="trans_agent_#trans_agent_id#" class="reqdClr" size="50" value="#agent_name#"
+									<input type="text" name="trans_agent_#trans_agent_id#" id="trans_agent_#trans_agent_id#" class="reqdClr" size="50" value="#preferred_agent_name#"
 					  					onchange="pickAgentModal('trans_agent_id_#trans_agent_id#',this.id,this.value); return false;"
 					  					onKeyPress="return noenter(event);">
 					  				<input type="hidden" name="trans_agent_id_#trans_agent_id#"  id="trans_agent_id_#trans_agent_id#" value="#agent_id#">
@@ -578,7 +578,7 @@
 				 <input type="button" value="Add a permit" class="picBtn"
 			   		onClick="addPermitToTrans('#transaction_id#','addNewPermitsPicked');">
 			</p>
-	<a href="/Reports/report_printer.cfm?transaction_id=#transaction_id#">[ Print Stuff ]</a>
+	<a href="/Reports/reporter.cfm?transaction_id=#transaction_id#">[ Print Stuff ]</a>
 	<p>
 		<strong>Media associated with this Borrow</strong>
 		<br>

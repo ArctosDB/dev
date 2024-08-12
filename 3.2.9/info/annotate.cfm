@@ -99,6 +99,23 @@
 			<cfquery name="prevAnn" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 				select * from annotations where media_id=<cfqueryparam value="#media_id#" CFSQLType = "CF_SQL_INTEGER">
 			</cfquery>
+
+		<cfelseif isdefined("agent_id") and len(agent_id) gt 0 >
+			<cfset linky="agent_id=#agent_id#">
+			<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+				select
+					'Agent <strong>' || preferred_agent_name || '</strong>' summary
+				from
+					agent
+				where
+					agent_id=<cfqueryparam value="#agent_id#" CFSQLType = "CF_SQL_INTEGER">
+			</cfquery>
+			<cfquery name="prevAnn" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+				select * from annotations where agent_id=<cfqueryparam value="#agent_id#" CFSQLType = "CF_SQL_INTEGER">
+			</cfquery>
+
+
+
 		<cfelse>
 			<div class="error">
 				Oops! I can't handle that request.
@@ -184,8 +201,12 @@
 		</div>
 	</form>
 	<cfif isdefined("prevAnn.recordcount") and prevAnn.recordcount gt 0>
-	<hr>
-	<p>Previous Annotations (<a target="_blank" href="/info/reviewAnnotation.cfm?#linky#">Click here for details</a>)</p>
+		<hr>
+		<p>Previous Annotations
+			<cfif listfind(session.roles,'coldfusion_user')>
+				(<a target="_blank" href="/info/reviewAnnotation.cfm?#linky#">Click here for details</a>)
+			</cfif>
+		</p>
 		<table id="tbl" border>
 			<th>Annotation</th>
 			<th>Made Date</th>

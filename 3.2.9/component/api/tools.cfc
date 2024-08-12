@@ -1,4 +1,123 @@
 <cfcomponent>
+
+	<cffunction name="create_agent" access="remote" returnformat="json" queryFormat="struct" output="true">
+		<!---- plz see sad note at ScheduledTasks/componentLoaderComponents/autoload_agents.cfm and maybe sync eh? ----->
+		<cfparam name="api_key" type="string" default="no_api_key">
+		<cfparam name="usr" type="string" default="pub_usr_all_all">
+		<cfparam name="pwd" type="string" default="">
+		<cfparam name="pk" type="string" default="">
+		<cfparam name="data" type="string" default="">
+
+		<cftry>
+			<cfquery name="api_auth_key" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
+				select check_api_access(
+					<cfqueryparam cfsqltype="varchar" value="#api_key#">,
+					<cfqueryparam cfsqltype="varchar" value="#session.ipaddress#">
+				) as ipadrck
+			</cfquery>
+			<cfif api_auth_key.ipadrck neq 'true'>
+				<cfset r["message"]='create_agent auth fail'>
+				<cfset args = StructNew()>
+				<cfset args.log_type = "error_log">
+				<cfset args.error_type='API error'>
+				<cfset args.error_message=r.message>
+				<cfset args.error_dump=trim(SerializeJSON(r))>
+				<cfinvoke component="component.internal" method="logThis" args="#args#">
+				<cfheader statuscode="401" statustext="Unauthorized">
+				<cfreturn r>
+				<cfabort>
+			</cfif>
+			<cfset agntobj=deserializejson(data)>
+			<cfset r=[=]>
+			<cftransaction>
+				<cfquery name="create_agent" result="create_agent" datasource="user_login" username="#usr#" password="#decrypt(pwd,pk,'AES/CBC/PKCS5Padding','hex')#">
+					insert into agent (
+						agent_id,
+						agent_type,
+						preferred_agent_name,
+						created_by_agent_id,
+						created_date
+					) values (
+						nextval('sq_agent_id'),
+						<cfqueryparam  value="#agntobj['agent_type']#" cfsqltype="cf_sql_varchar">,
+						<cfqueryparam  value="#agntobj['preferred_agent_name']#" cfsqltype="cf_sql_varchar">,
+						<cfqueryparam  value="#agntobj['created_by_agent_id']#" cfsqltype="cf_sql_int">,
+						current_timestamp
+					)
+				</cfquery>
+				<cfloop list="#agntobj['attribute_id_list']#" index="i">
+					<cfset thisAttType=evaluate("agntobj['attribute_type_" & i & "']")>
+					<cfset thisAttVal=evaluate("agntobj['attribute_value_" & i & "']")>
+					<cfif len(thisAttType) gt 0 and len(thisAttVal) gt 0>
+						<cfset thisBegin=evaluate("agntobj['begin_date_" & i & "']")>
+						<cfset thisEnd=evaluate("agntobj['end_date_" & i & "']")>
+						<cfset thisRelAgentID=evaluate("agntobj['related_agent_id_" & i & "']")>
+						<cfset thisDetDate=evaluate("agntobj['determined_date_" & i & "']")>
+						<cfset thisDetrID=evaluate("agntobj['attribute_determiner_id_" & i & "']")>
+						<cfset thisMeth=evaluate("agntobj['attribute_method_" & i & "']")>
+						<cfset thisRem=evaluate("agntobj['attribute_remark_" & i & "']")>
+						<cfset thisCreatID=evaluate("agntobj['created_by_agent_id_" & i & "']")>
+
+						<cfquery name="create_agent_attr" result="create_agent_attr" datasource="user_login" username="#usr#" password="#decrypt(pwd,pk,'AES/CBC/PKCS5Padding','hex')#">
+							insert into agent_attribute (
+								agent_id,
+								attribute_type,
+								attribute_value,
+								begin_date,
+								end_date,
+								related_agent_id,
+								determined_date,
+								attribute_determiner_id,
+								attribute_method,
+								attribute_remark,
+								created_by_agent_id
+							) values (
+								<cfqueryparam value="#create_agent.agent_id#" cfsqltype="cf_sql_int">,
+								<cfqueryparam value="#thisAttType#" cfsqltype="cf_sql_varchar">,
+								<cfqueryparam value="#thisAttVal#" cfsqltype="cf_sql_varchar">,
+								<cfqueryparam value="#thisBegin#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisBegin))#">,
+								<cfqueryparam value="#thisEnd#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisEnd))#">,
+								<cfqueryparam value="#thisRelAgentID#" cfsqltype="cf_sql_int" null="#Not Len(Trim(thisRelAgentID))#">,
+								<cfqueryparam value="#thisDetDate#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisDetDate))#">,
+								<cfqueryparam value="#thisDetrID#" cfsqltype="cf_sql_int" null="#Not Len(Trim(thisDetrID))#">,
+								<cfqueryparam value="#thisMeth#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisMeth))#">,
+								<cfqueryparam value="#thisRem#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisRem))#">,
+								<cfqueryparam value="#thisCreatID#" cfsqltype="cf_sql_int">
+							)
+						</cfquery>
+					</cfif>
+				</cfloop>
+			</cftransaction>
+
+
+			<cfset r["message"]='success'>
+			<cfset r["agent_id"]=create_agent.agent_id>
+			<cfreturn r>
+			<cfcatch>
+				<cfset r["message"]='create_agent fail'>
+				<cfset r["dump"]=cfcatch>
+				<cfset args = StructNew()>
+				<cfset args.log_type = "error_log">
+				<cfset args.error_type='API error'>
+				<cfset args.error_message=r.message>
+				<cfset args.error_dump=SanitizeHtml(trim(SerializeJSON(r)))>
+				<cfinvoke component="component.internal" method="logThis" args="#args#"></cfinvoke>
+				<cfheader statuscode="401" statustext="Unauthorized">
+				<cfreturn r>
+				<cfabort>
+			</cfcatch>
+		</cftry>
+	</cffunction>
+
+	
+	<cffunction name="srsly_sanitize_plz" returnformat="plain" access="remote" output="true">
+		<!--- make things that don't matter the same so we can compare usefully ---->
+        <cfargument name="str" required="true" type="string">
+		<cfset str=trim(str)>
+		<cfset str=replace(str,"#chr(13)##chr(10)#","#chr(10)#","all")>
+		<cfset str=canonicalize(str,false,false)>
+		<cfreturn str>
+	</cffunction>
 	<cffunction name="manage_agent_attribute" returnformat="json" access="remote" output="true">
 		<cfparam name="api_key" type="string" default="no_api_key">
 		<cfparam name="usr" type="string" default="pub_usr_all_all">
@@ -25,16 +144,72 @@
 				<cfabort>
 			</cfif>
 			<cfset attrobj=deserializejson(attrs)>
+
 		<cftransaction>
 			<!--- we need a current snapshot for the "are we actually doing anything" question below ---->
 			<cfquery name="current_agent_attribute" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 				select * from agent_attribute where agent_id=<cfqueryparam value="#agent_id#" cfsqltype="cf_sql_int">
 			</cfquery>
 
+			<cfquery name="current_agent" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+				select * from agent where agent_id=<cfqueryparam value="#agent_id#" cfsqltype="cf_sql_int">
+			</cfquery>
+
+			<cfif compare(current_agent.preferred_agent_name , preferred_agent_name) neq 0 or  compare(current_agent.agent_type , agent_type) neq 0>
+				<cfif compare(current_agent.preferred_agent_name , preferred_agent_name) neq 0>
+					<cfquery name="insert_dep_agent_attribute" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+						insert into agent_attribute (
+							agent_id,
+							attribute_type,
+							attribute_value,
+							created_by_agent_id,
+							deprecated_by_agent_id,
+							deprecated_timestamp,
+							deprecation_type
+						) values (
+							<cfqueryparam value="#agent_id#" cfsqltype="cf_sql_int">,
+							<cfqueryparam value="preferred name" cfsqltype="cf_sql_varchar">,
+							<cfqueryparam value="#current_agent.preferred_agent_name#" cfsqltype="cf_sql_varchar">,
+							<cfqueryparam value="#session.myAgentId#" cfsqltype="cf_sql_int">,
+							<cfqueryparam value="#session.myAgentId#" cfsqltype="cf_sql_int">,
+							current_timestamp,
+							<cfqueryparam value="update" cfsqltype="cf_sql_varchar">
+						)
+					</cfquery>
+				</cfif>
+				<cfif compare(current_agent.agent_type , agent_type) neq 0>
+					<cfquery name="insert_dep_agent_attribute" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+						insert into agent_attribute (
+							agent_id,
+							attribute_type,
+							attribute_value,
+							created_by_agent_id,
+							deprecated_by_agent_id,
+							deprecated_timestamp,
+							deprecation_type
+						) values (
+							<cfqueryparam value="#agent_id#" cfsqltype="cf_sql_int">,
+							<cfqueryparam value="agent type" cfsqltype="cf_sql_varchar">,
+							<cfqueryparam value="#current_agent.agent_type#" cfsqltype="cf_sql_varchar">,
+							<cfqueryparam value="#session.myAgentId#" cfsqltype="cf_sql_int">,
+							<cfqueryparam value="#session.myAgentId#" cfsqltype="cf_sql_int">,
+							current_timestamp,
+							<cfqueryparam value="update" cfsqltype="cf_sql_varchar">
+						)
+					</cfquery>
+				</cfif>
+				<cfquery name="up_agent" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+					update agent set 
+						preferred_agent_name=<cfqueryparam value="#preferred_agent_name#" cfsqltype="cf_sql_varchar">,
+						agent_type=<cfqueryparam value="#agent_type#" cfsqltype="cf_sql_varchar">
+					where agent_id=<cfqueryparam value="#agent_id#" cfsqltype="cf_sql_int">
+				</cfquery>
+			</cfif>
 			<cfloop from="1" to="#numNewRows#" index="i">
 				<cfset thisAttType=evaluate("attribute_type_new_" & i)>
 				<cfset thisAttVal=evaluate("attribute_value_new_" & i)>
-				<cfif len(thisAttType) gt 0 and len(thisAttVal) gt 0>
+				<cfset thisRelAgentID=evaluate("related_agent_id_new_" & i)>
+				<cfif len(thisAttType) gt 0 and (len(thisAttVal) gt 0 or len(thisRelAgentID) gt 0)>
 					<cfset thisBegin=evaluate("begin_date_new_" & i)>
 					<cfset thisEnd=evaluate("end_date_new_" & i)>
 					<cfset thisRelAgentID=evaluate("related_agent_id_new_" & i)>
@@ -43,6 +218,13 @@
 					<cfset thisMeth=evaluate("attribute_method_new_" & i)>
 					<cfset thisRem=evaluate("attribute_remark_new_" & i)>
 					<!---- simple insert ---->
+					<!---- special: get a value if only given relationship ---->
+					<cfif len(thisAttVal) is 0 and len(thisRelAgentID) gt 0>
+						<cfquery name="get_related_pref_name" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+							select preferred_agent_name from agent where agent_id=<cfqueryparam value="#thisRelAgentID#" cfsqltype="cf_sql_int">
+						</cfquery>
+						<cfset thisAttVal=get_related_pref_name.preferred_agent_name>
+					</cfif>
 					<cfquery name="insert_agent_attribute" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 						insert into agent_attribute (
 							agent_id,
@@ -98,18 +280,81 @@
 					<cfquery name="this_row" dbtype="query">
 						select * from current_agent_attribute where attribute_id=<cfqueryparam value="#i#" cfsqltype="cf_sql_int">
 					</cfquery>
-
 					<cfif 
-						this_row.attribute_type neq thisAttType or
-						this_row.attribute_value neq thisAttVal or
-						this_row.begin_date neq thisBegin or
-						this_row.end_date neq thisEnd or
-						this_row.related_agent_id neq thisRelAgentID or
-						this_row.determined_date neq thisDetDate or
-						this_row.attribute_determiner_id neq thisDetrID or
-						this_row.attribute_method neq thisMeth or
-						this_row.attribute_remark neq thisRem>
-						<!---- something has changed, deprecate.... ---->
+						srsly_sanitize_plz(this_row.attribute_type) neq srsly_sanitize_plz(thisAttType) or
+						srsly_sanitize_plz(this_row.attribute_value) neq srsly_sanitize_plz(thisAttVal) or
+						srsly_sanitize_plz(this_row.begin_date) neq srsly_sanitize_plz(thisBegin) or
+						srsly_sanitize_plz(this_row.end_date) neq srsly_sanitize_plz(thisEnd) or
+						srsly_sanitize_plz(this_row.related_agent_id) neq srsly_sanitize_plz(thisRelAgentID) or
+						srsly_sanitize_plz(this_row.determined_date) neq srsly_sanitize_plz(thisDetDate) or
+						srsly_sanitize_plz(this_row.attribute_determiner_id) neq srsly_sanitize_plz(thisDetrID) or
+						srsly_sanitize_plz(this_row.attribute_method) neq srsly_sanitize_plz(thisMeth) or
+						srsly_sanitize_plz(this_row.attribute_remark) neq srsly_sanitize_plz(thisRem)>
+
+						<!---- make a deprecated copy, so we can keep the same ID which is used in shipment ---->
+						<cfquery name="insert_dep_agent_attribute" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+							insert into agent_attribute (
+								agent_id,
+								attribute_type,
+								attribute_value,
+								begin_date,
+								end_date,
+								related_agent_id,
+								determined_date,
+								attribute_determiner_id,
+								attribute_method,
+								attribute_remark,
+								created_by_agent_id,
+								created_timestamp,
+								deprecated_by_agent_id,
+								deprecation_type,
+								deprecated_timestamp
+							) (
+								select
+									agent_id,
+									attribute_type,
+									attribute_value,
+									begin_date,
+									end_date,
+									related_agent_id,
+									determined_date,
+									attribute_determiner_id,
+									attribute_method,
+									attribute_remark,
+									created_by_agent_id,
+									created_timestamp,
+									<cfqueryparam value="#session.myAgentId#" cfsqltype="cf_sql_int">,
+									<cfqueryparam value="update" cfsqltype="cf_sql_varchar">,
+									current_timestamp
+								from
+									agent_attribute
+								where
+									attribute_id=<cfqueryparam value="#i#" cfsqltype="cf_sql_int">
+							)
+						</cfquery>
+
+						<!--- now update ---->
+						<cfquery name="update_agent_attribute" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+							update agent_attribute set
+								attribute_type=<cfqueryparam value="#thisAttType#" cfsqltype="cf_sql_varchar">,
+								attribute_value=<cfqueryparam value="#thisAttVal#" cfsqltype="cf_sql_varchar">,
+								begin_date=<cfqueryparam value="#thisBegin#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisBegin))#">,
+								end_date=<cfqueryparam value="#thisEnd#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisEnd))#">,
+								related_agent_id=<cfqueryparam value="#thisRelAgentID#" cfsqltype="cf_sql_int" null="#Not Len(Trim(thisRelAgentID))#">,
+								determined_date=<cfqueryparam value="#thisDetDate#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisDetDate))#">,
+								attribute_determiner_id=<cfqueryparam value="#thisDetrID#" cfsqltype="cf_sql_int" null="#Not Len(Trim(thisDetrID))#">,
+								attribute_method=<cfqueryparam value="#thisMeth#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisMeth))#">,
+								attribute_remark=<cfqueryparam value="#thisRem#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisRem))#">,
+								created_by_agent_id=<cfqueryparam value="#session.myAgentId#" cfsqltype="cf_sql_int">
+							where
+								attribute_id=<cfqueryparam value="#i#" cfsqltype="cf_sql_int">
+						</cfquery>
+								
+						<!--------------------------
+
+
+							old: this messes with shipment keys 
+
 						<cfquery name="deprecate_agent_attribute" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 							update agent_attribute set 
 								deprecated_by_agent_id=<cfqueryparam value="#session.myAgentId#" cfsqltype="cf_sql_int">,
@@ -146,6 +391,8 @@
 								<cfqueryparam value="#session.myAgentId#" cfsqltype="cf_sql_int">
 							)
 						</cfquery>
+
+						-------------->
 					</cfif>
 				</cfif>
 			</cfloop>
@@ -159,8 +406,8 @@
 				<cfset args = StructNew()>
 				<cfset args.log_type = "error_log">
 				<cfset args.error_type='API error'>
-				<cfset args.error_message=r.message>
-				<cfset args.error_dump=trim(SerializeJSON(r))>
+				<cfset args.error_message=SanitizeHtml(r.message)>
+				<cfset args.error_dump=SanitizeHtml(trim(SerializeJSON(r)))>
 				<cfinvoke component="component.internal" method="logThis" args="#args#"></cfinvoke>
 				<cfheader statuscode="401" statustext="Unauthorized">
 				<cfreturn r>
@@ -314,7 +561,7 @@
 				<cfset args.log_type = "error_log">
 				<cfset args.error_type='API error'>
 				<cfset args.error_message=r.message>
-				<cfset args.error_dump=trim(SerializeJSON(r))>
+				<cfset args.error_dump=SanitizeHtml(trim(SerializeJSON(r)))>
 				<cfinvoke component="component.internal" method="logThis" args="#args#"></cfinvoke>
 				<cfheader statuscode="401" statustext="Unauthorized">
 				<cfreturn r>
@@ -355,6 +602,8 @@
 
 
 			<cfif debug>
+
+				debug is on
 				<cfdump var="#idobj#">
 			</cfif>
 
@@ -518,17 +767,8 @@
 					</cfif>
 				</cfloop>
 			</cfif>
-
-
-
-
 			<cfset r["message"]='success'>
 			<cfreturn r>
-
-
-
-
-
 			<cfcatch>
 				<cfset r["message"]='update_identification fail'>
 				<cfset r["dump"]=cfcatch>
@@ -536,16 +776,13 @@
 				<cfset args.log_type = "error_log">
 				<cfset args.error_type='API error'>
 				<cfset args.error_message=r.message>
-				<cfset args.error_dump=trim(SerializeJSON(r))>
+				<cfset args.error_dump=SanitizeHtml(trim(SerializeJSON(r)))>
 				<cfinvoke component="component.internal" method="logThis" args="#args#">
 				<cfheader statuscode="401" statustext="Unauthorized">
 				<cfreturn r>
 				<cfabort>
 			</cfcatch>
 		</cftry>
-
-
-
 	</cffunction>
 
 </cfcomponent>

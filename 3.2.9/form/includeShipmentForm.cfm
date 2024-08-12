@@ -56,13 +56,13 @@
 				contents,
 				foreign_shipment_fg,
 				shipped_to_addr_id,
-				staddr.address as shipped_to_addr,
+				staddr.attribute_value as shipped_to_addr,
 				shipped_from_addr_id,
-				sfaddr.address shipped_from_addr
+				sfaddr.attribute_value shipped_from_addr
 			 from 
 			 	shipment 
-			 	inner join address staddr on shipment.shipped_to_addr_id=staddr.address_id
-			 	inner join address sfaddr on shipment.shipped_from_addr_id=sfaddr.address_id
+			 	inner join agent_attribute staddr on shipment.shipped_to_addr_id=staddr.attribute_id
+			 	inner join agent_attribute sfaddr on shipment.shipped_from_addr_id=sfaddr.attribute_id
 		 	where 
 		 		transaction_id = <cfqueryparam value="#transaction_id#" cfsqltype="cf_sql_int">
 		 	order by shipped_date
@@ -84,7 +84,7 @@
 						</div>
 						<div class="shipStuffFlexItem">
 							<label for="shipped_carrier_method" class="likeLink" onclick="getCtDoc('ctshipped_carrier_method')";>Shipped Method</label>
-							<select name="shipped_carrier_method" id="shipped_carrier_method" size="1" class="reqdClr">
+							<select name="shipped_carrier_method" id="shipped_carrier_method_#shipment_id#" size="1" class="reqdClr">
 								<option value=""></option>
 								<cfloop query="ctshipped_carrier_method">
 									<option
@@ -95,7 +95,7 @@
 						</div>
 						<div class="shipStuffFlexItem">
 							<label for="shipment_type" class="likeLink" onclick="getCtDoc('ctshipment_type')";>Shipment Type</label>
-							<select name="shipment_type" id="shipment_type" size="1" class="reqdClr">
+							<select name="shipment_type" id="shipment_type_#shipment_id#" size="1" class="reqdClr">
 								<option value=""></option>
 								<cfloop query="ctshipment_type">
 									<option
@@ -106,14 +106,14 @@
 						</div>
 						<div class="shipStuffFlexItem">
 							<label for="hazmat_fg">Hazmat?</label>
-							<select name="hazmat_fg" id="hazmat_fg" size="1">
+							<select name="hazmat_fg" id="hazmat_fg_#shipment_id#" size="1">
 								<option <cfif hazmat_fg is 0> selected="selected" </cfif>value="0">no</option>
 								<option <cfif hazmat_fg is 1> selected="selected" </cfif>value="1">yes</option>
 							</select>
 						</div>
 						<div class="shipStuffFlexItem">
 							<label for="foreign_shipment_fg">Foreign shipment?</label>
-							<select name="foreign_shipment_fg" id="foreign_shipment_fg" size="1">
+							<select name="foreign_shipment_fg" id="foreign_shipment_fg_#shipment_id#" size="1">
 								<option <cfif foreign_shipment_fg is 0> selected="selected" </cfif>value="0">no</option>
 								<option <cfif foreign_shipment_fg is 1> selected="selected" </cfif>value="1">yes</option>
 							</select>
@@ -124,7 +124,7 @@
 							<label for="shipped_to_addr">
 								Shipped To Address (may format funky until save)
 								<br><input type="text" name="staddrpk" id="" class="" size="50" placeholder="Type Agent Name and TAB to pick address" 
-								onchange="openOverlay('/picks/AddrPick.cfm?addrIdFld=shipped_to_addr_id_#shipment_id#&addrFld=shipped_to_addr_#shipment_id#&agentname=' + this.value,'Pick Address')" onKeyPress="return noenter(event);">
+								onchange="openOverlay('/picks/AddrPick.cfm?addrIdFld=shipped_to_addr_id_#shipment_id#&addrFld=shipped_to_addr_#shipment_id#&agent_name=' + this.value,'Pick Address')" onKeyPress="return noenter(event);">
 							</label>
 							<textarea name="shipped_to_addr" id="shipped_to_addr_#shipment_id#" cols="60" rows="5" readonly="yes" class="reqdClr">#shipped_to_addr#</textarea>
 							<input type="hidden" name="shipped_to_addr_id" value="#shipped_to_addr_id#" id="shipped_to_addr_id_#shipment_id#">
@@ -133,7 +133,7 @@
 							<label for="shipped_from_addr">
 								Shipped From Address (may format funky until save)
 								<br><input type="text" name="staddrpk" id="" class="" size="50" placeholder="Type Agent Name and TAB to pick address" 
-								onchange="openOverlay('/picks/AddrPick.cfm?addrIdFld=shipped_from_addr_id_#shipment_id#&addrFld=shipped_from_addr_#shipment_id#&agentname=' + this.value,'Pick Address')" onKeyPress="return noenter(event);">
+								onchange="openOverlay('/picks/AddrPick.cfm?addrIdFld=shipped_from_addr_id_#shipment_id#&addrFld=shipped_from_addr_#shipment_id#&agent_name=' + this.value,'Pick Address')" onKeyPress="return noenter(event);">
 							</label>
 							<textarea name="shipped_from_addr" id="shipped_from_addr_#shipment_id#" cols="60" rows="5" readonly="yes" class="reqdClr">#shipped_from_addr#</textarea>
 							<input type="hidden" name="shipped_from_addr_id" value="#shipped_from_addr_id#" id="shipped_from_addr_id_#shipment_id#">
@@ -147,7 +147,7 @@
 								 	<a href="#carriers_tracking_number#" class="external">open</a>
 								 </cfif>
 							</label>
-							<input type="text" value="#carriers_tracking_number#" name="carriers_tracking_number" id="carriers_tracking_number">
+							<input type="text" value="#carriers_tracking_number#" name="carriers_tracking_number" id="carriers_tracking_number_#shipment_id#">
 						</div>
 						<div class="shipStuffFlexItem">
 							<label for="shipped_date">Ship Date</label>
@@ -155,21 +155,21 @@
 						</div>
 						<div class="shipStuffFlexItem">
 							<label for="package_weight">Package Weight (TEXT, include units)</label>
-							<input type="text" value="#package_weight#" name="package_weight" id="package_weight">
+							<input type="text" value="#package_weight#" name="package_weight" id="package_weight_#shipment_id#">
 						</div>
 						<div class="shipStuffFlexItem">
 							<label for="insured_for_insured_value">Insured Value (NUMBER, US$)</label>
-							<input type="text" value="#INSURED_FOR_INSURED_VALUE#" name="insured_for_insured_value" id="insured_for_insured_value">
+							<input type="text" value="#INSURED_FOR_INSURED_VALUE#" name="insured_for_insured_value" id="insured_for_insured_value_#shipment_id#">
 						</div>
 					</div>
 					<div class="shipStuffFlexBox">			
 						<div class="shipStuffFlexItem">
 							<label for="shipment_remarks">Remarks</label>
-							<textarea name="shipment_remarks" id="shipment_remarks" cols="60" rows="5">#shipment_remarks#</textarea>
+							<textarea name="shipment_remarks" id="shipment_remarks_#shipment_id#" cols="60" rows="5">#shipment_remarks#</textarea>
 						</div>
 						<div class="shipStuffFlexItem">
 							<label for="contents">Contents</label>
-							<textarea name="contents" id="contents" cols="60" rows="5">#contents#</textarea>
+							<textarea name="contents" id="contents_#shipment_id#" cols="60" rows="5">#contents#</textarea>
 						</div>
 					</div>
 					<div>
@@ -180,7 +180,8 @@
 		</cfloop>
 		<div class="newRec oneShipment">
 			<h3>Create a Shipment</h3>
-			<form name="newshipment" method="post" action="#listlast(getBaseTemplatePath(),'/')#">
+			<input type="button" value="templates" class="picBtn"  onclick="openOverlay('/form/collection_template.cfm?typ=shipment_create&frm=newshipment','Collection Templates');">
+			<form name="newshipment" id="newshipment" method="post" action="#listlast(getBaseTemplatePath(),'/')#">
 				<input type="hidden" name="action" value="createShip">
 				<input type="hidden" name="prev_action" value="#action#">
 				<input type="hidden" name="transaction_id" value="#transaction_id#">
@@ -188,10 +189,10 @@
 				<div class="shipStuffFlexBox">
 					<div class="shipStuffFlexItem">
 						<label for="packed_by_agent">Packed By Agent</label>
-						<input type="text" name="packed_by_agent" id="ns_packed_by_agent" class="reqdClr" size="50"
-							onchange="pickAgentModal('ns_packed_by_agent_id',this.id,this.value);"
+						<input type="text" name="packed_by_agent" id="packed_by_agent" class="reqdClr" size="50"
+							onchange="pickAgentModal('packed_by_agent_id',this.id,this.value);"
 							onKeyPress="return noenter(event);">
-						<input type="hidden" name="packed_by_agent_id" id="ns_packed_by_agent_id">
+						<input type="hidden" name="packed_by_agent_id" id="packed_by_agent_id">
 					</div>
 					<div class="shipStuffFlexItem">
 						<label for="shipped_carrier_method" class="likeLink" onclick="getCtDoc('ctshipped_carrier_method')";>Shipped Method</label>
@@ -231,7 +232,7 @@
 						<label for="packed_by_agent">
 							Shipped To Address (may format funky until save)
 							<br><input type="text" name="staddrpk" id="" class="" size="50" placeholder="Type Agent Name and TAB to pick address" 
-								onchange="openOverlay('/picks/AddrPick.cfm?addrIdFld=shipped_to_addr_id&addrFld=shipped_to_addr&agentname=' + this.value,'Pick Address')" onKeyPress="return noenter(event);">
+								onchange="openOverlay('/picks/AddrPick.cfm?addrIdFld=shipped_to_addr_id&addrFld=shipped_to_addr&agent_name=' + this.value,'Pick Address')" onKeyPress="return noenter(event);">
 						</label>
 						<textarea name="shipped_to_addr" id="shipped_to_addr" cols="60" rows="5" readonly="yes" class="reqdClr"></textarea>
 						<input type="hidden" name="shipped_to_addr_id" id="shipped_to_addr_id">
@@ -240,7 +241,7 @@
 						<label for="shipped_from_addr">
 							Shipped From Address
 							<br><input type="text" name="staddrpk" id="" class="" size="50" placeholder="Type Agent Name and TAB to pick address" 
-								onchange="openOverlay('/picks/AddrPick.cfm?addrIdFld=shipped_from_addr_id&addrFld=shipped_from_addr&agentname=' + this.value,'Pick Address')" onKeyPress="return noenter(event);">
+								onchange="openOverlay('/picks/AddrPick.cfm?addrIdFld=shipped_from_addr_id&addrFld=shipped_from_addr&agent_name=' + this.value,'Pick Address')" onKeyPress="return noenter(event);">
 						</label>
 						<textarea name="shipped_from_addr" id="shipped_from_addr" cols="60" rows="5" readonly="yes" class="reqdClr"></textarea>
 						<input type="hidden" name="shipped_from_addr_id" id="shipped_from_addr_id">

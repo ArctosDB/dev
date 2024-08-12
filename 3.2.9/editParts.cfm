@@ -1,5 +1,4 @@
 <cfinclude template="/includes/_header.cfm">
-<cf_customizeIFrame>
 <cfif action is "nothing">
 	<style>
 		.relted {border:5px solid red;}
@@ -546,9 +545,7 @@
 </cfif>
 <!----------------------------------------------------------------------------------->
 <cfif action is "newpart">
-	<cfquery name= "getEntBy" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		SELECT agent_id FROM agent_name WHERE agent_name = '#session.username#'  group by agent_id
-	</cfquery>
+	
 	<cfquery name= "pid" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		SELECT nextval('sq_collection_object_id') pid
 	</cfquery>

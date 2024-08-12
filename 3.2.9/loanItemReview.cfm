@@ -1,9 +1,24 @@
 <cfset title="Review Loan Items">
 <cfinclude template="/includes/_header.cfm">
+
+
+<!----
 <link href="https://nightly.datatables.net/css/jquery.dataTables.css" rel="stylesheet" type="text/css" />
 <script src="https://nightly.datatables.net/js/jquery.dataTables.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/fixedheader/3.1.7/js/dataTables.fixedHeader.min.js"></script>
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedheader/3.1.7/css/fixedHeader.dataTables.min.css"/>
+---->
+
+
+<script src="https://cdn.datatables.net/1.13.8/js/jquery.dataTables.min.js"></script>
+<link href="https://cdn.datatables.net/1.13.7/css/jquery.dataTables.min.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="https://cdn.datatables.net/fixedheader/3.1.7/js/dataTables.fixedHeader.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/fixedheader/3.1.7/css/fixedHeader.dataTables.min.css"/>
+<script type="text/javascript" src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/select/1.7.0/css/select.dataTables.min.css"/>
+
+
+
 
 <cfquery name="ctdisposition" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 	select disposition from ctdisposition order by disposition
@@ -71,9 +86,30 @@
 						alert("FAIL: " + JSON.stringify(r.message));
 					}
 				},
-					error: function (xhr, textStatus, errorThrown){
-			    	alert(errorThrown + ': ' + textStatus + ': ' + xhr);
-				}
+							 error: function (jqXHR, textStatus, errorThrown) {
+
+							 	console.log('err');
+
+								if ("responseText" in jqXHR){
+									var x=jqXHR["responseText"];
+									var theAlert=jqXHR["responseText"];
+									console.log(theAlert);
+									var alobj=JSON.parse(theAlert);
+									if ("Message" in alobj){
+										alert(alobj["Message"]);
+									}
+									if ("error" in alobj){
+										console.log(alobj["error"]);
+									}
+									if ("sql" in alobj){
+										console.log(alobj["sql"]);
+									}
+								} else {
+									alert('An unhandled error has occurred.');
+								}
+				            }
+
+
 			});
 		}
 
@@ -172,7 +208,9 @@
 					header: true,
 					footer: true
 				},
+				lengthMenu: [10, 25, 50, 75, 100],
 				"pageLength": $("#loan_item_review_rows").val(),
+				responsive: window.innerWidth < 1000 ? true : false,
 				"stateSaveCallback": function (settings, data) {
 					if ($("#loan_item_review_rows").val() != data["length"]){
 						$("#loan_item_review_rows").val(data["length"]);
@@ -188,9 +226,6 @@
 							},
 							success: function(r) {
 								//nada
-							},
-							error: function (xhr, textStatus, errorThrown){
-							    alert(errorThrown + ': ' + textStatus + ': ' + xhr);
 							}
 						});
 					}
@@ -208,6 +243,25 @@
 		                d.method="getLoanItems",
 		                d.returnformat="json",
 		                d.queryformat="struct"
+		            },
+		             error: function (jqXHR, textStatus, errorThrown) {       		 	 	
+						if ("responseText" in jqXHR){
+							var x=jqXHR["responseText"];
+							var theAlert=jqXHR["responseText"];
+							console.log(theAlert);
+							var alobj=JSON.parse(theAlert);
+							if ("Message" in alobj){
+								alert(alobj["Message"]);
+							}
+							if ("error" in alobj){
+								console.log(alobj["error"]);
+							}
+							if ("sql" in alobj){
+								console.log(alobj["sql"]);
+							}
+						} else {
+							alert('An unhandled error has occurred.');
+						}
 		            }
        		 	},
 		        columns: [
@@ -317,7 +371,7 @@
 			    ],
 			});
 			$('#loan_item_review_tbl').css( 'display', 'table' );
-			oTable.responsive.recalc();
+			//oTable.responsive.recalc();
 		});
 	</script>
 	<cfoutput>
@@ -624,21 +678,19 @@
 			loan_item_remarks,
 			specimen_part.disposition,
 			scientific_name,
-			Encumbrance,
+			flat.encumbrances,
 			loan_number,
 			'#session.CustomOtherIdentifier#' AS CustomIDType,
 			concatSingleOtherId(flat.collection_object_id,'#session.CustomOtherIdentifier#') AS CustomID,
 			to_char(pbc.last_date,'YYYY-MM-DD"T"HH24:MI:SS') last_date,
-			--getNearestPartBarcode(specimen_part.collection_object_id) nearest_barcode
 			pbc.barcode as part_barcode,
-			p_pbc.barcode as parent_barcode
+			p_pbc.barcode as parent_barcode,
+			flat.cat_num
 		 from
 			loan_item
 			inner join loan on loan_item.transaction_id =loan.transaction_id
 			inner join specimen_part on loan_item.part_id = specimen_part.collection_object_id
 			inner join flat on specimen_part.derived_from_cat_item = flat.collection_object_id
-			left outer join coll_object_encumbrance on flat.collection_object_id = coll_object_encumbrance.collection_object_id
-			left outer join encumbrance on coll_object_encumbrance.encumbrance_id = encumbrance.encumbrance_id
 			left outer join coll_obj_cont_hist on specimen_part.collection_object_id = coll_obj_cont_hist.collection_object_id
 			left outer join container partc on coll_obj_cont_hist.container_id=partc.container_id
 			left outer join container pbc on partc.parent_container_id=pbc.container_id
@@ -648,7 +700,7 @@
 			left outer join container p_pbc on p_partc.parent_container_id=p_pbc.container_id
 		WHERE
 		  	loan_item.transaction_id = <cfqueryparam value="#transaction_id#" cfsqltype="cf_sql_int">
-		ORDER BY cat_num
+		ORDER BY flat.cat_num
 	</cfquery>
 	<cfset  util = CreateObject("component","component.utilities")>
 	<cfset csv = util.QueryToCSV2(Query=mine,Fields=mine.columnlist)>

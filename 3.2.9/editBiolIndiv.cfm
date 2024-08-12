@@ -60,10 +60,6 @@
 		var currentValue=$("#val_" + aid).val();
 		var currentUnits=$("#unit_" + aid).val();
 
-
-
-
-
 		jQuery.getJSON("/component/DataEntry.cfc",
 			{
 				method : "getAttributeCodeTable",
@@ -74,7 +70,7 @@
 				queryformat : 'column'
 			},
 			function (r) {
-				console.log(r);
+				//console.log(r);
 				if (r.RESULT_TYPE=='units'){
 					var dv=(r.VALUES);
 					//console.log(dv);
@@ -118,55 +114,6 @@
 			}
 		);
 	}
-
-	
-
-	function success_populateAttribute_aintusedgoaway (r) {
-		var result=r.DATA;
-		var resType=result.V[0];
-		var aid=result.V[1];
-		var x;
-		aid='_' + aid;
-		$("#attribute_value" + aid).remove();
-		$("#attribute_units" + aid).remove();
-		//$("#determined_date" + aid).addClass('reqdClr').prop('required',true);
-		//$("#agent_name" + aid).addClass('reqdClr').prop('required',true);
-
-		if (resType == 'value') {
-			var d = '<select class="reqdClr" required name="attribute_value' + aid + '" id="attribute_value' + aid + '">';
-			d+='<option value=""></option>';
-			for (i=2;i<result.V.length;i++) {
-				x=result.V[i];
-				if(x=='_yes_'){
-					x='yes';
-				}
-				if(x=='_no_'){
-					x='no';
-				}
-
-				d+='<option value="' + x + '">' + x + '</option>';
-			}
-			d+='</select>';
-			$("#_attribute_value" + aid).append(d);
-			$("#attribute_value" + aid).val($("#val" + aid).val());
-		} else if (resType == 'units') {
-			var d = '<select class="reqdClr" required name="attribute_units' + aid + '" id="attribute_units' + aid + '">';
-			d+='<option value=""></option>';
-			for (i=2;i<result.V.length;i++) {
-				d+='<option value="' + result.V[i] + '">' + result.V[i] + '</option>';
-			}
-			d+='</select>';
-			$("#_attribute_units" + aid).append(d);
-			$("#attribute_units" + aid).val($("#unit" + aid).val());
-			var t='<input type="text" class="reqdClr" required name="attribute_value' + aid + '" id="attribute_value' + aid + '">';
-			$("#_attribute_value" + aid).append(t);
-			$("#attribute_value" + aid).val($("#val" + aid).val());
-		} else {
-			var t='<textarea class="smalltextarea reqdClr" required rows="1" cols="15" name="attribute_value' + aid + '" id="attribute_value' + aid + '"></textarea?';
-			$("#_attribute_value" + aid).append(t);
-			$("#attribute_value" + aid).val($("#val" + aid).val());
-		}
-	}
 	function useAgent1_mamm(){
 		var theName=$("input[id^='agent_name_']").first().val();
 		var theID=$("input[id^='determined_by_agent_id_']").first().val();
@@ -186,7 +133,6 @@
 </script>
 <cfif action is "nothing">
 	<strong>Edit Individual Attributes</strong>
-	<span class="infoLInk" onClick="windowOpener('/info/attributeHelpPick.cfm','','width=600,height=600, resizable,scrollbars');">Help</span>
 	<cfoutput>
 		<cfquery name="raw" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			SELECT
@@ -197,7 +143,7 @@
 				collection.guid_prefix,
 				cataloged_item.collection_object_id collection_object_id,
 				ATTRIBUTE_ID,
-				agent_name,
+				preferred_agent_name,
 				determined_by_agent_id,
 				ATTRIBUTE_TYPE,
 				ATTRIBUTE_VALUE,
@@ -210,7 +156,7 @@
 				cataloged_item
 				inner join collection on cataloged_item.collection_id = collection.collection_id
 				left outer join attributes on cataloged_item.collection_object_id = attributes.collection_object_id
-				left outer join preferred_agent_name on attributes.determined_by_agent_id = preferred_agent_name.agent_id
+				left outer join agent on attributes.determined_by_agent_id = agent.agent_id
 			WHERE
 				cataloged_item.collection_object_id = #val(collection_object_id)#
 		</cfquery>
@@ -237,13 +183,15 @@
 				record_remark
 		</cfquery>
 		<cfquery name="ctattribute_type" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-			SELECT attribute_type FROM ctattribute_type where collection_cde='#indiv.collection_cde#' order by attribute_type
+			SELECT attribute_type FROM ctattribute_type where
+			<cfqueryparam value="#indiv.guid_prefix#" cfsqltype="cf_sql_varchar">=any(collections)
+			 order by attribute_type
 		</cfquery>
 		<cfquery name="atts" dbtype="query">
 			select
 				collection_object_id,
 				ATTRIBUTE_ID,
-				agent_name,
+				preferred_agent_name,
 				determined_by_agent_id,
 				ATTRIBUTE_TYPE,
 				ATTRIBUTE_VALUE,
@@ -258,7 +206,7 @@
 			group by
 				collection_object_id,
 				ATTRIBUTE_ID,
-				agent_name,
+				preferred_agent_name,
 				determined_by_agent_id,
 				ATTRIBUTE_TYPE,
 				ATTRIBUTE_VALUE,
@@ -328,7 +276,7 @@
 							<input type="hidden" name="determined_by_agent_id_#attribute_id#" id="determined_by_agent_id_#attribute_id#"
 								value="#determined_by_agent_id#">
 							<input type="text" name="agent_name_#attribute_id#" id="agent_name_#attribute_id#"
-								value="#encodeforhtml(agent_name)#" size="50"
+								value="#encodeforhtml(preferred_agent_name)#" size="50"
 		 						onchange="pickAgentModal('determined_by_agent_id_#attribute_id#',this.id,this.value); return false;"
 		  						onKeyPress="return noenter(event);">
 						</td>
@@ -668,5 +616,3 @@
 		<cflocation url="editBiolIndiv.cfm?collection_object_id=#collection_object_id#" addtoken="false">
 	</cfoutput>
 </cfif>
-<!------------------------------------------------------------------------------>
-<cf_customizeIFrame>

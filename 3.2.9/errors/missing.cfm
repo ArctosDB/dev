@@ -134,29 +134,15 @@
 				<cfif d.recordcount is 0>
 					<cfthrow message="saved handler failed" detail="A request for a saved search failed">
 				</cfif>
-				<cfif d.url contains "#application.serverRootUrl#/search.cfm?">
-					<cfset mapurl=replace(d.url,"#application.serverRootUrl#/search.cfm?","","all")>
-					<cfloop list="#mapURL#" delimiters="&" index="i">
-						<cfif listlen(i,"=") eq 2>
-							<cfset t=listgetat(i,1,"=")>
-							<cfset v=listgetat(i,2,"=")>
-							<cfset "#T#" = "#urldecode(v)#">
-						</cfif>
-					</cfloop>
-					<cfheader statuscode="200" statustext="OK">
-					<cfinclude template="/search.cfm">
+
+				<cfif left(d.url,4) is "http" or left(d.url,1) is "/">
+					<!--- full URL, do nothing --->
+					<cfset durl=d.url>
 				<cfelse>
-					<cfif left(d.url,4) is "http">
-						<!--- full URL, do nothing --->
-						<cfset durl=d.url>
-					<cfelse>
-						<cfset durl="/" & d.url>
-					</cfif>
-					Redirecting to: <a href="#durl#">#durl#</a>
-					<script>
-						document.location='#durl#';
-					</script>
+					<cfset durl="/" & d.url>
 				</cfif>
+				Redirecting to: <a href="#durl#">#durl#</a>		
+				<cflocation url="#durl#" addtoken="false" />
 			<cfelse>
 				<cfthrow message="unhandled saved call" detail="A call for a /saved/ URL could not be resolved">
 			</cfif>
@@ -169,16 +155,25 @@
 		<cfinclude template="/search.cfm">
 	</cfoutput>
 <cfelseif listfindnocase(request.rdurl,'agent',"/")>
-	<!--- strip off things that are in the address; request.rdurl is (sometimes?!) missing a slashy so deal with that possibility ---->
-	<cfset gPos=listfindnocase(request.rdurl,"agent","/")>
-	<cfset agent_id = listgetat(request.rdurl,gPos+1,"/")>
-	<cfheader statuscode="200" statustext="OK">
-	<cfinclude template="/agent.cfm">	
+	<cfif trim(replace(request.rdurl,'/', '','all')) is 'agent'>
+		<cfheader statuscode="200" statustext="OK">
+		<cfinclude template="/agent.cfm">
+	<cfelse>
+		<cfset gPos=listfindnocase(request.rdurl,"agent","/")>
+		<cfset agent_id = listgetat(request.rdurl,gPos+1,"/")>
+		<cfheader statuscode="200" statustext="OK">
+		<cfinclude template="/agent_detail.cfm">
+	</cfif>
 <cfelseif listfindnocase(request.rdurl,'collection',"/")>
-	<cfset gPos=listfindnocase(request.rdurl,"collection","/")>
-	<cfset guid_prefix = listgetat(request.rdurl,gPos+1,"/")>
-	<cfheader statuscode="200" statustext="OK">
-	<cfinclude template="/collection.cfm">
+	<cftry>
+		<cfset gPos=listfindnocase(request.rdurl,"collection","/")>
+		<cfset guid_prefix = listgetat(request.rdurl,gPos+1,"/")>
+		<cfheader statuscode="200" statustext="OK">
+		<cfinclude template="/collection.cfm">
+		<cfcatch>
+			<cfinclude template="/home.cfm">
+		</cfcatch>
+	</cftry>
 <cfelseif listfindnocase(request.rdurl,'orcid',"/")>
 	<!--- strip off things that are in the address; request.rdurl is (sometimes?!) missing a slashy so deal with that possibility ---->
 	<cfset oid=request.rdurl>
@@ -191,12 +186,15 @@
 	<cfset gPos=listfindnocase(request.rdurl,"orcid","/")>
 	<cfset oid = listgetat(oid,gPos+1,"/")>
 	<cfquery name="getAgntId" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-		select distinct agent_id from address where address_type='ORCID' and upper(address) like <cfqueryparam value="%#ucase(oid)#%" CFSQLType="CF_SQL_VARCHAR" list="no"  null="no">
+		select distinct agent_id 
+		from agent_attribute where attribute_type='ORCID' 
+		and deprecation_type is null
+		and attribute_value ilike <cfqueryparam value="%#oid#%" CFSQLType="CF_SQL_VARCHAR" list="no"  null="no">
 	</cfquery>
 	<cfif getAgntId.recordcount is 1 and len(getAgntId.agent_id) gt 0>
 		<cfset agent_id=getAgntId.agent_id>
 		<cfheader statuscode="200" statustext="OK">
-		<cfinclude template="/agent.cfm">
+		<cfinclude template="/agent_detail.cfm">
 	<cfelse>
 		<cfthrow message="orcid handler failed" detail="A request for orcid failed">
 	</cfif>

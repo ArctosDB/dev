@@ -41,7 +41,6 @@
 						returnformat : "json"
 					},
 					success: function(r) {
-						console.log(r);
 						location.reload();
 					}
 				});	
@@ -195,8 +194,3 @@
 			</cfif>
 		</cfif>
 	</cfif>
-	<!---------
-<cfif application.version is "test" and len(session.username) eq 0>
-	nope<cfabort>
-</cfif>
-------->

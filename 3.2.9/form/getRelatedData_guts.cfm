@@ -1,13 +1,31 @@
+<cfinclude template="/includes/_includeCheck.cfm">
+
 <cfsetting enablecfoutputonly="true">
+
+<!----
 <cfparam name="catnum" default="">
 <cfparam name="guid_prefix" default="">
 <cfparam name="issuedby" default="">
 <cfparam name="idtype" default="">
 <cfparam name="idval" default="">
+
 <cfif len(catnum) is 0 and len(idval) is 0>
 	<cfoutput>At least ID or Catalog Number is required to search</cfoutput><cfabort>
 </cfif>  
-<cfquery name="d" datasource="uam_god">
+
+---->
+
+<cfparam name="search_identifier" default="">
+
+<cfif len(search_identifier) is 0>
+	GUID, triplet, catalog number, or identifier is required to search<cfabort>
+</cfif> 
+
+<cfset search_identifier=rereplace(search_identifier, 'https?:\/\/arctos.database.museum\/guid\/','','all')>
+<!--- and test, whatever ---->
+<cfset search_identifier=rereplace(search_identifier, 'https?:\/\/arctos-test.tacc.utexas.edu\/guid\/','','all')>
+
+<cfquery name="d" datasource="uam_god" timeout="30">
 	select
 		filtered_flat.collection_object_id,
 		filtered_flat.collecting_event_id,
@@ -21,42 +39,22 @@
 		collector.collector_role,
 		collector.coll_order,
 		clr_agent.preferred_agent_name,
-		getPreferredAgentName(determined_by_agent_id) as attribute_determiner,
-		attribute_type,
-		attribute_value,
-		attribute_units,
-		attribute_remark,
-		determination_method,
-		determined_date,
-		colln_agent.preferred_agent_name as collection_agent
+		filtered_flat.identifiers::varchar,
+		filtered_flat.attributedetail::varchar
 	from
 		filtered_flat
 		left outer join collector on filtered_flat.collection_object_id=collector.collection_object_id
 		left outer join agent clr_agent on collector.agent_id=clr_agent.agent_id
-		left outer join attributes on filtered_flat.collection_object_id=attributes.collection_object_id
-		left outer join coll_obj_other_id_num on filtered_flat.collection_object_id=coll_obj_other_id_num.collection_object_id
-		left outer join agent_name issbyagnt on coll_obj_other_id_num.issued_by_agent_id=issbyagnt.agent_id
-		left outer join agent_name can on filtered_flat.guid_prefix=can.agent_name
-		left outer join agent colln_agent on can.agent_id=colln_agent.agent_id
-	where 
-		1=1
-		<cfif len(idval) gt 0>
-			and coll_obj_other_id_num.display_value ilike <cfqueryparam CFSQLType="CF_SQL_varchar" value="#trim(idval)#">
-		</cfif>
-		<cfif len(idtype) gt 0>
-			and coll_obj_other_id_num.other_id_type=<cfqueryparam CFSQLType="CF_SQL_varchar" value="#idtype#"> 
-		</cfif>
-		<cfif len(issuedby) gt 0>
-			and issbyagnt.agent_name ilike <cfqueryparam CFSQLType="CF_SQL_varchar" value="%#issuedby#%">
-		</cfif>
-		<cfif len(guid_prefix) gt 0>
-			and filtered_flat.guid_prefix = <cfqueryparam CFSQLType="CF_SQL_varchar" value="#guid_prefix#">
-		</cfif>
-		<cfif len(catnum) gt 0>
-			and upper(filtered_flat.cat_num) = <cfqueryparam CFSQLType="CF_SQL_varchar" value="#ucase(catnum)#">
-		</cfif>
-	limit 100
+		inner join (
+			select collection_object_id,guid st from filtered_flat
+			union select collection_object_id,cat_num st from filtered_flat
+			union select collection_object_id,display_value st from coll_obj_other_id_num
+		) stms on filtered_flat.collection_object_id=stms.collection_object_id
+      where 
+      	upper(stms.st)=<cfqueryparam CFSQLType="CF_SQL_varchar" value="#ucase(trim(search_identifier))#">
 </cfquery>
+
+
 <cfif d.recordcount lt 1>
 	<cfoutput>NOTFOUND</cfoutput><cfabort>
 </cfif>
@@ -71,7 +69,8 @@
 		verbatim_locality,
 		verbatim_date,
 		previousidentifications,
-		collection_agent
+		identifiers,
+		attributedetail
 	from d group by 
 		collection_object_id,
 		collecting_event_id,
@@ -82,7 +81,8 @@
 		verbatim_locality,
 		verbatim_date,
 		previousidentifications,
-		collection_agent
+		identifiers,
+		attributedetail
 </cfquery>
 <cfoutput>
 	<table border>
@@ -96,6 +96,7 @@
 			<th>VerbatimDate</th>
 			<th>Collectors</th>
 			<th>Attributes</th>
+			<th>Identifiers</th>
 		</tr>
 		<cfset i=1>
 		<cfloop query="uniq">
@@ -110,14 +111,14 @@
 			<cfset mystr.verbatim_locality=uniq.verbatim_locality>
 			<cfset mystr.verbatim_date=uniq.verbatim_date>
 			<cfset mystr.idents=uniq.previousidentifications>
-			<cfset mystr["collection_agent"]=uniq.collection_agent>
+			<cfset mystr.ids=uniq.identifiers>
 			<tr>
 				<td><input type="button" class="savBtn" onclick="useThis(#collection_object_id#)" value="use"></td>
 				<td>
 					<a href="/guid/#guid#" class="external">#guid#</a>
 				</td>
 				<td>
-					<div class="idjson" id="pid_#collection_object_id#">#previousidentifications#</div>
+					<div class="jsondatacell" id="pid_#collection_object_id#">#previousidentifications#</div>
 				</td>
 				<td>#higher_geog#</td>
 				<td>#spec_locality#</td>
@@ -143,31 +144,12 @@
 					</cfloop>
 				</td>
 				<td>
-					<cfquery name="attrs" dbtype="query">
-						select 	
-							attribute_determiner,
-							attribute_type,
-							attribute_value,
-							attribute_units,
-							attribute_remark,
-							determination_method,
-							determined_date
-						from d where attribute_type is not null and collection_object_id=<cfqueryparam CFSQLType="cf_sql_int" value="#collection_object_id#">
-						group by 
-							attribute_determiner,
-							attribute_type,
-							attribute_value,
-							attribute_units,
-							attribute_remark,
-							determination_method,
-							determined_date
-					</cfquery>
-					<cfset mystr.attrs=serializejson(attrs,'struct')>
-					<cfloop query="attrs">
-						<div>
-							#attribute_type# #attribute_value# #attribute_units# #determined_date# #determination_method# #attribute_remark#
-						</div>
-					</cfloop>
+					<cfset mystr.attrs=attributedetail>
+					<div class="jsondatacell" id="pida_#collection_object_id#">#attributedetail#</div>
+				</td>
+
+				<td>
+					<div class="jsondatacell" id="pidr_#collection_object_id#">#identifiers#</div>
 				</td>
 				<!----
 				<td><cfdump var=#mystr#></td>

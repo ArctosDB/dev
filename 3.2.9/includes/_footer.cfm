@@ -22,9 +22,7 @@
 		<a href="/"><img id="arctosfooterlogo" src="/images/ArctosBluegl.svg" alt="Arctos" border="0" height="50px;"></a>
 	</div>
 </div>
-<cfif isdefined("Application.version") and application.version is "test">
-	<div id="google_translate_element"></div>
-</cfif>
+<div id="google_translate_element"></div>
 <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script> 
 <script>
 window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;

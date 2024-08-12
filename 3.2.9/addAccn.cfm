@@ -146,4 +146,3 @@
 </cfif>
 <!--------------------------------------------------------------------------------->
 <cfinclude template="includes/_footer.cfm">
-<cf_customizeIFrame>

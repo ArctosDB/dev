@@ -223,7 +223,7 @@ function deleteAstrTax(k){
 				identification.scientific_name,
 				identification.taxon_concept_id,
 				cataloged_item.cat_num,
-				preferred_agent_name.agent_name,
+				agent.preferred_agent_name,
 				identification_agent.identifier_order,
 				identification_agent.agent_id,
 				identification.made_date,
@@ -260,7 +260,7 @@ function deleteAstrTax(k){
 				left outer join identification_attributes on identification.identification_id=identification_attributes.identification_id
 				inner join collection on cataloged_item.collection_id=collection.collection_id
 				left outer join identification_agent on identification.identification_id = identification_agent.identification_id
-				left outer join preferred_agent_name on identification_agent.agent_id = preferred_agent_name.agent_id
+				left outer join agent on identification_agent.agent_id = agent.agent_id
 				left outer join publication on identification.publication_id=publication.publication_id
 				left outer join identification_taxonomy on identification.identification_id = identification_taxonomy.identification_id
 				left outer join taxon_name on identification_taxonomy.taxon_name_id=taxon_name.taxon_name_id
@@ -477,7 +477,7 @@ function deleteAstrTax(k){
 		<cfloop query="distIds">
 			<cfquery name="identifiers" dbtype="query">
 				select
-					agent_name,
+					preferred_agent_name,
 					identifier_order,
 					agent_id,
 					identification_agent_id
@@ -487,7 +487,7 @@ function deleteAstrTax(k){
 					identification_id=<cfqueryparam value="#identification_id#" cfsqltype="cf_sql_int"> and
 					agent_id is not null
 				group by
-					agent_name,
+					preferred_agent_name,
 					identifier_order,
 					agent_id,
 					identification_agent_id
@@ -694,7 +694,7 @@ function deleteAstrTax(k){
 													<input type="text" 
 														name="identifier_agentname_#identification_id#_#identification_agent_id#" 
 														id="identifier_agentname_#identification_id#_#identification_agent_id#"
-														value="#encodeforhtml(agent_name)#"
+														value="#encodeforhtml(preferred_agent_name)#"
 														size="50" 
 														onchange="pickAgentModal('identifier_agentid_#identification_id#_#identification_agent_id#',this.id,this.value);" 
 														placeholder="Identifier (Agent)">
@@ -1034,24 +1034,31 @@ function deleteAstrTax(k){
 		<cfset ArrayAppend(attrs, oneatt)>
 	</cfloop>
 	<cfset idobj["attributes"]=attrs>
-
-	<cfquery name="ak" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-		select api_key from api_key inner join agent on api_key.issued_to=agent.agent_id where preferred_agent_name='arctos_api_user'
-	</cfquery>
-
+	<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
 	<cfinvoke component="/component/api/tools" method="update_identification" returnvariable="x">
-		<cfinvokeargument name="api_key" value="#ak.api_key#">
+		<cfinvokeargument name="api_key" value="#api_key#">
 		<cfinvokeargument name="usr" value="#session.dbuser#">
 		<cfinvokeargument name="pwd" value="#session.epw#">
 		<cfinvokeargument name="pk" value="#session.sessionKey#">
 		<cfinvokeargument name="identification" value="#serializeJSON(idobj)#">
-		<cfinvokeargument name="debug" value="true">
+		<cfinvokeargument name="debug" value="false">
 	</cfinvoke>
 	<cfif structkeyexists(x,"message") and x.message is 'success'>
 		<cflocation url="/editIdentification.cfm?collection_object_id=#collection_object_id###editIdentification_#identification_id#" addtoken="false">
 	<cfelse>
-		<cfthrow message="#x.message#" detail="#serialize(x)#">
+
+		<cfset htdet="">
+		<cfif structKeyExists(x, "dump")>
+			<cfif structKeyExists(x.dump, "Message")>
+				<cfset htdet=htdet & "<div>Message: " & SanitizeHtml(x.dump.Message) & "</div>">
+			</cfif>
+			<cfif structKeyExists(x.dump, "Sql")>
+				<cfset htdet=htdet & "<div>SQL: " & SanitizeHtml(x.dump.Sql) & "</div>">
+			</cfif>
+		</cfif>
+		<cfthrow message="#x.message#" detail="#htdet#" extendedInfo="#SanitizeHtml(serialize(x))#">
 	</cfif>
+
 	<!----
 		<cfdump var="#x#">
 	----->
@@ -1149,16 +1156,13 @@ function deleteAstrTax(k){
 			</cfif>
 		</cfloop>
 		<cfset idobj["attributes"]=attrs>
-		<cfquery name="ak" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-			select api_key from api_key inner join agent on api_key.issued_to=agent.agent_id where preferred_agent_name='arctos_api_user'
-		</cfquery>
-
+		<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
 		<!--- the service needs this so it can deal with multiple IDs --->
 		<cfset ids=[]>
 		<cfset ArrayAppend(ids, idobj)>
 		<cfset mids.identifications=ids>
 		<cfinvoke component="/component/api/tools" method="create_identification" returnvariable="x">
-			<cfinvokeargument name="api_key" value="#ak.api_key#">
+			<cfinvokeargument name="api_key" value="#api_key#">
 			<cfinvokeargument name="usr" value="#session.dbuser#">
 			<cfinvokeargument name="pwd" value="#session.epw#">
 			<cfinvokeargument name="pk" value="#session.sessionKey#">
@@ -1175,10 +1179,19 @@ function deleteAstrTax(k){
 		<cfif structkeyexists(x,"message") and x.message is 'success'>
 			<cflocation url="/editIdentification.cfm?collection_object_id=#collection_object_id###editIdentification_#x.identification_id#" addtoken="false">
 		<cfelse>
-			<cfthrow message="#x.message#" detail="#serialize(x)#">
+
+			<cfset htdet="">
+			<cfif structKeyExists(x, "dump")>
+				<cfif structKeyExists(x.dump, "Message")>
+					<cfset htdet=htdet & "<div>Message: " & SanitizeHtml(x.dump.Message) & "</div>">
+				</cfif>
+				<cfif structKeyExists(x.dump, "Sql")>
+					<cfset htdet=htdet & "<div>SQL: " & SanitizeHtml(x.dump.Sql) & "</div>">
+				</cfif>
+			</cfif>
+			<cfthrow message="#x.message#" detail="#htdet#" extendedInfo="#SanitizeHtml(serialize(x))#">
 		</cfif>
 	</cfoutput>
 </cfif>
 <!----------------------------------------------------------------------------------->
 <cfinclude template="includes/_pickFooter.cfm">
-<!----<cf_customizeIFrame>---->

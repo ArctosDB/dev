@@ -4,7 +4,7 @@
 	select distinct(guid_prefix) from collection order by guid_prefix
 </cfquery>
 <cfquery name="ctOtherIdType" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-    select other_id_type FROM ctColl_Other_Id_Type ORDER BY sort_order,other_Id_Type
+    select other_id_type FROM ctColl_Other_Id_Type ORDER BY other_Id_Type
 </cfquery>
 <!----------------------------------------------------------->
 	Search for Cataloged Items:

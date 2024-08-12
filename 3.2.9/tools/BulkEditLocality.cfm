@@ -21,7 +21,7 @@ create table cf_temp_edit_locality (
 	datum  varchar(255),
 	locality_remarks varchar,
 	georeference_protocol varchar,
-	utm_zone varchar(3),
+	utm_zone varchar(255),
 	utm_ew numeric,
 	utm_ns numeric,
 	use_geography_polygon boolean not null,
@@ -219,7 +219,7 @@ insert into cf_component_loader (
 	</tr>
 	<tr>
 		<td>georeference_protocol</td>
-		<td>conditionally</td>
+		<td>no</td>
 		<td>Coordinates require metadata; see locality documentation.  <a href="/info/ctDocumentation.cfm?table=ctgeoreference_protocol">ctgeoreference_protocol</a> </td>
 	</tr>	
 	<tr>

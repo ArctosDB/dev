@@ -39,17 +39,17 @@
 <cfset clist=listRemoveDuplicates(clist)>
 <cfquery name="cc" datasource="uam_god">
     select
-        agent_name.agent_name,
+        cf_users.username,
         collection.institution_acronym
     FROM
         collection_contacts
         inner join collection on collection_contacts.collection_id=collection.collection_id
-        inner join agent_name on collection_contacts.contact_agent_id=agent_name.agent_id and agent_name_type='login'
+        inner join username on collection_contacts.contact_agent_id=username.operator_agent_id
     where
         collection_contacts.contact_role='data quality' and
         collection.institution_acronym in (<cfqueryparam value="#clist#" CFSQLType="cf_sql_varchar" list="true">)
     group by
-        agent_name.agent_name,
+        cf_users.username,
         collection.institution_acronym
 </cfquery>
 <cfoutput>    
@@ -61,13 +61,13 @@
             </a>
         </cfsavecontent>
         <cfquery name="tuns" dbtype="query">
-            select agent_name 
+            select username 
             from cc 
             where institution_acronym in (<cfqueryparam value="#part_inst#,#ctr_inst#" CFSQLType="cf_sql_varchar" list="true">)
-            group by agent_name
+            group by username
         </cfquery>
         <cfinvoke component="/component/functions" method="deliver_notification">
-            <cfinvokeargument name="usernames" value="#valuelist(tuns.agent_name)#">
+            <cfinvokeargument name="usernames" value="#valuelist(tuns.username)#">
             <cfinvokeargument name="subject" value="Part/Container Mismatch">
             <cfinvokeargument name="message" value="#msg#">
             <cfinvokeargument name="email_immediate" value="">

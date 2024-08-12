@@ -18,7 +18,7 @@
 	select distinct(trans_agent_role) from cttrans_agent_role  where trans_agent_role != 'entered by' order by trans_agent_role
 </cfquery>
 <cfquery name="ctcollection" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
-	select * from collection order by guid_prefix
+	select collection_id,guid_prefix from collection order by guid_prefix
 </cfquery>
 <cfquery name="ctShip" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 	select shipped_carrier_method from ctshipped_carrier_method order by shipped_carrier_method
@@ -273,55 +273,63 @@
 function useThisOne(n){
  $("#loan_number").val(n);
 }
-jQuery(document).ready(function() {
-	$( "#collection_id" ).change(function() {
-		$("#nlnd").html('');
-		try{
-			//console.log('try');
-			jQuery.getJSON("/component/functions.cfc",
-				{
-					method : "getNextLoanNumber",
-					collection_id : $("#collection_id").val(),
-					returnformat : "json"
-				},
-				function (r) {
-					//console.log(r);
-					try{
-						var s='<table border><tr><th>Type</th><th>Value</th></tr>';
-						$.each( r.DATA, function( k, v ) {
-							if (v[0]=='next number'){
-								var nnc="<span class=\"likeLink\" onclick=\"useThisOne('" + v[1] + "');\">" + v[1] + "</span>";
-							} else {
-								var nnc=v[1];
-							}
-							if (v[0].length>0 && v[1].length>0){
-								s+='<tr><td>' + v[0]  + '</td><td>' + nnc + '</td></tr>';
-							}
-						});
-						s+='</table>';
-						$("#nlnd").html(s);
-					} catch(err){
-						//console.log('incatch');
-						$("#nlnd").html('no suggestions available');
-					}
+
+function checkNextNum(){
+	$("#nlnd").html('');
+	try{
+		//console.log('try');
+		jQuery.getJSON("/component/functions.cfc",
+			{
+				method : "getNextLoanNumber",
+				collection_id : $("#collection_id").val(),
+				returnformat : "json"
+			},
+			function (r) {
+				//console.log(r);
+				try{
+					var s='<table border><tr><th>Type</th><th>Value</th></tr>';
+					$.each( r.DATA, function( k, v ) {
+						if (v[0]=='next number'){
+							var nnc="<span class=\"likeLink\" onclick=\"useThisOne('" + v[1] + "');\">" + v[1] + "</span>";
+						} else {
+							var nnc=v[1];
+						}
+						if (v[0].length>0 && v[1].length>0){
+							s+='<tr><td>' + v[0]  + '</td><td>' + nnc + '</td></tr>';
+						}
+					});
+					s+='</table>';
+					$("#nlnd").html(s);
+				} catch(err){
+					//console.log('incatch');
+					$("#nlnd").html('no suggestions available');
 				}
-			);
-		} catch (e) {
-			//console.log('catch');
-			$("#nlnd").html('no suggestions available');
-		}
-	});
-});
+			}
+		);
+	} catch (e) {
+		//console.log('catch');
+		$("#nlnd").html('no suggestions available');
+	}
+}
+
 </script>
-	Initiate a loan-like transaction: <span class="helpLink" data-helplink="loan">Help</span>
+	<h3>
+		Initiate a loan-like transaction
+	</h3>
+	<input 
+		type="button" 
+		value="templates" 
+		class="picBtn" 
+		onclick="openOverlay('/form/collection_template.cfm?typ=loan_create&frm=newloan','Collection Templates');">
 	<cfoutput>
-		<form name="newloan" id="newloan" action="Loan.cfm" method="post" onSubmit="return noenter();">
+		<!------------onSubmit="return noenter();"---------->
+		<form name="newloan" id="newloan" action="Loan.cfm" method="post">
 			<input type="hidden" name="action" value="makeLoan">
 			<table border>
 				<tr>
 					<td>
 						<label for="collection_id">Collection</label>
-						<select name="collection_id" size="1" id="collection_id" class="reqdClr">
+						<select name="collection_id" size="1" id="collection_id" class="reqdClr" onchange="checkNextNum()">
 							<option value=""></option>
 							<cfloop query="ctcollection">
 								<option value="#ctcollection.collection_id#">#ctcollection.guid_prefix#</option>
@@ -333,7 +341,7 @@ jQuery(document).ready(function() {
 						<input type="text" name="loan_number" class="reqdClr" id="loan_number">
 					</td>
 				</tr>
-
+			
 				<tr>
 					<td>
 						<label for="loan_type">Transaction Type</label>
@@ -464,16 +472,13 @@ jQuery(document).ready(function() {
 							</div>
 						</div>	
 					</td>
-				</tr>
-				<tr>
+				</tr>	<tr>
 					<td colspan="2" align="center">
 						<input type="submit" value="Create Transaction" class="insBtn">
-						&nbsp;
-						<input type="button" value="Quit" class="qutBtn" onClick="document.location = 'Loan.cfm'">
 			   		</td>
 				</tr>
 			</table>
-		</form>
+		</form>		
 		<div class="nextnum" id="nlnd">
 			<p>
 				Select a collection for data; file an Issue to request incrementing.
@@ -484,9 +489,6 @@ jQuery(document).ready(function() {
 <!-------------------------------------------------------------------------------------------------->
 <cfif action is "editLoan">
 	<cfset title="Edit Loan-like transaction">
-
-
-
 	<cfoutput>
 	<cfquery name="loanDetails" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		select
@@ -772,7 +774,7 @@ jQuery(document).ready(function() {
 			<li><a href="search.cfm?loan_trans_id=#transaction_id#">[ catalog records ]</a></li>
 		</ul>
 		<label for="redir">Print</label>
-		<a href="/Reports/report_printer.cfm?transaction_id=#transaction_id#">
+		<a href="/Reports/reporter.cfm?transaction_id=#transaction_id#">
 			<input type="button" class="lnkBtn" value="Arctos Reporter">
 		</a>
 
@@ -985,14 +987,11 @@ jQuery(document).ready(function() {
 			}
 		</script>
 		<p>
-			 <input type="button" value="Add a permit" class="picBtn"
-		   		onClick="addPermitToTrans('#transaction_id#','addNewPermitsPicked');">
+			 <input type="button" value="Add a permit" class="picBtn" onClick="addPermitToTrans('#transaction_id#','addNewPermitsPicked');">
 		</p>
 	</p>
 
 	</td></tr></table>
-
-
 
 <!---- include shipment form, pair with includeShipmentSQL outside any action block ---->
 <cfinclude template="/form/includeShipmentForm.cfm">

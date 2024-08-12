@@ -103,12 +103,12 @@ insert into cf_component_loader (
 	<tr>
 		<td>attribute_value</td>
 		<td>yes</td>
-		<td>Some are controlled by tables from <a href="/info/ctDocumentation.cfm?table=ctlocality_att_att">ctlocality_att_att</a></td>
+		<td>Some are controlled, see ctlocality_attribute_type</td>
 	</tr>
 	<tr>
 		<td>attribute_units</td>
 		<td>conditionally</td>
-		<td>If required, units are from <a href="/info/ctDocumentation.cfm?table=ctlocality_att_att">ctlocality_att_att</a></td>
+		<td>Some are controlled, see ctlocality_attribute_type</a></td>
 	</tr>
 	<tr>
 		<td>attribute_determiner</td>

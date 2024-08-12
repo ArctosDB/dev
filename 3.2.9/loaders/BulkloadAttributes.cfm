@@ -1,5 +1,36 @@
-<!-------What this is and how to use it-------------
+<!-------
 
+-- https://github.com/ArctosDB/arctos/issues/7642
+
+create table cf_temp_attributes (
+	key serial not null,
+	guid_prefix varchar(255),
+	guid varchar(60),
+	uuid varchar(60),
+	other_id_type varchar(60),
+	other_id_number varchar(60),
+	other_id_issuedby varchar(60),
+	attribute_type varchar(60),
+	attribute_value varchar(4000),
+	attribute_units varchar(40),
+	attribute_determiner varchar(255),
+	attribute_date varchar(40),
+	attribute_method varchar(4000),
+	attribute_remark varchar(4000),
+	username varchar not null default getUsernameFromSession() references cf_users(username),
+	last_ts timestamp default current_timestamp,
+	status varchar
+);
+
+grant select, insert, update, delete on cf_temp_attributes to manage_records;
+grant select, usage on cf_temp_attributes_key_seq to public;
+alter table cf_temp_attributes alter column key set default nextval('cf_temp_attributes_key_seq');
+
+
+
+drop sequence cf_temp_attributes_key_seq1;
+
+ALTER SEQUENCE cf_temp_attributes_key_seq1 RENAME TO cf_temp_attributes_key_seq;
 
 delete from cf_component_loader where loader_template='autoload_specimen_attribute';
 
@@ -32,10 +63,10 @@ insert into cf_component_loader (
 
 https://github.com/ArctosDB/arctos/issues/7315
 
-update cf_component_loader set rec_per_run=60,remark='20240218 60recs running in ~45s' where loader_template='autoload_specimen_attribute';
+update cf_component_loader set rec_per_run=20,remark='202405 timeouts with 60'  where loader_template='autoload_specimen_attribute';
 
 
-update cf_temp_attributes set status='autoload' where username = 'jessicatir';
+
 
 ------------->
 <cfinclude template="/includes/_header.cfm">
@@ -54,7 +85,7 @@ update cf_temp_attributes set status='autoload' where username = 'jessicatir';
 <cfparam name="status" default="">
 <cfparam name="username" default="">
 <cfparam name="UUID" default="">
-<cfset ComponentLoaderVersion="1.8">
+<cfset ComponentLoaderVersion="1.10">
 <cfoutput>
 	<cfset hasUpdateAccess=true>
 	<cfloop list="#cf_component_loader.manage_roles#" index="i">
@@ -72,67 +103,71 @@ update cf_temp_attributes set status='autoload' where username = 'jessicatir';
 
 			select string_agg(column_name,',') from information_schema.columns where table_name='cf_temp_demotable' and column_name not in ('key','last_ts','username','status');
 	---->
-	<cfset templateHeader="guid,guid_prefix,other_id_type,other_id_number,uuid,attribute,attribute_value,attribute_units,attribute_date,attribute_meth,determiner,remarks">
 
+	<cfset templateHeader="guid,guid_prefix,other_id_type,other_id_number,other_id_issuedby,uuid,attribute_type,attribute_value,attribute_units,attribute_date,attribute_method,attribute_determiner,attribute_remark,status">
 </cfoutput>
-
-<!------------------------------------------ BEGIN: documentation table guts ---------------------------------------------------------->
-
 <cfsavecontent variable = "defDocTableGuts">
 	<tr>
 		<td>guid</td>
 		<td>conditionally</td>
 		<td>
-			"DWC Triplet," UAM:Mamm:12. One of  GUID or (guid_prefix,other_id_type,other_id_number)b or UUID must be provided and resolve to one catalog record. 
+			"DWC Triplet," UAM:Mamm:12. One of  GUID or (guid_prefix,other_id_type,other_id_number,other_id_issuedby) or UUID must be provided and resolve to one catalog record. 
 		</td>
 	</tr>
 	<tr>
 		<td>guid_prefix</td>
 		<td>conditionally</td>
 		<td>
-			One of  GUID or (guid_prefix,other_id_type,other_id_number)b or UUID must be provided and resolve to one catalog record. 
+			One of  GUID or (guid_prefix,other_id_type,other_id_number,other_id_issuedby) or UUID must be provided and resolve to one catalog record. 
 		</td>
 	</tr>
 	<tr>
 		<td>other_id_type</td>
 		<td>conditionally</td>
 		<td>
-			 <a href="/info/ctDocumentation.cfm?table=CTCOLL_OTHER_ID_TYPE">CTCOLL_OTHER_ID_TYPE</a> One of  GUID or (guid_prefix,other_id_type,other_id_number)b or UUID must be provided and resolve to one catalog record. 
+			 <a href="/info/ctDocumentation.cfm?table=CTCOLL_OTHER_ID_TYPE">CTCOLL_OTHER_ID_TYPE</a> One of  GUID or (guid_prefix,other_id_type,other_id_number) or UUID must be provided and resolve to one catalog record. 
 		</td>
 	</tr>
 	<tr>
 		<td>other_id_number</td>
 		<td>conditionally</td>
 		<td>
-			One of  GUID or (guid_prefix,other_id_type,other_id_number)b or UUID must be provided and resolve to one catalog record. 
+			One of  GUID or (guid_prefix,other_id_type,other_id_number,other_id_issuedby) or UUID must be provided and resolve to one catalog record. 
+		</td>
+	</tr>
+	<tr>
+		<td>other_id_issuedby</td>
+		<td>conditionally</td>
+		<td>
+			One of  GUID or (guid_prefix,other_id_type,other_id_number,other_id_issuedby) or UUID must be provided and resolve to one catalog record. 
 		</td>
 	</tr>
 	<tr>
 		<td>uuid</td>
 		<td>conditionally</td>
 		<td>
-			One of  GUID or (guid_prefix,other_id_type,other_id_number)b or UUID must be provided and resolve to one catalog record. 
+			One of  GUID or (guid_prefix,other_id_type,other_id_number) or UUID must be provided and resolve to one catalog record. 
 		</td>
 	</tr>
 	<tr>
-		<td>attribute</td>
+		<td>attribute_type</td>
 		<td>yes</td>
 		<td>
-			Attribute to create. <a href="/info/ctDocumentation.cfm?table=CTATTRIBUTE_TYPE">CTATTRIBUTE_TYPE</a>
+			Attribute type to create. <a href="/info/ctDocumentation.cfm?table=CTATTRIBUTE_TYPE">CTATTRIBUTE_TYPE</a>
 		</td>
 	</tr>
 	<tr>
 		<td>attribute_value</td>
 		<td>yes</td>
 		<td>
-			Some have controlled values or datatype - see <a href="/info/ctDocumentation.cfm?table=CTATTRIBUTE_CODE_TABLES">CTATTRIBUTE_CODE_TABLES</a>
+			Some have controlled values or datatype - see <a href="/info/ctDocumentation.cfm?table=CTATTRIBUTE_TYPE">CTATTRIBUTE_TYPE</a>
 		</td>
 	</tr>
 	<tr>
 		<td>attribute_units</td>
 		<td>conditionally</td>
 		<td>
-			Some require units, see <a href="/info/ctDocumentation.cfm?table=CTATTRIBUTE_CODE_TABLES">CTATTRIBUTE_CODE_TABLES</a>
+			Some require units, see <a href="/info/ctDocumentation.cfm?table=CTATTRIBUTE_TYPE">CTATTRIBUTE_TYPE</a>
 		</td>
 	</tr>
 	<tr>
@@ -143,21 +178,21 @@ update cf_temp_attributes set status='autoload' where username = 'jessicatir';
 		</td>
 	</tr>
 	<tr>
-		<td>attribute_meth</td>
+		<td>attribute_method</td>
 		<td>no</td>
 		<td>
 			free text
 		</td>
 	</tr>
 	<tr>
-		<td>determiner</td>
+		<td>attribute_determiner</td>
 		<td>no</td>
 		<td>
 			Must resolve to distinct agent.
 		</td>
 	</tr>
 	<tr>
-		<td>remarks</td>
+		<td>attribute_remark</td>
 		<td>no</td>
 		<td>
 			free text
@@ -334,45 +369,12 @@ update cf_temp_attributes set status='autoload' where username = 'jessicatir';
 						<cfloop list="#templateHeader#" index="i">
 							<th>#i#</th>
 						</cfloop>
-
-						<!--------------- this section will need customized for individual loaders ----------------------------->
-						<!-----------------------
-							HOWTO/template for UUID/"extras":
-
-							Make the other_id_number column look like below, it may need adjusted for some loaders
-
-							<td>
-								#other_id_number#
-								<cfif other_id_type is "UUID">
-									<div>
-										<a href="/search.cfm?oidtype=UUID&oidnum==#other_id_number#" class="external infoLink" target="_blank">Search Records</a>
-									</div>
-									<div>
-										<a href="/Bulkloader/browseBulk.cfm?uuid=#other_id_number#" class="external infoLink" target="_blank">Search Bulkloader</a>
-									</div>
-								</cfif>
-							</td>
-
-						--------------->
-						<!-------------
-								OPTION: static: remove the loop above and below and replace with something like
-
-
-									<th>random_varchar_field</th>
-									<th>random_bigint_field</th>
-								
-								and
-
-									<td>#random_varchar_field#</td>
-									<td>#random_bigint_field#</td>
-
-						------------>
 						<!--------------- END::this section will need customized for individual loaders ----------------------------->
 					</tr>
 					<cfloop query="d">
 						<tr>
 							<td><input type="checkbox" name="key" value="#key#"></td>
-							<td>#status#</td>
+							<td><div class="componentLoaderStatusDisplay">#status#</div></td>
 							<!--------------- this section will need customized for individual loaders ----------------------------->
 							<cfloop list="#templateHeader#" index="i">
 								<cfset thisVal=evaluate("d." & i)>
@@ -627,6 +629,7 @@ update cf_temp_attributes set status='autoload' where username = 'jessicatir';
 					</td>
 				</tr>
 			</cfloop>
+		</table>
 	</cfoutput>
 </cfif>
 <!-----------Deleted Page------------------------------------------------------------------------------------------------------------------------------------------->
@@ -737,6 +740,22 @@ update cf_temp_attributes set status='autoload' where username = 'jessicatir';
 	<cfoutput>
 		<cfif hasUpdateAccess is false>
 			<div class="importantNotification">You do not have access to perform this operation.</div>
+			<cfabort>
+		</cfif>
+		<cfif not isdefined ("key") or len(trim(key)) is 0>
+			<div class="importantNotification">
+				<p>
+					Nothing to update, aborting.
+				</p>
+				<p>
+					Check some boxes, provide a status, then click update.
+				</p>
+				<p>
+					<a href="#thisFormFile#?action=table&username=#username#&status=#status#">
+						<input type="button" class="lnkBtn" value="back">
+					</a>
+				</p>
+			</div>
 			<cfabort>
 		</cfif>
 		<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">

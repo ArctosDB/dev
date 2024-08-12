@@ -34,15 +34,10 @@
 	 order by created_timestamp desc
 </cfquery>
 
-
-
 <cfoutput>
+	<h3>Edit History for #agent_attribute.preferred_agent_name#</h3>
 
-
-	<h3>Viewing all information for #agent_attribute.preferred_agent_name#</h3>
-
-
-	<table border>
+	<table border class="sortable" id="t">
 		<tr>
 			<th>attribute</th>
 			<th>value</th>
@@ -59,7 +54,6 @@
 			<th>deprecated</th>
 			<th>deprecation_type</th>
 		</tr>
-
 		<cfloop query="agent_attribute">
 			<tr>
 				<td>#attribute_type#</td>
@@ -92,14 +86,8 @@
 				</td>
 				<td>#deprecated_timestamp#</td>
 				<td>#deprecation_type#</td>
-
 			</tr>
-	
 		</cfloop>
-
 	</table>
-
-
-
 </cfoutput>
 <cfinclude template="/includes/_footer.cfm">

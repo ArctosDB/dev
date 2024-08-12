@@ -19,7 +19,7 @@ create table cf_temp_specevent (
 	verificationstatus varchar(255),
 	verified_by_agent varchar(255),
 	verified_date varchar,
-	collecting_method varchar(255),
+	collecting_method varchar(4000),
 	collecting_source varchar(255),
 	habitat varchar(255),
 	specimen_event_remark varchar(4000),
@@ -28,7 +28,7 @@ create table cf_temp_specevent (
 	collecting_event_name varchar(255),
 	verbatim_date varchar(255),
 	verbatim_locality varchar(255),
-	coll_event_remarks varchar(255),
+	coll_event_remarks varchar(4000),
 	began_date varchar(255),
 	ended_date varchar(255),
 	-- coordinate-stuff
@@ -80,6 +80,14 @@ grant select, insert on cf_temp_specevent to data_entry;
 grant select, usage on cf_temp_specevent_key_seq to public;
 
 alter table cf_temp_specevent alter column specimen_event_remark type varchar(4000);
+
+----https://github.com/ArctosDB/arctos/issues/7428
+alter table cf_temp_specevent alter column collecting_method type varchar(4000);
+
+--https://github.com/ArctosDB/arctos/issues/7527
+alter table cf_temp_specevent alter column coll_event_remarks type varchar(4000);
+
+
 
 	-- collecting event stuff
 
@@ -183,7 +191,7 @@ insert into cf_component_loader (
 	</tr>
 	<tr>
 		<td>verificationstatus</td>
-		<td>yes</td>
+		<td>no</td>
 		<td><a href="/info/ctDocumentation.cfm?table=CTVERIFICATIONSTATUS">verificationstatus</a></td>
 	</tr>
 	<tr>
@@ -292,7 +300,7 @@ insert into cf_component_loader (
 	
 	<tr>
 		<td>georeference_protocol</td>
-		<td>required if ORIG_LAT_LONG_UNITS is given</td>
+		<td>no</td>
 		<td><a href="/info/ctDocumentation.cfm?table=CTGEOREFERENCE_PROTOCOL">CTGEOREFERENCE_PROTOCOL</a></td>
 	</tr>
 	<tr>

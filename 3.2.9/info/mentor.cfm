@@ -29,16 +29,20 @@ questions regarding Arctos.
 	<tr>
 		<th>Name</th>
 		<th>Email</th>
-		<th>Collection Type</th>
 		<th>Collection</th>
+		<th>Collection Type</th>
+		<th>Institution</th>
+		<th>Collection Description</th>
 		<th>Web Link</th>
 	</tr>
 	<cfloop query="d">
 		<tr>
 			<td>#agentName#</td>
 			<td>#email#</td>
+			<td><a href="/collection/#GUID_PREFIX#">#GUID_PREFIX#</a></td>
 			<td>#collection_cde#</td>
-			<td>#INSTITUTION# #COLLECTION#</td>
+			<td>#INSTITUTION#</td>
+			<td>#COLLECTION#</td>
 			<td>
 				<cfif len(WEB_LINK) gt 0>
 					<a href="#WEB_LINK#" target="_blank" class="external">More Information</a>

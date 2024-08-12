@@ -46,7 +46,8 @@
 		session.catrec_srch_cols='';
 		session.catrec_rslt_cols='';
 		session.directory_view='';
-		session.include_verbatim='';
+		session.reporter_prefs='';
+		session.include_verbatim='false';
 		if (len(username) is 0 and len(pwd) is 0){
 			// public user, just make happy noises at the defaults
 			r.status="success";
@@ -85,6 +86,7 @@
 	        			catrec_srch_cols,
 	        			catrec_rslt_cols,
 	        			directory_view,
+	        			reporter_prefs,
 	        			include_verbatim
 	        		from cf_users where username = :usr "
 	        );
@@ -138,11 +140,11 @@
 					     SELECT
 					        pg_roles.oid,
 					        pg_roles.rolname,
-					        agent_name.agent_id
-					       FROM
+					        cf_users.operator_agent_id as agent_id
+					      FROM
 					        pg_roles
-					        inner join agent_name on pg_roles.rolname=lower(agent_name.agent_name) and agent_name_type='login'
-					        WHERE agent_name.agent_name = :usr and
+					        inner join cf_users on pg_roles.rolname=lower(cf_users.username)
+					        WHERE cf_users.username = :usr and
 					        rolvaliduntil >= current_timestamp
 					        UNION ALL
 					        SELECT
@@ -219,6 +221,7 @@
 				session.catrec_srch_cols=userdata.catrec_srch_cols;
 				session.catrec_rslt_cols=userdata.catrec_rslt_cols;
 				session.directory_view=userdata.directory_view;
+				session.reporter_prefs=userdata.reporter_prefs;
 				session.include_verbatim=userdata.include_verbatim;
 				
 				// TEMPORARY: set up authentication for the crappy coldfusion reporter
@@ -271,6 +274,7 @@
 				session.catrec_srch_cols=userdata.catrec_srch_cols;
 				session.catrec_rslt_cols=userdata.catrec_rslt_cols;
 				session.directory_view=userdata.directory_view;
+				session.reporter_prefs=userdata.reporter_prefs;
 				session.include_verbatim=userdata.include_verbatim;
 	    		// END: user-not-operator specific config
 	    		r.status="success";
@@ -574,7 +578,7 @@
 	            q.addParam(name="logged_action",value=v_logged_action, cfsqltype="cf_sql_varchar",null="#Not Len(Trim(v_logged_action))#");
 	            q.addParam(name="logged_time",value=v_logged_time, cfsqltype="cf_sql_int",null="#Not Len(Trim(v_logged_time))#");
 	            logrequest=q.execute();
-	        }
+	        }	      
 	    }// slashy-thread
 	}
 }</cfscript>

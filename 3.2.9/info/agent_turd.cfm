@@ -5,7 +5,7 @@
 		group by report_name
 	</cfquery>
 	<cfif agent_turd.recordcount gt 0>
-		<div>Transarctos Unified Reporting Directive Involvement</div>
+		<div>Transarctos Unified Reporting Directive</div>
 		<div style="margin-left: 2em;">
 			<cfloop query="agent_turd">
 				<div>

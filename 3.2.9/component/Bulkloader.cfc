@@ -242,6 +242,7 @@
 				specimen_event_remark,
 				collecting_method,
 				collecting_source
+			order by guid
 		</cfquery>
 		<cfloop query="core">
 			<cfset status='CLONE FROM #core.guid#'>
@@ -417,9 +418,9 @@
 							id_remarks
 						from 
 							seed 
-						where 
-							guid_prefix=<cfqueryparam value="#core.guid_prefix#" cfsqltype="cf_sql_varchar"> and
-							other_id_type is not null
+						where
+							guid=<cfqueryparam value="#core.guid#" cfsqltype="cf_sql_varchar"> and
+							other_id_type is not null and display_value is not null
 						group by 
 							other_id_type,
 							id_issuedby,
@@ -428,7 +429,7 @@
 							id_remarks
 					</cfquery>
 					<cfif identifiers.recordcount gt bulk_otherid_count>
-						<cfset status=listappend(status,'too many identifiers','|')>
+						<cfset status=listappend(status,'too many identifiers [#identifiers.recordcount# exist #bulk_otherid_count# possible]','|')>
 					</cfif>
 					<cfloop from="1" to="#bulk_otherid_count#" index="i">
 						<cfif identifiers.recordcount gte i>
@@ -453,7 +454,7 @@
 						from 
 							seed 
 						where 
-							guid_prefix=<cfqueryparam value="#core.guid_prefix#" cfsqltype="cf_sql_varchar"> and
+							guid=<cfqueryparam value="#core.guid#" cfsqltype="cf_sql_varchar"> and
 							id_agent is not null
 						group by 
 							id_agent,
@@ -485,7 +486,7 @@
 						from 
 							seed 
 						where 
-							guid_prefix=<cfqueryparam value="#core.guid_prefix#" cfsqltype="cf_sql_varchar"> and
+							guid=<cfqueryparam value="#core.guid#" cfsqltype="cf_sql_varchar"> and
 							id_attribute_type is not null
 						group by 
 							id_attribute_type,
@@ -527,7 +528,7 @@
 						from 
 							seed 
 						where
-							guid_prefix=<cfqueryparam value="#core.guid_prefix#" cfsqltype="cf_sql_varchar"> and
+							guid=<cfqueryparam value="#core.guid#" cfsqltype="cf_sql_varchar"> and
 							collname is not null
 						group by 
 							collname,
@@ -561,7 +562,7 @@
 						from 
 							seed 
 						where 
-							guid_prefix=<cfqueryparam value="#core.guid_prefix#" cfsqltype="cf_sql_varchar"> and
+							guid=<cfqueryparam value="#core.guid#" cfsqltype="cf_sql_varchar"> and
 							loc_attribute_type is not null
 						group by 
 							loc_attribute_type,
@@ -598,6 +599,7 @@
 					<cfquery name="collecting_event_attributes" dbtype="query">
 						select
 							evt_attribute_type,
+							evt_attribute_value,
 							evt_attribute_units,
 							evt_attribute_remark,
 							evt_determination_method,
@@ -606,10 +608,11 @@
 						from 
 							seed 
 						where
-							guid_prefix=<cfqueryparam value="#core.guid_prefix#" cfsqltype="cf_sql_varchar"> and
-							evt_attribute_type is not null
+							guid=<cfqueryparam value="#core.guid#" cfsqltype="cf_sql_varchar"> and
+							evt_attribute_type is not null and evt_attribute_value is not null
 						group by 
 							evt_attribute_type,
+							evt_attribute_value,
 							evt_attribute_units,
 							evt_attribute_remark,
 							evt_determination_method,
@@ -651,7 +654,7 @@
 						from 
 							seed 
 						where 
-							guid_prefix=<cfqueryparam value="#core.guid_prefix#" cfsqltype="cf_sql_varchar"> and
+							guid=<cfqueryparam value="#core.guid#" cfsqltype="cf_sql_varchar"> and
 							attribute_type is not null
 						group by 
 							attribute_type,
@@ -697,7 +700,7 @@
 						from 
 							seed 
 						where
-							guid_prefix=<cfqueryparam value="#core.guid_prefix#" cfsqltype="cf_sql_varchar"> and
+							guid=<cfqueryparam value="#core.guid#" cfsqltype="cf_sql_varchar"> and
 							part_id is not null
 						group by 
 							part_id,
@@ -717,7 +720,7 @@
 						from 
 							seed 
 						where
-							guid_prefix=<cfqueryparam value="#core.guid_prefix#" cfsqltype="cf_sql_varchar"> and
+							guid=<cfqueryparam value="#core.guid#" cfsqltype="cf_sql_varchar"> and
 							part_attribute_id is not null
 						group by 
 							part_id,
@@ -759,6 +762,15 @@
 								where
 									sp_attribute_type is not null and
 									part_id=<cfqueryparam value="#r.part_id#" cfsqltype="cf_sql_int">
+								group by 
+									part_attribute_id,
+									sp_attribute_type,
+									sp_attribute_value,
+									sp_attribute_units,
+									sp_attribute_remark,
+									sp_determination_method,
+									sp_attribute_determined_date,
+									sp_attribute_determiner
 							</cfquery>
 							<cfloop from="1" to="#bulk_part_attr_count#" index="a">
 								<cfif thisPartAtts.recordcount gte a>
@@ -1165,18 +1177,6 @@
 			<cfreturn r>
 		</cfcatch>
 		</cftry>
-</cffunction>
-<!----------------------------------------------------------------------------------------->
-<cffunction name="getCollectionCodeFromGuidPrefix" access="remote" returnformat="json" queryformat="column">
-	<cfargument name="guid_prefix" required="yes">
-	 <!---- this has to be called remotely, but only allow logged-in Operators access--->
-    <cfif not isdefined("session.roles") or not listFindNoCase(session.roles, 'COLDFUSION_USER')>
-      <cfthrow message="unauthorized">
-    </cfif>
-	<cfquery name="cc" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
-		select collection_cde from collection where guid_prefix=<cfqueryparam value="#guid_prefix#" cfsqltype="cf_sql_varchar">
-	</cfquery>
-	<cfreturn cc.collection_cde>
 </cffunction>
 <!----------------------------------------------------------------------------------------->
 <cffunction name="loadRecord" access="remote">

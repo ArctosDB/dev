@@ -2,15 +2,16 @@
 <cfset title = "Edit Identifiers">
 <cfif action is "nothing">
 	<script>
+		// see https://github.com/ArctosDB/arctos/issues/7822 this can probably go away
 		function identifierBuilder() {
 			var u='/form/identifierBuilder.cfm?';
 			u+='idtype=' + $("#other_id_type").val();
-			u+='&idval=' + $("#other_id_prefix").val();
+			u+='&idval=' + $("#display_value").val();
 			u+='&issuedby=' + $("#issued_by").val();
 			u+='&clickedfrom=';
 			u+='&typ_fld=' + 'other_id_type';
 			u+='&iss_fld=' + 'issued_by';
-			u+='&val_fld=' + 'other_id_prefix';
+			u+='&val_fld=' + 'display_value';
 			openOverlay(u,'Build Identifiers');
 		}
 
@@ -35,7 +36,6 @@
 			);
 		}
 		function createAnEntity(collection_object_id){
-
 			var cm="This will create an Entity record which may be used as eg, Organism ID. You will need to add information to the Entity later.";
 			cm+="\n\nDO NOT create an Entity here if you have already made one for any Entity Component; reuse that identifier in this record instead.";
 			cm+="\n\nContinue?";
@@ -57,7 +57,7 @@
 							jQuery('#cloned').css("display", "inline").html(q);
 
 							$("#other_id_type").val('Organism ID');
-							$("#other_id_prefix").val(r.GUID);
+							$("#display_value").val(r.GUID);
 
 						} else {
 							alert(r);
@@ -69,7 +69,7 @@
 			}
 		}
 		function cloneCatalogedItem(collection_object_id){
-			jQuery('#cloned').css("display", "inline").html('<img src="/images/indicator.gif">Creating clone(s) - hold tight.....');
+			jQuery('#cloned').show().html('<img src="/images/indicator.gif">Creating clone(s) - hold tight.....');
 			$.ajax({
 			 	url: "/component/functions.cfc",
 			 	type: "GET",
@@ -78,7 +78,6 @@
 				data: {
 					method:  "cloneCatalogedItem",
 					collection_object_id : collection_object_id,
-					numRecs: $("#numRecs").val(),
 					refType: $("#refType").val(),
 					taxon_name: $("#taxon_name").val(),
 					collection_id: $("#collection_id").val(),
@@ -86,13 +85,13 @@
 					queryformat : 'column'
 				},
 			 	success: function( data ) {
-				  if (data == 'spiffy') {
-						var q='created ' + $("#numRecs").val() + ' clones in bulkloader.';
+				  if (data.status == 'success') {
+						var q='created <a class="external" href="/Bulkloader/editBulkloader.cfm?key=' + data.key + '">' + data.key + '</a>';
 					} else {
 						var q='cloning failed: ' + data;
 						alert(q);
 					}
-					jQuery('#cloned').css("display", "inline").html(q);
+					jQuery('#cloned').show().html(q);
 				 },
 				 error: function( data ) {
 				  alert( 'ERROR: ', data );
@@ -107,8 +106,8 @@
 				for ( i = 1; i <= $("#numberOfIDs").val(); i++ ) {
 					if ($("#delete_" + i).prop('checked')!==true) {
 						//console.log('nodelete');
-						if ($("#other_id_prefix_" + i).val().length===0 && $("#other_id_number_" + i).val().length===0 && $("#other_id_suffix_" + i).val().length===0){
-							alert('Prefix, Number, and Suffix may not all be NULL. Check the delete box and save to remove an identifier');
+						if ($("#display_value_" + i).val().length===0){
+							alert('Identifier may not be NULL. Check the delete box and save to remove an identifier');
 							$("#trid_" + i).addClass('badPick');
 							return false;
 						}
@@ -116,24 +115,10 @@
 				}
 			});
 			$("#newOID").submit(function(event){
-				if ($("#other_id_prefix").val().length===0 && $("#other_id_number").val().length===0 && $("#other_id_suffix").val().length===0){
-					alert('Prefix, Number, and Suffix may not all be NULL.');
+				if ($("#display_value").val().length===0){
+					alert('Identifier may not all be NULL.');
 					$("#trid_new").addClass('badPick');
 					return false;
-				}
-			});
-
-			$("#newOID").change(function() {
-				// make the options a little more friendly for known types
-				console.log($("#other_id_type").val());
-				if ($("#other_id_type").val() == 'AF' || $("#other_id_type").val() == 'NK') {
-					$("#other_id_prefix").val('').hide();
-					$("#other_id_number").show();
-					$("#other_id_suffix").val('').hide();
-				} else {
-					$("#other_id_prefix").show();
-					$("#other_id_number").show();
-					$("#other_id_suffix").show();
 				}
 			});
 		});
@@ -145,7 +130,7 @@
 			overflow: hidden;
 		}
 		.idtypepick{
-			width: 10em;
+			width: 12em;
 		}
 		.relnpick{
 			width: 10em;
@@ -192,12 +177,14 @@
 			Don't get all clicky or you'll make a mess.
 			<br>Create
 			<form name="clone">
+				<!----
 				<label for="numRecs">Number of new records</label>
 				<select name="numRecs" id="numRecs">
 					<cfloop from="1" to="1000" index="i">
 						<option value="#i#">#i#</option>
 					</cfloop>
 				</select>
+				---->
 				<label for="refType">relationship (id_references in bulkloader) to this record</label>
 				<select name="refType" id="refType" size="1">
 					<option value="">-pick one-</option>
@@ -229,9 +216,7 @@
 			select
 				coll_obj_other_id_num.coll_obj_other_id_num_id,
 				cataloged_item.cat_num,
-				replace(coll_obj_other_id_num.other_id_prefix,' ','&nbsp;') other_id_prefix,
-				coll_obj_other_id_num.other_id_number,
-				coll_obj_other_id_num.other_id_suffix,
+				coll_obj_other_id_num.display_value,
 				coll_obj_other_id_num.other_id_type,
 				cataloged_item.collection_id,
 				coll_obj_other_id_num.id_references,
@@ -249,7 +234,7 @@
 				cataloged_item.collection_object_id=#val(collection_object_id)#
 		</cfquery>		
 		<cfquery name="ctType" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-			select other_id_type from ctcoll_other_id_type order by sort_order,other_id_type
+			select other_id_type from ctcoll_other_id_type order by other_id_type
 		</cfquery>
 		<cfquery name="cat" dbtype="query">
 			select
@@ -266,9 +251,7 @@
 		<cfquery name="oids" dbtype="query">
 			select
 				COLL_OBJ_OTHER_ID_NUM_ID,
-				other_id_prefix,
-				other_id_number,
-				other_id_suffix,
+				display_value,
 				other_id_type,
 				id_references,
 				coll_obj_other_id_num_id,
@@ -283,9 +266,7 @@
 				COLL_OBJ_OTHER_ID_NUM_ID is not null
 			group by
 				COLL_OBJ_OTHER_ID_NUM_ID,
-				other_id_prefix,
-				other_id_number,
-				other_id_suffix,
+				display_value,
 				other_id_type,
 				id_references,
 				coll_obj_other_id_num_id,
@@ -294,40 +275,49 @@
 				issued_by,
 				issued_by_agent_id,
 				remarks
+			order by
+				issued_by_agent_id,
+				other_id_type,
+				display_value
 		</cfquery>
 		<h3>Identifiers</h3>
-		<b>Edit existing Identifiers:</b>
 		<form name="ids" id="formEdit" method="post" action="editIdentifiers.cfm">
 			<input type="hidden" name="collection_object_id" value="#collection_object_id#">
 			<input type="hidden" name="Action" value="saveEdits">
-			<table>
-				<tr #iif(i MOD 2,DE("class='oddRow'"),DE("class='evenRow'"))#>
-					<input type="hidden" name="oldcat_num" value="#cat.cat_num#">
-					<td>Catalog Number:</td>
-					<td>#cat.guid_prefix#:</td>
-					<td><input type="text" name="cat_num" value="#cat.cat_num#" size="25" class="reqdClr"></td>
-			 		<td>
-				 		<span class="infoLink"onClick="window.open('/tools/findGap.cfm','','width=400,height=338, resizable,scrollbars');">[ find gaps ]</span>
-					</td>
-				 </tr>
-			</table>
+
+
 			<cfset i=1>
+			<div style="margin-top:.5em;margin-bottom:.5em;">
+				<b>Catalog Number:</b>
+				<table>
+					<tr #iif(i MOD 2,DE("class='oddRow'"),DE("class='evenRow'"))#>
+						<input type="hidden" name="oldcat_num" value="#cat.cat_num#">
+						<td>Catalog Number:</td>
+						<td>#cat.guid_prefix#:</td>
+						<td><input type="text" name="cat_num" value="#cat.cat_num#" size="25" class="reqdClr"></td>
+				 		<td>
+					 		<span class="infoLink"onClick="window.open('/tools/findGap.cfm','','width=400,height=338, resizable,scrollbars');">[ find gaps ]</span>
+						</td>
+					 </tr>
+				</table>
+			</div>
+
+
+			<b>Other Identifiers:</b>
 			<table border>
 				<tr>
 					<th>
 						ID Type
 				 		<span class="infoLink" onClick="getCtDoc('ctcoll_other_id_type','')">[ define ]</span>
 					</th>
-					<th>Prefix or String</th>
-					<th>INT</th>
-					<th>Suffix</th>
+					<th>IssuedBy</th>
+					<th>Value</th>
 					<th>
 						Relationship
 						<span class="infoLink" onClick="getCtDoc('ctid_references','')">[ define ]</span>
 					</th>
-					<th>AssignedBy</th>
-					<th>IssuedBy</th>
 					<th>Remark</th>
+					<th>AssignedBy</th>
 					<th>Delete</th>
 				</tr>
 				<cfloop query="oids">
@@ -341,14 +331,15 @@
 								</cfloop>
 							</select>
 						</td>
+
 						<td>
-							<input type="text" value="#EncodeForHTML(canonicalize(oids.other_id_prefix,true,true))#" size="50" name="other_id_prefix_#i#" id="other_id_prefix_#i#"  placeholder="prefix">
+							<input placeholder="issued by agent" type="text" name="issued_by_#i#" id="issued_by_#i#" value="#issued_by#" class=""
+								onchange="pickAgentModal('issued_by_agent_id_#i#',this.name,this.value); return false;"
+						 		onKeyPress="return noenter(event);">
+							<input type="hidden" name="issued_by_agent_id_#i#" id="issued_by_agent_id_#i#" value="#issued_by_agent_id#">
 						</td>
 						<td>
-							<input type="number" step="any" value="#oids.other_id_number#" size="6" name="other_id_number_#i#" id="other_id_number_#i#" placeholder="integer">
-						</td>
-						<td>
-							<input type="text" value="#EncodeForHTML(canonicalize(oids.other_id_suffix,true,true))#" size="6" name="other_id_suffix_#i#" id="other_id_suffix_#i#" placeholder="suffix">
+							<input type="text" step="any" value="#oids.display_value#" size="60" name="display_value_#i#" id="display_value_#i#" placeholder="identifier value">
 						</td>
 						<td>
 							<select class="relnpick" name="id_references_#i#" id="id_references_#i#" size="1">
@@ -359,18 +350,12 @@
 							</select>
 						</td>
 						<td>
+							<textarea placeholder="remarks" name="remarks_#i#" id="remarks_#i#" class="smalltextarea">#remarks#</textarea>
+						</td>
+						<td>
 							<div class="assigner">
 								<cfif assigned_by is "unknown">legacy<cfelse>#assigned_by#@#assigned_date#</cfif>
 							</div>
-						</td>
-						<td>
-							<input type="text" name="issued_by_#i#" id="issued_by_#i#" value="#issued_by#" class=""
-								onchange="pickAgentModal('issued_by_agent_id_#i#',this.name,this.value); return false;"
-						 		onKeyPress="return noenter(event);">
-							<input type="hidden" name="issued_by_agent_id_#i#" id="issued_by_agent_id_#i#" value="#issued_by_agent_id#">
-						</td>
-						<td>
-							<textarea name="remarks_#i#" id="remarks_#i#" class="smalltextarea">#remarks#</textarea>
 						</td>
 						<td>
 							<input type="checkbox" id="delete_#i#" name="delete_#i#" value="1">
@@ -378,62 +363,59 @@
 					</tr>
 					<cfset i=i+1>
 				</cfloop>
-				<cfset nid=i-1>
-				<input type="hidden" value="#nid#" name="numberOfIDs" id="numberOfIDs">
-			</table>
-			<input type="submit" name="not_submit" value="Save Changes" class="savBtn">
-		</form>
-		<b>
-			Add New Identifier
-			<input type="button" class="insBtn" value="builder" onclick="identifierBuilder();">
-		</b>
-		<form name="newOID" id="newOID" method="post" action="editIdentifiers.cfm">
-			<input type="hidden" name="collection_object_id" value="#collection_object_id#">
-			<input type="hidden" name="Action" value="newOID">
-			<table border class="newRec">
-				<tr id="trid_new">
-					<td>
-						<select class="idtypepick" name="other_id_type" id="other_id_type" size="1">
-							<option value=""></option>
-							<cfloop query="ctType">
-								<option	value="#ctType.other_id_type#">#ctType.other_id_type#</option>
-							</cfloop>
-						</select>
-					</td>
-					<td>
-						<input type="text" size="50" name="other_id_prefix" id="other_id_prefix" placeholder="prefix">
-					</td>
-					<td>
-						<input type="number" step="any" size="6" name="other_id_number" id="other_id_number" placeholder="integer">
-					</td>
-					<td>
-						<input type="text" size="6" name="other_id_suffix" id="other_id_suffix" placeholder="suffix">
-					</td>
-					<td>
-						<select class="relnpick" name="id_references" id="id_references" size="1">
-							<cfloop query="ctid_references">
-								<option	<cfif ctid_references.id_references is 'self'> selected="selected" </cfif>
-										value="#ctid_references.id_references#">#ctid_references.id_references#</option>
-							</cfloop>
-						</select>
-					</td>
-					<td>
-						<div class="assigner">
-							#session.username#@#dateformat(now(),"yyyy-mm-dd")#
+				<tr class="newRec">
+					<td colspan="7">
+						<div style="text-align: center;">
+							- add -
 						</div>
 					</td>
-					<td>
-						<input type="text" name="issued_by" id="issued_by" value="" class=""
-							onchange="pickAgentModal('issued_by_agent_id',this.name,this.value); return false;"
-					 		onKeyPress="return noenter(event);">
-						<input type="hidden" name="issued_by_agent_id" id="issued_by_agent_id" value="">
-					</td>
-					<td>
-						<textarea placeholder="remarks" name="remarks" id="remarks" class="smalltextarea"></textarea>
-					</td>
 				</tr>
+				<cfset nid=i-1>
+				<input type="hidden" value="#nid#" name="numberOfIDs" id="numberOfIDs">
+
+				<cfset numberOfNewIdentifiers=3>
+				<input type="hidden" value="#numberOfNewIdentifiers#" name="numberOfNewIdentifiers" id="numberOfNewIdentifiers">
+				<cfloop from="1" to="#numberOfNewIdentifiers#" index="i">
+					<tr class="newRec">
+						<td>
+							<select class="idtypepick" name="other_id_type_new_#i#" id="other_id_typ_new_#i#" size="1">
+								<option value=""></option>
+								<cfloop query="ctType">
+									<option	value="#ctType.other_id_type#">#ctType.other_id_type#</option>
+								</cfloop>
+							</select>
+						</td>
+
+						<td>
+							<input placeholder="issued by agent" type="text" name="issued_by_new_#i#" id="issued_by_new_#i#" value="" class=""
+								onchange="pickAgentModal('issued_by_agent_id_new_#i#',this.name,this.value); return false;"
+						 		onKeyPress="return noenter(event);">
+							<input type="hidden" name="issued_by_agent_id_new_#i#" id="issued_by_agent_id_new_#i#" value="">
+						</td>
+						<td>
+							<input type="text" size="60" name="display_value_new_#i#" id="display_value_new_#i#" placeholder="identifier value">
+						</td>
+						<td>
+							<select class="relnpick" name="id_references_new_#i#" id="id_references_new_#i#" size="1">
+								<cfloop query="ctid_references">
+									<option	<cfif ctid_references.id_references is 'self'> selected="selected" </cfif>
+											value="#ctid_references.id_references#">#ctid_references.id_references#</option>
+								</cfloop>
+							</select>
+						</td>
+						<td>
+							<textarea placeholder="remarks" name="remarks_new_#i#" id="remarks_new_#i#" class="smalltextarea"></textarea>
+						</td>
+						<td>
+							<div class="assigner">
+								#session.username#@#dateformat(now(),"yyyy-mm-dd")#
+							</div>
+						</td>
+						<td></td>
+					</tr>
+				</cfloop>
 			</table>
-			<input type="submit" value="Insert" class="insBtn">
+			<input type="submit" name="not_submit" value="Save Changes" class="savBtn">
 		</form>
 	</cfoutput>
 </cfif>
@@ -453,34 +435,29 @@
 		<cfloop from="1" to="#numberOfIDs#" index="n">
 			<cfset thisCOLL_OBJ_OTHER_ID_NUM_ID = evaluate("COLL_OBJ_OTHER_ID_NUM_ID_" & n)>
 			<cfset thisID_REFERENCES = evaluate("ID_REFERENCES_" & n)>
-			<cfset thisOTHER_ID_NUMBER = evaluate("OTHER_ID_NUMBER_" & n)>
-			<cfset thisOTHER_ID_PREFIX = evaluate("OTHER_ID_PREFIX_" & n)>
-			<cfset thisOTHER_ID_SUFFIX = evaluate("OTHER_ID_SUFFIX_" & n)>
+			<cfset thisdisplay_value = evaluate("display_value_" & n)>
 			<cfset thisOTHER_ID_TYPE = evaluate("OTHER_ID_TYPE_" & n)>
 			<cfset thisissued_by_agent_id = evaluate("issued_by_agent_id_" & n)>
 			<cfset thisremarks = evaluate("remarks_" & n)>
 
 			<cfif isdefined("delete_" & n) and evaluate("delete_" & n) is 1>
 				<cfquery name="dOIDt" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					delete from coll_obj_other_id_num WHERE	COLL_OBJ_OTHER_ID_NUM_ID=#thisCOLL_OBJ_OTHER_ID_NUM_ID#
+					delete from coll_obj_other_id_num WHERE	COLL_OBJ_OTHER_ID_NUM_ID=<cfqueryparam value="#thisCOLL_OBJ_OTHER_ID_NUM_ID#" cfsqltype="cf_sql_int">
 				</cfquery>
 			<cfelse>
-				<!--- spaces --->
-				<cfset thisOTHER_ID_PREFIX=replace(thisOTHER_ID_PREFIX,' ',chr(7),'all')>
+				<cfset thisdisplay_value=replace(thisdisplay_value,' ',chr(7),'all')>
 				<!---- HTML, because some browsers roll thataway ---->
-				<cfset thisOTHER_ID_PREFIX=replace(thisOTHER_ID_PREFIX,'&nbsp;',chr(7),'all')>
+				<cfset thisdisplay_value=replace(thisdisplay_value,'&nbsp;',chr(7),'all')>
 				<!---- nbsp's charcode, because I have no idea but it's in there ---->
-				<cfset thisOTHER_ID_PREFIX=replace(thisOTHER_ID_PREFIX,chr(160),chr(7),'all')>
+				<cfset thisdisplay_value=replace(thisdisplay_value,chr(160),chr(7),'all')>
 				<!--- now replace all chr(7) with chr(32)=space --->
-				<cfset thisOTHER_ID_PREFIX=replace(thisOTHER_ID_PREFIX,chr(7),chr(32),'all')>
+				<cfset thisdisplay_value=replace(thisdisplay_value,chr(7),chr(32),'all')>
 				<cfquery name="upOIDt" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 					UPDATE
 						coll_obj_other_id_num
 					SET
 						other_id_type=<cfqueryparam value="#thisOTHER_ID_TYPE#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(thisOTHER_ID_TYPE))#">,
-						other_id_prefix=<cfqueryparam value="#thisOTHER_ID_PREFIX#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(thisOTHER_ID_PREFIX))#">,
-						other_id_number=<cfqueryparam value="#thisOTHER_ID_NUMBER#" CFSQLType="cf_sql_int" null="#Not Len(Trim(thisOTHER_ID_NUMBER))#">,
-						other_id_suffix=<cfqueryparam value="#thisOTHER_ID_SUFFIX#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(thisOTHER_ID_SUFFIX))#">,
+						display_value=<cfqueryparam value="#thisdisplay_value#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(thisdisplay_value))#">,
 						id_references=<cfqueryparam value="#thisID_REFERENCES#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(thisID_REFERENCES))#">,
 						issued_by_agent_id=<cfqueryparam value="#thisissued_by_agent_id#" CFSQLType="cf_sql_int" null="#Not Len(Trim(thisissued_by_agent_id))#">,
 						remarks=<cfqueryparam value="#thisremarks#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(thisremarks))#">
@@ -489,36 +466,33 @@
 				</cfquery>
 			</cfif>
 		</cfloop>
+		<cfloop from="1" to="#numberOfNewIdentifiers#" index="i">
+			<cfset thisOTHER_ID_TYPE = evaluate("other_id_type_new_" & i)>
+			<cfset thisdisplay_value = evaluate("display_value_new_" & i)>
+			<cfset thisID_REFERENCES = evaluate("id_references_new_" & i)>
+			<cfset thisissued_by_agent_id = evaluate("issued_by_agent_id_new_" & i)>
+			<cfset thisremarks = evaluate("remarks_new_" & i)>
+			<cfif len(thisOTHER_ID_TYPE) gt 0 and len(thisdisplay_value) gt 0>
+				<cfquery name="newOIDt" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+					INSERT INTO coll_obj_other_id_num(
+						collection_object_id,
+						other_id_type,
+						display_value,
+						id_references,
+						issued_by_agent_id,
+						remarks
+					) VALUES (
+						<cfqueryparam value = "#collection_object_id#" CFSQLType="cf_sql_int" null="false">,
+						<cfqueryparam value = "#thisOTHER_ID_TYPE#" CFSQLType="CF_SQL_VARCHAR">,
+						<cfqueryparam value = "#thisdisplay_value#" CFSQLType="CF_SQL_VARCHAR">,
+						<cfqueryparam value = "#thisID_REFERENCES#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(thisID_REFERENCES))#">,
+						<cfqueryparam value = "#thisissued_by_agent_id#" CFSQLType="cf_sql_int" null="#Not Len(Trim(thisissued_by_agent_id))#">,
+						<cfqueryparam value = "#thisremarks#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(thisremarks))#">
+					)
+				</cfquery>
+			</cfif>
+		</cfloop>
 	</cftransaction>
 	<cflocation url="editIdentifiers.cfm?collection_object_id=#collection_object_id#" addtoken="false">
 </cfoutput>
 </cfif>
-<!-------------------------------------------------------->
-<cfif action is "newOID">
-	<cfoutput>
-		<cfquery name="newOIDt" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		INSERT INTO coll_obj_other_id_num
-			(collection_object_id,
-			other_id_type,
-			other_id_prefix,
-			other_id_number,
-			other_id_suffix,
-			id_references,
-			issued_by_agent_id,
-			remarks
-		) VALUES (
-			<cfqueryparam value = "#collection_object_id#" CFSQLType="cf_sql_int" null="false">,
-			<cfqueryparam value = "#other_id_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(other_id_type))#">,
-			<cfqueryparam value = "#other_id_prefix#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(other_id_prefix))#">,
-			<cfqueryparam value = "#other_id_number#" CFSQLType="cf_sql_int" null="#Not Len(Trim(other_id_number))#">,
-			<cfqueryparam value = "#other_id_suffix#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(other_id_suffix))#">,
-			<cfqueryparam value = "#id_references#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(id_references))#">,
-			<cfqueryparam value = "#issued_by_agent_id#" CFSQLType="cf_sql_int" null="#Not Len(Trim(issued_by_agent_id))#">,
-			<cfqueryparam value = "#remarks#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(remarks))#">
-		)
-		</cfquery>
-		<cflocation url="editIdentifiers.cfm?collection_object_id=#collection_object_id#" addtoken="false">
-	</cfoutput>
-</cfif>
-<!-------------------------------------------------------->
-<cf_customizeIFrame>

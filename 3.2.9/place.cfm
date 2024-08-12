@@ -133,9 +133,7 @@
 	<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/v/dt/dt-1.13.1/r-2.4.0/datatables.min.css"/>
 	<script type="text/javascript" src="https://cdn.datatables.net/v/dt/dt-1.13.1/r-2.4.0/datatables.min.js"></script>
 
-	<cfquery name="ak" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-		select api_key from api_key inner join agent on api_key.issued_to=agent.agent_id where preferred_agent_name='arctos_api_user'
-	</cfquery>
+	<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
 	<cfif sch is "collecting_event">
 		<cfset apiMeth="getPlace&sch_node=collecting_event">
 		<cfset defsrtc="collecting_event_id">
@@ -169,7 +167,7 @@
 			function down_attrs(mth){
 				if (mth=='evt_atts'){
 					$.ajax({
-						url: "/component/api.cfc?method=#apiMeth#&api_key=#ak.api_key#&queryformat=struct&rqstAction=getDistinctEventID",
+						url: "/component/api.cfc?method=#apiMeth#&api_key=#api_key#&queryformat=struct&rqstAction=getDistinctEventID",
 						type: "POST",
 						dataType: "json",
 						data: $('form##getCol').serialize(),
@@ -188,7 +186,7 @@
 					});
 				} else if (mth=='loc_atts' || mth=='flat_loc_atts') {
 					$.ajax({
-						url: "/component/api.cfc?method=#apiMeth#&api_key=#ak.api_key#&queryformat=struct&rqstAction=getDistinctLocalityID",
+						url: "/component/api.cfc?method=#apiMeth#&api_key=#api_key#&queryformat=struct&rqstAction=getDistinctLocalityID",
 						type: "POST",
 						dataType: "json",
 						data: $('form##getCol').serialize(),
@@ -209,7 +207,7 @@
 			}
 			function procMLN(){
 				$.ajax({
-					url: "/component/api.cfc?method=#apiMeth#&api_key=#ak.api_key#&queryformat=struct&rqstAction=getDistinctLocalityID",
+					url: "/component/api.cfc?method=#apiMeth#&api_key=#api_key#&queryformat=struct&rqstAction=getDistinctLocalityID",
 					type: "POST",
 					dataType: "json",
 					data: $('form##getCol').serialize(),
@@ -228,7 +226,7 @@
 			}
 			function procMME(){
 				$.ajax({
-					url: "/component/api.cfc?method=#apiMeth#&api_key=#ak.api_key#&queryformat=struct&rqstAction=getDistinctEventID",
+					url: "/component/api.cfc?method=#apiMeth#&api_key=#api_key#&queryformat=struct&rqstAction=getDistinctEventID",
 					type: "POST",
 					dataType: "json",
 					data: $('form##getCol').serialize(),
@@ -247,7 +245,7 @@
 			}
 			function procMEN(){
 				$.ajax({
-					url: "/component/api.cfc?method=#apiMeth#&api_key=#ak.api_key#&queryformat=struct&rqstAction=getDistinctEventID",
+					url: "/component/api.cfc?method=#apiMeth#&api_key=#api_key#&queryformat=struct&rqstAction=getDistinctEventID",
 					type: "POST",
 					dataType: "json",
 					data: $('form##getCol').serialize(),
@@ -266,7 +264,7 @@
 			}
 			function openAllCatRec(){
 				$.ajax({
-					url: "/component/api.cfc?method=#apiMeth#&api_key=#ak.api_key#&queryformat=struct&rqstAction=getDistinctLocalityID",
+					url: "/component/api.cfc?method=#apiMeth#&api_key=#api_key#&queryformat=struct&rqstAction=getDistinctLocalityID",
 					type: "POST",
 					dataType: "json",
 					data: $('form##getCol').serialize(),
@@ -285,7 +283,7 @@
 			}
 			function berkeleyMapperView(){
 				$.ajax({
-					url: "/component/api.cfc?method=#apiMeth#&api_key=#ak.api_key#&queryformat=struct&rqstAction=getDistinctLocalityID",
+					url: "/component/api.cfc?method=#apiMeth#&api_key=#api_key#&queryformat=struct&rqstAction=getDistinctLocalityID",
 					type: "POST",
 					dataType: "json",
 					data: $('form##getCol').serialize(),
@@ -305,7 +303,7 @@
 			function downloadCSV(){
 				$("##downloadButton").html('<img src="/images/indicator.gif">');
 				$.ajax({
-					url: "/component/api.cfc?method=#apiMeth#&api_key=#ak.api_key#&queryformat=struct&rqstAction=download",
+					url: "/component/api.cfc?method=#apiMeth#&api_key=#api_key#&queryformat=struct&rqstAction=download",
 					type: "POST",
 					dataType: "json",
 					data: $('form##getCol').serialize(),
@@ -395,7 +393,7 @@
 						});
 					 },
 					"ajax": {
-						"url": "/component/api.cfc?method=#apiMeth#&api_key=#ak.api_key#&queryformat=struct",
+						"url": "/component/api.cfc?method=#apiMeth#&api_key=#api_key#&queryformat=struct",
 						"type": "post",
 						"dataSrc": "DATA",
 						"data": function(d) {

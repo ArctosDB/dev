@@ -1,320 +1,223 @@
-
-<!--- first get records with a pure status ---->
 <cfquery name="d" datasource="uam_god" >
 	select * from cf_temp_agent where status = 'autoload' order by last_ts desc limit #recLimit#
 </cfquery>
 <cfif debug is true>
 	<cfdump var=#d#>
 </cfif>
-<!--- no time delay, find or die for this form --->
-<cfoutput>
-	<cfif d.recordcount gt 0>
-		<cfset thisRan=true>
-		<cfset obj = CreateObject("component","component.agent")>
+<cfif d.recordcount gt 0>
+	<cfoutput>
 		<cfloop query="d">
-			<cfquery name="checkUserHasRole" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select checkUserHasRole(
-					<cfqueryparam value="#d.username#" CFSQLType="CF_SQL_VARCHAR">,
-					<cfqueryparam value="manage_records" CFSQLType="CF_SQL_VARCHAR">
-				) as hasAccess
-			</cfquery>
-			<cfif debug>
-				<cfdump var=#checkUserHasRole#>
-			</cfif>
-			<cfif not checkUserHasRole.hasAccess>
-				<cfquery name="fail" datasource="uam_god">
-					update cf_temp_agent set status='insufficient access' where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
-				</cfquery>
-				<cfcontinue />
-			</cfif>
-			<cfquery name="checkUserHasRole" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select checkUserHasRole(
-					<cfqueryparam value="#d.username#" CFSQLType="CF_SQL_VARCHAR">,
-					<cfqueryparam value="manage_agents" CFSQLType="CF_SQL_VARCHAR">
-				) as hasAccess
-			</cfquery>
-			<cfif debug>
-				<cfdump var=#checkUserHasRole#>
-			</cfif>
-			<cfif not checkUserHasRole.hasAccess>
-				<cfquery name="fail" datasource="uam_god">
-					update cf_temp_agent set status='insufficient access' where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
-				</cfquery>
-				<cfcontinue />
-			</cfif>
-			<cfif debug>
-				<p>running for key #d.key#</p>
-			</cfif>
-
-			<cfset ninc=0>
-			<cfset naddr=0>
-
-			<cfloop from="1" to="6" index="i">
-				<!--- see if we can dig names out of aka-land, if they're not already given --->
-				<cfset thisNameType=evaluate("d.other_name_type_" & i)>
-				<cfset thisName=evaluate("d.other_name_" & i)>
-
-				<cfif (len(thisNameType) gt 0 and len(thisName) is 0) or (len(thisNameType) is 0 and len(thisName) gt 0)>
-					<cfset probs=listAppend(probs, '(other_name_type_n,other_name_n) must be paired.', '#chr(10)#')>
-				</cfif>
-
-				<cfif thisNameType is "first name">
-					<cfset nobj["first_name"]=thisName>
-				<cfelseif thisNameType is "middle name">
-					<cfset nobj["middle_name"]=thisName>
-				<cfelseif thisNameType is "last name">
-					<cfset nobj["last_name"]=thisName>
-				<cfelse>
-					<cfset ninc=ninc+1>
-					<cfset nobj["name_#ninc#"]=thisName>
-					<cfset nobj["name_type_#ninc#"]=thisNameType>
-				</cfif>
-
-				<cfset thisAddrType=evaluate("d.address_type_" & i)>
-				<cfset thisAddr=evaluate("d.address_" & i)>
-
-				<cfif (len(thisAddrType) gt 0 and len(thisAddr) is 0) or (len(thisAddrType) is 0 and len(thisAddr) gt 0)>
-					<cfset probs=listAppend(probs, '(address_type_n,address_n) must be paired.', '#chr(10)#')>
-				</cfif>
-				<cfif len(thisAddrType) gt 0 and len(thisAddr) gt 0>
-					<cfset naddr=naddr+1>
-					<cfset nobj["address_#naddr#"]=thisAddr>
-					<cfset nobj["address_type_#naddr#"]=thisAddrType>
-				</cfif>
-			</cfloop>
-
-			<cfinvoke component="/component/agent" method="checkAgentJson" returnvariable="fnProbs">
-				<cfinvokeargument name="preferred_name" value="#d.preferred_name#">
-				<cfinvokeargument name="agent_type" value="#d.agent_type#">
-				<cfif structKeyExists(nobj, "first_name")>
-					<cfinvokeargument name="first_name" value="#nobj.first_name#">
-				</cfif>
-				<cfif structKeyExists(nobj, "middle_name")>
-					<cfinvokeargument name="middle_name" value="#nobj.middle_name#">
-				</cfif>
-				<cfif structKeyExists(nobj, "last_name")>
-					<cfinvokeargument name="last_name" value="#nobj.last_name#">
-				</cfif>
-				<cfloop from="1" to="#ninc#" index="i">
-					<cfset n=nobj["name_#i#"]>
-					<cfset nt=nobj["name_type_#i#"]>
-					<cfinvokeargument name="name_#i#" value="#n#">
-					<cfinvokeargument name="name_type_#i#" value="#nt#">
-				</cfloop>
-
-				<cfloop from="1" to="#naddr#" index="i">
-					<cfset n=nobj["address_#i#"]>
-					<cfset nt=nobj["address_type_#i#"]>
-					<cfinvokeargument name="address_#i#" value="#n#">
-					<cfinvokeargument name="address_type_#i#" value="#nt#">
-				</cfloop>
-			</cfinvoke>
-			
-			<cfif debug>
-				<cfdump var=#fnProbs#>
-			</cfif>
-			<cfquery name="hasFatal" dbtype="query">
-				select count(*) c from fnProbs where severity='fatal'
-			</cfquery>
-			<cfif debug>
-				<cfdump var=#hasFatal#>
-			</cfif>
-			<cfif hasFatal.c gt 0>
-				<cfquery name="logit" datasource="uam_god">
-					update cf_temp_agent set status=<cfqueryparam value="fatal errors detected" CFSQLType="CF_SQL_VARCHAR"> where key=#val(d.key)#
-				</cfquery>
-				<cfcontinue/>
-			</cfif>
-
-			<cfset hasRequiredExtra=false>
-			<cfloop from="1" to="2" index="i">
-				<cfset thisIsThere=evaluate('d.agent_status_' & i)>
-				<cfset thisIsThere2=evaluate('d.agent_status_date_' & i)>
-				<cfif len(thisIsThere) gt 0 and len(thisIsThere2) gt 0>
-					<cfset hasRequiredExtra=true>
-				</cfif>
-			</cfloop>
-			<cfloop from="1" to="6" index="i">
-				<cfset thisIsThere=evaluate('d.address_type_' & i)>
-				<cfset thisIsThere2=evaluate('d.address_' & i)>
-				<cfif len(thisIsThere) gt 0 and len(thisIsThere2) gt 0>
-					<cfset hasRequiredExtra=true>
-				</cfif>
-			</cfloop>
-
-			<cfloop from="1" to="3" index="i">
-				<cfset thisIsThere=evaluate('agent_relationship_' & i)>
-				<cfif len(thisIsThere) gt 0>
-					<cfset hasRequiredExtra=true>
-				</cfif>
-			</cfloop>
-			<cfif hasRequiredExtra is false>
-				<cfquery name="logit" datasource="uam_god">
-					update cf_temp_agent set status=<cfqueryparam value="At least one address, status, or relationship is required" CFSQLType="CF_SQL_VARCHAR"> where key=#val(d.key)#
-				</cfquery>
-				<cfcontinue/>
-			</cfif>
+			<cfset thisRan=true>
 			<cftry>
 				<cftransaction>
-					<cfif debug>
-						<br>loading #preferred_name#....
-					</cfif>
-					<cfquery name="agentID" datasource="uam_god">
-						select nextval('sq_agent_id') nextAgentId
+					<cfquery name="getAgentid" datasource="uam_god"  cachedwithin="#createtimespan(0,0,60,0)#">
+						select getAgentid(<cfqueryparam value="#d.username#" CFSQLType="CF_SQL_VARCHAR">) as theAgentId
 					</cfquery>
-					<cfquery name="insPerson" datasource="uam_god">
-						INSERT INTO agent (
+					<cfset creator_agent_id=getAgentid.theAgentId>
+
+					<cfquery name="create_agent" result="create_agent" datasource="uam_god">
+						insert into agent (
 							agent_id,
-							created_by_agent_id,
 							agent_type,
-							PREFERRED_AGENT_NAME,
-							AGENT_REMARKS,
-							curatorial_remarks
-						) VALUES (
-							<cfqueryparam value="#agentID.nextAgentId#" CFSQLType="cf_sql_int">,
-							getAgentId(<cfqueryparam value="#d.username#" CFSQLType="cf_sql_varchar">),
-							<cfqueryparam value="#d.agent_type#" CFSQLType="CF_SQL_VARCHAR">,
-							<cfqueryparam value="#d.preferred_name#" CFSQLType="CF_SQL_VARCHAR">,
-							<cfqueryparam CFSQLType="CF_SQL_varchar" value="#d.agent_remark#" null="#Not Len(Trim(d.agent_remark))#">,
-							<cfqueryparam CFSQLType="CF_SQL_varchar" value="#d.curatorial_remarks#" null="#Not Len(Trim(d.curatorial_remarks))#">
+							preferred_agent_name,
+							created_by_agent_id,
+							created_date
+						) values (
+							nextval('sq_agent_id'),
+							<cfqueryparam  value="#d.agent_type#" cfsqltype="cf_sql_varchar">,
+							<cfqueryparam  value="#d.preferred_agent_name#" cfsqltype="cf_sql_varchar">,
+							<cfqueryparam  value="#creator_agent_id#" cfsqltype="cf_sql_int">,
+							current_timestamp
 						)
 					</cfquery>
-					<cfloop from="1" to="6" index="i">
-						<cfset thisNameType=evaluate("other_name_type_" & i)>
-						<cfset thisName=trim(evaluate("other_name_" & i))>
-						<cfif LEN(thisNameType) GT 0 AND LEN(thisName) GT 0>
-							<cfquery name="insName" datasource="uam_god">
-								INSERT INTO agent_name (
-									agent_name_id,
-									agent_id,
-									agent_name_type,
-									agent_name
-								) VALUES (
-									NEXTVAL('SQ_AGENT_NAME_ID'),
-									<cfqueryparam value="#agentID.nextAgentId#" CFSQLType="cf_sql_int">,
-									<cfqueryparam value="#thisNameType#" CFSQLType="CF_SQL_VARCHAR">,
-									<cfqueryparam value="#thisName#" CFSQLType="CF_SQL_VARCHAR">
-								)
+					<cfloop from="1" to="10" index="attribute_id">
+						<cfset thisAttType=evaluate("attribute_type_" & attribute_id)>
+						<!--- stop any potential stupidity ---->
+						<cfif thisAttType is 'login'>
+							<cfquery name="fail" datasource="uam_god">
+								update cf_temp_agent set status='found login superbad' where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
 							</cfquery>
+							<cfcontinue />
 						</cfif>
-					</cfloop>
-					<cfloop from="1" to="2" index="i">
-						<cfset thisStatus=evaluate("agent_status_" & i)>
-						<cfset thisSDate=evaluate("agent_status_date_" & i)>
-						<cfset thisSRmk=evaluate("agent_status_remark_" & i)>
-						<cfif LEN(thisStatus) GT 0 AND LEN(thisSDate) GT 0>
-							<cfquery name="insName" datasource="uam_god">
-								INSERT INTO AGENT_STATUS (
-									AGENT_STATUS_ID,
-									agent_id,
-									AGENT_STATUS,
-									STATUS_DATE,
-									status_remark,
-									status_reported_by,
-									status_reported_date
-								) VALUES (
-									NEXTVAL('SQ_AGENT_STATUS_ID'),
-									<cfqueryparam value="#agentID.nextAgentId#" CFSQLType="cf_sql_int">,
-									<cfqueryparam value="#thisStatus#" CFSQLType="CF_SQL_VARCHAR">,
-									<cfqueryparam value="#thisSDate#" CFSQLType="CF_SQL_VARCHAR">,
-									<cfqueryparam CFSQLType="CF_SQL_varchar" value="#thisSRmk#" null="#Not Len(Trim(thisSRmk))#">,
-									getAgentid(<cfqueryparam value="#d.username#" CFSQLType="CF_SQL_VARCHAR">),
-									current_date
-								)
-							</cfquery>
-						</cfif>
-					</cfloop>
-					<cfloop from="1" to="6" index="i">
-						<cfset thisAddressType=evaluate("d.address_type_" & i)>
-						<cfset thisAddress=evaluate("d.address_" & i)>
-						<cfif LEN(thisAddressType) GT 0 AND LEN(thisAddress) GT 0>
-							<cfset coords=''>
-							<cfif thisAddressType is 'shipping'  or thisAddressType is 'correspondence'>
-								<cftry>
-								  <cfinvoke component="/component/utilities" method="georeferenceAddress" returnVariable="gcaddr">
-                                        <cfinvokeargument name="returnFormat" value="json">
-                                        <cfinvokeargument name="address" value="#thisAddress#">
-                                        <cfinvokeargument name="agent_id" value="#agentID.nextAgentId#">
-                                    </cfinvoke>
-                                    <cfset coords=gcaddr.coords>
-                                    <cfcatch>
-										<cfset coords=''>
-									</cfcatch>
-								</cftry>
+						<cfset thisAttVal=evaluate("attribute_value_" & attribute_id)>
+						<cfset thisRelAgent=evaluate("related_agent_" & attribute_id)>
+						<cfif len(thisAttType) gt 0 and (len(thisAttVal) gt 0 or len(thisRelAgentID) gt 0)>
+							<cfset thisBegin=evaluate("begin_date_" & attribute_id)>
+							<cfset thisEnd=evaluate("end_date_" & attribute_id)>
+							<cfset thisDetDate=evaluate("determined_date_" & attribute_id)>
+							<cfset thisDetr=evaluate("determiner_" & attribute_id)>
+							<cfset thisMeth=evaluate("method_" & attribute_id)>
+							<cfset thisRem=evaluate("remark_" & attribute_id)>
+							<cfif len(thisRelAgent) gt 0>
+								<cfquery name="getAgentid" datasource="uam_god"  cachedwithin="#createtimespan(0,0,60,0)#">
+									select getAgentid(<cfqueryparam value="#thisRelAgent#" CFSQLType="CF_SQL_VARCHAR">) as theAgentId
+								</cfquery>
+								<cfif getAgentid.recordcount neq 1>
+									<cfquery name="fail" datasource="uam_god">
+										update cf_temp_pre_bulk_agent set status='related agent not resolved' where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+									</cfquery>
+									<cfcontinue />
+								</cfif>
+								<cfset thisRelAgentID=getAgentid.theAgentId>
+							<cfelse>
+								<cfset thisRelAgentID=''>
 							</cfif>
-							<cfset thisAddressSDt=evaluate("d.address_start_date_" & i)>
-							<cfset thisAddressEDt=evaluate("d.address_end_date_" & i)>
-							<cfset thisAddressRmk=evaluate("d.address_remark_" & i)>
-							<cfquery name="insAddr" datasource="uam_god">
-								INSERT INTO address (
-									AGENT_ID,
-									address_type,
-									address,
-									ADDRESS_REMARK,
-									start_date,
-									end_date,
-									s_coordinates,
-									s_lastdate
-								) VALUES (
-									<cfqueryparam value="#agentID.nextAgentId#" CFSQLType="cf_sql_int">,
-									<cfqueryparam cfsqltype="cf_sql_varchar" value="#thisAddressType#">,
-									<cfqueryparam cfsqltype="cf_sql_varchar" value="#thisAddress#">,
-									<cfqueryparam cfsqltype="cf_sql_varchar" value="#thisAddressRmk#" null="#Not Len(Trim(thisAddressRmk))#">,
-									<cfqueryparam cfsqltype="cf_sql_varchar" value="#thisAddressSDt#" null="#Not Len(Trim(thisAddressSDt))#">,
-									<cfqueryparam cfsqltype="cf_sql_varchar" value="#thisAddressEDt#" null="#Not Len(Trim(thisAddressEDt))#">,
-									<cfqueryparam cfsqltype="cf_sql_varchar" value="#coords#" null="#Not Len(Trim(coords))#">,
-									current_date
-								)
-							</cfquery>
-						</cfif>
-					</cfloop>
-					<cfloop from="1" to="3" index="i">
-						<cfset thisRelnshp=evaluate("d.agent_relationship_" & i)>
-						<cfset thisRelAgt=evaluate("d.related_agent_" & i)>
-						<cfset thisRelBD=evaluate("d.relationship_began_date_" & i)>
-						<cfset thisRelED=evaluate("d.relationship_end_date_" & i)>
-						<cfset thisRelRem=evaluate("d.relationship_remarks_" & i)>
-						<cfif len(thisRelnshp) gt 0>
-							<cfquery name="insAgtRelsh" datasource="uam_god">
-								insert into agent_relations (
+							<cfif len(thisDetr) gt 0>
+								<cfquery name="getAgentid" datasource="uam_god"  cachedwithin="#createtimespan(0,0,60,0)#">
+									select getAgentid(<cfqueryparam value="#thisDetr#" CFSQLType="CF_SQL_VARCHAR">) as theAgentId
+								</cfquery>
+								<cfif getAgentid.recordcount neq 1>
+									<cfquery name="fail" datasource="uam_god">
+										update cf_temp_pre_bulk_agent set status='determiner agent not resolved' where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+									</cfquery>
+									<cfcontinue />
+								</cfif>
+								<cfset thisDetrID=getAgentid.theAgentId>
+							<cfelse>
+								<cfset thisDetrID=''>
+							</cfif>
+							<cfquery name="create_agent_attr" datasource="uam_god" >
+								insert into agent_attribute (
 									agent_id,
+									attribute_type,
+									attribute_value,
+									begin_date,
+									end_date,
 									related_agent_id,
-									agent_relationship,
-									created_by_agent_id,
-									created_on_date,
-									relationship_began_date,
-									relationship_end_date,
-									relationship_remarks
+									determined_date,
+									attribute_determiner_id,
+									attribute_method,
+									attribute_remark,
+									created_by_agent_id
 								) values (
-									<cfqueryparam value="#agentID.nextAgentId#" CFSQLType="cf_sql_int">,
-									getAgentid(<cfqueryparam value="#thisRelAgt#" CFSQLType="CF_SQL_VARCHAR">),
-									<cfqueryparam cfsqltype="cf_sql_varchar" value="#thisRelnshp#">,
-									getAgentid(<cfqueryparam value="#d.username#" CFSQLType="CF_SQL_VARCHAR">),
-									current_date,
-									<cfqueryparam cfsqltype="cf_sql_varchar" value="#thisRelBD#" null="#Not Len(Trim(thisRelBD))#">,
-									<cfqueryparam cfsqltype="cf_sql_varchar" value="#thisRelED#" null="#Not Len(Trim(thisRelED))#">,
-									<cfqueryparam cfsqltype="cf_sql_varchar" value="#thisRelRem#" null="#Not Len(Trim(thisRelRem))#">
+									<cfqueryparam value="#create_agent.agent_id#" cfsqltype="cf_sql_int">,
+									<cfqueryparam value="#thisAttType#" cfsqltype="cf_sql_varchar">,
+									<cfqueryparam value="#thisAttVal#" cfsqltype="cf_sql_varchar">,
+									<cfqueryparam value="#thisBegin#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisBegin))#">,
+									<cfqueryparam value="#thisEnd#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisEnd))#">,
+									<cfqueryparam value="#thisRelAgentID#" cfsqltype="cf_sql_int" null="#Not Len(Trim(thisRelAgentID))#">,
+									<cfqueryparam value="#thisDetDate#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisDetDate))#">,
+									<cfqueryparam value="#thisDetrID#" cfsqltype="cf_sql_int" null="#Not Len(Trim(thisDetrID))#">,
+									<cfqueryparam value="#thisMeth#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisMeth))#">,
+									<cfqueryparam value="#thisRem#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(thisRem))#">,
+									<cfqueryparam value="#creator_agent_id#" cfsqltype="cf_sql_int">
 								)
 							</cfquery>
 						</cfif>
 					</cfloop>
-					<cfif debug>
-						<p>woot happy running cleanup</p>
-					</cfif>
-					<cfquery name="cleanupf" datasource="uam_god">
-						delete from cf_temp_agent where key=#val(d.key)#
+					<cfquery name="done" datasource="uam_god">
+						delete from  cf_temp_agent where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
 					</cfquery>
 				</cftransaction>
-			<cfcatch>
-				<cfif debug>
-					<cfdump var=#cfcatch#>
-					<p>failed running cleanup</p>
-				</cfif>
-				<cfquery name="cleanupf" datasource="uam_god">
-					update cf_temp_agent set status=<cfqueryparam value="load fail::#cfcatch.message#" CFSQLType="CF_SQL_VARCHAR"> where key=#val(d.key)#
-				</cfquery>
-			</cfcatch>
+				<cfcatch>
+					<cfif debug>
+						<p>ERROR DUMP</p>
+						<cfdump var=#cfcatch#>
+					</cfif>
+					<cfquery name="cleanupf" datasource="uam_god">
+						update cf_temp_agent set status='load fail::#cfcatch.message#' where key=<cfqueryparam value="#d.key#" cfsqltype="cf_sql_int">
+					</cfquery>
+				</cfcatch>
 			</cftry>
 		</cfloop>
-	</cfif>
-</cfoutput>
+	</cfoutput>
+</cfif>
+
+
+<!--------------------
+			see 
+			https://github.com/ArctosDB/arctos/issues/7714
+			and email with TACC "authentication options"
+			can't figure out how to safely auth nonhuman user at the API at this point, so we're department of redundancy departmenting some critical code. 
+			Bah.
+
+		<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
+		<cfloop query="d">
+			<cfset thisRan=true>
+			<cfset errs="">
+			<cfset sobj=[=]>
+			<cfset sobj["agent_type"]=agent_type>
+			<cfset sobj["agent_id"]=''>
+			<cfset sobj["preferred_agent_name"]=preferred_agent_name>
+			<cfquery name="getAgentid" datasource="uam_god"  cachedwithin="#createtimespan(0,0,60,0)#">
+				select getAgentid(<cfqueryparam value="#username#" CFSQLType="CF_SQL_VARCHAR">) as theAgentId
+			</cfquery>
+			<cfset sobj["created_by_agent_id"]=creator_agent_id>
+			<cfset attribute_id_list="">
+			<cfloop from="1" to="10" index="attribute_id">
+				<cfset thisAttType=evaluate("attribute_type_" & attribute_id)>
+				<!--- stop any potential stupidity ---->
+				<cfif thisAttType is 'login'>
+					<cfcontinue>
+				</cfif>
+				<cfset thisAttVal=evaluate("attribute_value_" & attribute_id)>
+				<cfset thisRelAgent=evaluate("related_agent_" & attribute_id)>
+				<cfif len(thisAttType) gt 0 and (len(thisAttVal) gt 0 or len(thisRelAgentID) gt 0)>
+					<cfset sobj["attribute_type_#attribute_id#"]=thisAttType>
+					<cfset sobj["attribute_value_#attribute_id#"]=thisAttVal>
+					<cfset sobj["begin_date_#attribute_id#"]=evaluate("begin_date_" & attribute_id)>
+					<cfset sobj["end_date_#attribute_id#"]=evaluate("end_date_" & attribute_id)>
+					<cfif len(thisRelAgent) gt 0>
+						<cfquery name="getAgentid" datasource="uam_god"  cachedwithin="#createtimespan(0,0,60,0)#">
+							select getAgentid(<cfqueryparam value="#thisRelAgent#" CFSQLType="CF_SQL_VARCHAR">) as theAgentId
+						</cfquery>
+						<cfif getAgentid.recordcount neq 1>
+							<cfset errs="related agent not resolved">
+							<cfquery name="fail" datasource="uam_god">
+								update cf_temp_pre_bulk_agent set status='related agent not resolved' where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+							</cfquery>
+							<cfcontinue />
+						</cfif>
+						<cfset sobj["related_agent_id_#attribute_id#"]=getAgentid.theAgentId>
+					<cfelse>
+						<cfset sobj["related_agent_id_#attribute_id#"]=''>
+					</cfif>
+					<cfset sobj["determined_date_#attribute_id#"]=evaluate("determined_date_" & attribute_id)>
+					<cfset thisDetr=evaluate("determiner_" & attribute_id)>
+					<cfif len(thisDetr) gt 0>
+						<cfquery name="getAgentid" datasource="uam_god"  cachedwithin="#createtimespan(0,0,60,0)#">
+							select getAgentid(<cfqueryparam value="#thisDetr#" CFSQLType="CF_SQL_VARCHAR">) as theAgentId
+						</cfquery>
+						<cfif getAgentid.recordcount neq 1>
+							<cfquery name="fail" datasource="uam_god">
+								update cf_temp_pre_bulk_agent set status='determiner agent not resolved' where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+							</cfquery>
+							<cfcontinue />
+						</cfif>
+						<cfset sobj["attribute_determiner_id_#attribute_id#"]=getAgentid.theAgentId>
+					<cfelse>
+						<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+					</cfif>
+					<cfset sobj["attribute_method_#attribute_id#"]=evaluate("method_" & attribute_id)>
+					<cfset sobj["attribute_remark_#attribute_id#"]=evaluate("remark_" & attribute_id)>
+
+					<cfset sobj["created_by_agent_id_#attribute_id#"]=creator_agent_id>
+					
+					<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+				</cfif>
+			</cfloop>
+			<cfset sobj["attribute_id_list"]=attribute_id_list>
+			<cfset sobj=serializeJSON(sobj)>
+			<cfinvoke component="/component/api/tools" method="create_agent" returnvariable="x">
+				<cfinvokeargument name="api_key" value="#api_key#">
+				<cfinvokeargument name="usr" value="#session.dbuser#">
+				<cfinvokeargument name="pwd" value="#session.epw#">
+				<cfinvokeargument name="pk" value="#session.sessionKey#">
+				<cfinvokeargument name="data" value="#sobj#">
+			</cfinvoke>
+			<cfif debug>
+				<cfdump var="#x#">
+			</cfif>
+			<cfif x.message is "success">
+				<cfquery name="done" datasource="uam_god">
+					delete from  cf_temp_agent where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+				</cfquery>
+				<cfcontinue />
+			<cfelse>
+				<cfquery name="fail" datasource="uam_god">
+					update cf_temp_agent set status='create fail' where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+				</cfquery>
+				<cfcontinue />
+			</cfif>
+		</cfloop>
+------------>

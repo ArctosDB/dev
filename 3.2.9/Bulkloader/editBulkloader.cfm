@@ -105,7 +105,8 @@
 <cfoutput>
 	<cfif not isdefined("key") or len(key) is 0>
 		Improper Call<cfabort>
-	</cfif>	
+	</cfif>
+	<!---- https://github.com/ArctosDB/arctos/issues/7386#issuecomment-1933036695 ---->
 	<div class="deeditnote">
 		This form edits records in the bulkloader. It has important limitations, please read carefully before proceeding.
 		The <a href="/Bulkloader/browseBulk.cfm?key=#key#">table view app</a> will handle records that this
@@ -238,7 +239,7 @@
 								</select>
 							</td>
 							<td>
-								<input type="text" name="identifier_#i#_value" id="identifier_#i#_value">
+								<input type="text" name="identifier_#i#_value" id="identifier_#i#_value" class="identifierValueInput">
 							</td>
 							<td>
 								<select name="identifier_#i#_relationship" id="identifier_#i#_relationship" size="1">
@@ -424,7 +425,7 @@
 					<div class="asectiontitle">
 						Record-Event
 						<div class="asectionsubtitle">
-							Locality stack is ignored unless this is given. record_event_type,record_event_determiner,record_event_determined_date,record_event_verificationstatus are required to use.
+							Locality stack is ignored unless this is given. record_event_type,record_event_determiner,record_event_determined_date are required to use.
 							<a href="https://handbook.arctosdb.org/documentation/specimen-event.html" class="external">Handbook</a>
 						</div>
 					</div>
@@ -749,8 +750,7 @@
 							Locality Attributes
 							<div class="asectionsubtitle">
 								Ignored unless type and value are given
-								<span class="likeLink" onclick="getCtDocVal('ctlocality_attribute_type','');">Type Documentation</span>
-								<span class="likeLink" onclick="getCtDocVal('ctlocality_att_att','');">Control Documentation</span>
+								<span class="likeLink" onclick="getCtDocVal('ctlocality_attribute_type','');">Documentation</span>
 							</div>
 						</div>
 						<table border>
@@ -1032,9 +1032,6 @@
 						</div>
 					</div>
 				</div>
-
-				
-				
 			</div>
 
 			<div class="asection">
@@ -1043,7 +1040,6 @@
 					<div class="asectionsubtitle">
 						Ignored unless type and value are given
 						<span class="likeLink" onclick="getCtDocVal('ctattribute_type','');">Type Documentation</span>
-						<span class="likeLink" onclick="getCtDocVal('ctattribute_code_tables','');">Control Documentation</span>
 						<a href="https://handbook.arctosdb.org/documentation/attributes.html" class="external">Handbook</a>
 					</div>
 				</div>

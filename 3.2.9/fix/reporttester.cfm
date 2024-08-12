@@ -1,266 +1,199 @@
-<!--- putting this here because that's how my dev environment likes it, inline works equally well ----->
-<style>
-	/* div to hold catnums and header, might not be necessary at all */
-	.catnum_outer_flex{
-		border:1px solid purple;
-	}
-	/* container for catnums, which are in divs because we're looping the list */
-.innner_catnum_list_flex{
-	display: flex;
-	flex-wrap: wrap;
-	justify-content: space-between;
-
-}
-
-	/* div to hold catnums and header, might not be necessary at all */
-	.catnum_outer_grid{
-		border:1px solid purple;
-	}
-	/* container for catnums, which are in divs because we're looping the list */
-.innner_catnum_list_grid{
-	display: grid;
-	/* million ways to do this, this one is maybe easy to read/understand/adjust and efficiency isn't important here */
-	grid-template-columns: 1fr 1fr 1fr 1fr;
-}
-
-
-</style>
-<!--- raw query --->
-<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,6,0)#">
 	select
-		flat.family,
+		<!---- formatted date ---->
+		TO_CHAR(NOW() :: DATE, 'Mon dd, yyyy') as prtdate, 
+		flat.cat_num,
+		<!---- text-overflow isn't supported at the moment to attempt to "pre-ellipse" 
+		case when length(flat.scientific_name) > 28 
+			then concat(substring(flat.scientific_name, 1, 25), '...')
+			else flat.scientific_name 
+		end as scientific_name,
+		---->
 		flat.scientific_name,
-		flat.country,
-		flat.state_prov,
-		flat.county,
-		flat.spec_locality,
-		flat.verbatim_date,
-		flat.collectors,
-		flat.guid_prefix,
-		flat.cat_num
+		<!---- pre-formap locality-including-geography information ---->
+		concat_ws(', ',
+		    flat.spec_locality,
+  		    replace(flat.county,' County',' Co.'),
+		    flat.state_prov,
+		    case when flat.country='United States' then null else flat.country end
+		) as locstr,
+		<!---- manipulate a cached attribute ---->
+		case when flat.sex='female' then 'F' when flat.sex='male' then 'M' when flat.sex='female ?' then 'F?' when flat.sex='male ?' then 'M?' when flat.sex='unknown' then 'U' else flat.sex end sex,
+		case 
+			when cn.n is not null then cn.n 
+			when pn.n is not null then pn.n 
+			when pl.n is not null then pl.n 
+			else null 
+		end as collectornumber,
+		flat.verbatim_date as coll_date,
+		<!---- call a function to format agents ---->
+		getlabelname(flat.collection_object_id) as labels_agent_name,
+		getMvzMammParts(flat.collection_object_id) as parts
 	FROM
 		flat
 		inner join #table_name# on flat.collection_object_id=#table_name#.collection_object_id
+		<!---- join filteredd and aggregated identifiers ----->
+		left outer join (
+		    select collection_object_id, string_agg(display_value,', ') n from coll_obj_other_id_num where other_id_type='collector number' group by collection_object_id
+		) cn on flat.collection_object_id=cn.collection_object_id
+		left outer join (
+		    select collection_object_id, string_agg(display_value,', ') n from coll_obj_other_id_num where other_id_type='preparator number' group by collection_object_id
+		) pn on flat.collection_object_id=pn.collection_object_id
+		left outer join (
+		    select collection_object_id, string_agg(display_value,', ') n from coll_obj_other_id_num where issued_by_agent_id=21347703 group by collection_object_id
+		) pl on flat.collection_object_id=pl.collection_object_id
+	order by flat.scientific_name,flat.cat_num::numeric
 </cfquery>
+<!---- CSS could also be stored separately, I keep it inline because I copy and paste from my editor ---->
+<style>
+	<!----- this is a container for a single label ----->
+	.cell {
+		padding: 2px;
+		width: 42mm;
+		max-width:42mm;
+		height: 33mm;
+		page-break-inside: avoid;
+		font-family: Ariel, sans-serif;
+		font-size: 11px;
+		overflow: hidden;
+	}
+	<!-------- try to prevent page breaking inside the table by nesting it in this div ---->
+	.onePage{
+		page-break-inside: avoid;
+	}
+	<!---- force a page break ---->
+	.pageBreak{
+		page-break-after: always;
+	}
+	<!---- make table borders skinny, we're using them for layout (like some kind of savage...) --->
+	table {
+		border-collapse: collapse;
+	}
+	<!---- CSS2.1 selectors are very limited, just give our "content TD" a class and set "cut here" borders with it ---->
+	<!---- this gets processed inside of cfoutput tags, so we have to escape the hash. CSS in the CSS block is handled differently ---->
+	.one_item_td{
+		border: 1px dashed ##d3d3d3;
+	}
+	.header {
+		text-align: center;
+		letter-spacing: 1px;
+		font-size: 0.8em;
+	}
+
+	<!-----
+	this was for ellipsis approach
+	.sn {
+		font-style: italic;
+		text-align: center;
+		white-space: nowrap;
+		overflow: hidden;
+	}
+	----->
+	.sn {
+		font-style: italic;
+		text-align: center;
+	}
+
+	.cn {
+		white-space: nowrap;
+	}
+	.sex {
+		text-align:center;
+		font-size:9px;
+	}
+	<!---- I would not mix setting font size by points and ems ---->
+	.origno {
+		font-size: 8pt;
+		text-align: right;
+	}
+	<!---- I would not mix setting font size by points and ems ---->
+	.dt {
+		font-size: 0.8em;
+	}
+
+	<!----- indent wrapped text ---->
+	.loc {
+		height: 0.55in;
+		font-size: 7pt;
+		text-indent : -10px ;
+		margin-left :  10px ;
+	}
+
+	.coll {
+		font-size: 0.8em;
+		text-align: right;
+	}
+
+	.parts {
+		font-size: 0.8em;
+		overflow: hidden;
+		text-align: center;
+		bottom: 0;
+	}
+
+</style>
+
+<!--- set the layout, these need to work as multiple of class cell ---->
+<cfset rowsPerPage=5>
+<cfset columnsPerPage=6>
+
+<!---- precalc, don't change these ---->
+<cfset itemsPerPage=rowsPerPage * columnsPerPage>
+<cfset numberOfPages=ceiling(d.recordcount / itemsPerPage)>
+<cfset tblItemCt=0>
+<cfset colItmCt=0>
 
 
-<!----
-	Uncomment to dump out the raw query
-	
-	<cfdump var="#d#">
----->
-
-<cfquery name="tmp" dbtype="query">
-	select spec_locality as rtn from d group by spec_locality
-</cfquery>
-
-<cfif tmp.recordcount is 1>
-	<cfset spec_locality=tmp.rtn>
-<cfelse>
-	<cfset spec_locality="">
-</cfif>
-
-
-<cfquery name="tmp" dbtype="query">
-	select collectors as rtn from d group by collectors
-</cfquery>
-
-<cfif tmp.recordcount is 1>
-	<cfset collectors=tmp.rtn>
-<cfelse>
-	<cfset collectors="">
-</cfif>
-
-
-
-
-
-<!--- just make unique sorted lists?? --->
-<cfset tmp=valuelist(d.family)>
-<cfset tmp=listRemoveDuplicates(tmp)>
-<cfif listLen(tmp) is 1>
-	<cfset family=listSort(tmp,'text')>
-<cfelse>
-	<cfset family="">
-</cfif>
-
-<cfset tmp=valuelist(d.scientific_name)>
-<cfset tmp=listRemoveDuplicates(tmp)>
-<cfif listLen(tmp) is 1>
-	<cfset scientific_name=listSort(tmp,'text')>
-<cfelse>
-	<cfset scientific_name="">
-</cfif>
-
-
-
-<cfset tmp=valuelist(d.country)>
-<cfset tmp=listRemoveDuplicates(tmp)>
-<cfif listLen(tmp) is 1>
-	<cfset country=listSort(tmp,'text')>
-<cfelse>
-	<cfset country="">
-</cfif>
-
-
-
-<cfset tmp=valuelist(d.state_prov)>
-<cfset tmp=listRemoveDuplicates(tmp)>
-<cfif listLen(tmp) is 1>
-	<cfset state_prov=listSort(tmp,'text')>
-<cfelse>
-	<cfset state_prov="">
-</cfif>
-
-<cfset tmp=valuelist(d.county)>
-<cfset tmp=listRemoveDuplicates(tmp)>
-<cfif listLen(tmp) is 1>
-	<cfset county=listSort(tmp,'text')>
-<cfelse>
-	<cfset county="">
-</cfif>
-
-
-
-<cfset tmp=valuelist(d.verbatim_date)>
-<cfset tmp=listRemoveDuplicates(tmp)>
-<cfif listLen(tmp) is 1>
-	<cfset verbatim_date=listSort(tmp,'text')>
-<cfelse>
-	<cfset verbatim_date="">
-</cfif>
-
-
-<cfset tmp=valuelist(d.guid_prefix)>
-<cfset tmp=listRemoveDuplicates(tmp)>
-<cfif listLen(tmp) is 1>
-	<cfset guid_prefix=listSort(tmp,'text')>
-<cfelse>
-	<cfset guid_prefix="">
-</cfif>
-
-
-<cfset tmp=valuelist(d.cat_num)>
-<cfset tmp=listRemoveDuplicates(tmp)>
-<cfset tmp=listChangeDelims(tmp,', ')>
-<cfset cat_num=listSort(tmp,'numeric')>
-
-
-
-<cfset q=querynew("
-	family,
-	scientific_name,
-	country,
-	state_prov,
-	county,
-	spec_locality,
-	verbatim_date,
-	collectors,
-	guid_prefix,
-	cat_num
-")>
-
-
-
-<cfset ocnl=cat_num>
-
-
-<!---- Then I think we will need a limit on the cat numbers that fit on a single label, and have the rest printed on a second label. --->
-<cfset numCatNumPerRow=35>
-
-
-<!--- "loop to" should be as small as possible while still larger than the maximum possible number of 'pages' ---->
-<cfloop from="1" to="100" index="lp">
-	<cfif len(ocnl) is 0>
-		<!---- done bye ---->
-		<cfbreak>
+<cfloop from="1" to="#d.recordcount#" index="i">
+	<!---- grab a record; we'll need to reference this scope when we use things ---->
+	<cfset r=d.getRow(i)>
+	<cfif tblItemCt is 0>
+		<!---- start a new table ---->
+		<div class="onePage">
+		<table class="layout_table">
 	</cfif>
-	<cfset thisCat="">
-	<cfif listLen(ocnl) lte numCatNumPerRow>
-		<!---- grab what's there and zero the list so we break on next loop ---->
-		<cfset thisCat=ocnl>
-		<cfset ocnl=''>
-	<cfelse>
-		<cfloop from="1" to="#numCatNumPerRow#" index="i">
-			<cfif listLen(ocnl) gte 1>
-				<cfset thisCat=listAppend(thisCat, listGetAt(ocnl, 1))>
-				<cfset ocnl=listDeleteAt(ocnl, 1)>
-			</cfif>
-		</cfloop>
+	<cfif colItmCt is 0>
+		<!---- start a row --->
+		<tr>
 	</cfif>
-	<!--- add what we just made ---->
-	<cfset queryaddrow(q,{
-		family=family,
-		scientific_name=scientific_name,
-		country=country,
-		state_prov=state_prov,
-		county=county,
-		spec_locality=spec_locality,
-		verbatim_date=verbatim_date,
-		collectors=collectors,
-		guid_prefix=guid_prefix,
-		cat_num=thisCat
-	})>
-</cfloop>
-
-<!----
-	Uncomment to dump out the assembled query
-	
-	<cfdump var="#q#">
----->
-
-
-
-<div class="wrapper">
-	<cfloop query="q">
+	<!--- one item's table cell---->
+	<td class="one_item_td">
+		<!---- one item's div cell - this is the content, and the only thing that should usually change down here ---->
 		<div class="cell">
-			<div class="fam">#family#</div>
-			<hr>
-			<div class="sn">#scientific_name#</div>
-			<hr>
-			<div class="loc">
-				<cfif len(country) gt 0>#country#: </cfif>#state_prov#: #county#; #spec_locality#
-			</div>
-			<div class="catnum_outer_flex">
-				BYU:Herp:
-				<div class="innner_catnum_list_flex">
-					<cfloop list="#cat_num#" index="i">
-						<div>#i#</div>
-					</cfloop>
-				</div>
-			</div>
-			<!------ repeat with fixed layout grid ----------->
-
-
-			<div class="catnum_outer_grid">
-				BYU:Herp:
-<div class="innner_catnum_list_grid">
-	<cfloop list="#cat_num#" index="i">
-		<div>#i#</div>
-	</cfloop>
-</div>
-			</div>
-
-
-			<div class="twocol">
-				<div class="crds"></div>
-			<div>
-			<div class="clrs"> </div>
-			<div class="clrs">Coll: #collectors#</div>
-			<div class="twocol"></div>
-			<div class="twocol">
-				<div class="attributes" </div>
-			</div>
-			<hr>
-			<div class="footer">BYU LIFE SCIENCE MUSEUM - HERPETOLOGY</div>
-			<hr>
-			<div class="twocol">    
-				<div class="dt">#verbatim_date#</div>
-				<div class="notes">70% Ethanol</div>
-			</div>
+			<div class="header"><u>UNIVERSITY OF CALIFORNIA</u></div>
+			<table width="100%">
+				<tr>
+					<td><div class="cn">MVZ #r.cat_num#</div></td>
+					<td><div class="sex">#r.sex#</div></td>
+					<td><div class="origno">#r.collectornumber#</div></td>
+				</tr>
+			</table>
+			<div class="sn">#r.scientific_name#</div>
+			<div class="loc">#r.locstr#</div>
+			<table width="100%">
+				<tr>
+					<td><div class="dt">#r.coll_date#</div></td>
+					<td><div class="coll">#r.labels_agent_name#</div></td>
+				</tr>
+			</table>
+			<div class="parts">#r.parts#</div>
 		</div>
-	</cfloop>
-</div>
+		<!---- END:: one item's div cell - this is the content, and the only thing that should usually change down here ---->
+	</td>
+	<cfset tblItemCt=tblItemCt+1>
+	<cfset colItmCt=colItmCt+1>
 
-
-
+	<cfif colItmCt is columnsPerPage or i is d.recordcount>
+		<cfset colItmCt=0>
+		</tr>
+	</cfif>
+	<cfif tblItemCt is itemsPerPage  or i is d.recordcount>
+		<cfset tblItemCt=0>
+		</table>
+		</div><!---- stop onePage--->
+		<!---- when paging, NOT when running out of data ---->
+		<cfif tblItemCt is itemsPerPage>
+			<div class="pageBreak"></div>
+		</cfif>		
+	</cfif>
+</cfloop>

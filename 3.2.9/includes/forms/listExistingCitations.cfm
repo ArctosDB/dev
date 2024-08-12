@@ -1,3 +1,4 @@
+<cfinclude template="/includes/_includeCheck.cfm">
 <cfoutput>
 	<cfquery name="getCited" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		SELECT

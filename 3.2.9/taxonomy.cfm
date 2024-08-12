@@ -203,25 +203,12 @@
 </style>
 <!--------- global form defaults -------------->
 
-<cfif not isdefined("taxon_name")>
-	<cfset taxon_name="">
-</cfif>
-<cfif not isdefined("taxon_term")>
-	<cfset taxon_term="">
-</cfif>
-<cfif not isdefined("term_type")>
-	<cfset term_type="">
-</cfif>
-<cfif not isdefined("source")>
-	<cfset source="">
-</cfif>
-<cfif not isdefined("common_name")>
-	<cfset common_name="">
-</cfif>
-<cfif not isdefined("taxon_name_type")>
-	<cfset taxon_name_type="">
-</cfif>
-
+<cfparam name="taxon_name" default="">
+<cfparam name="taxon_term" default="">
+<cfparam name="term_type" default="">
+<cfparam name="source" default="">
+<cfparam name="taxon_name_type" default="">
+<cfparam name="creator" default="">
 <!--------------------- end init -------------------------->
 <cfoutput>
 	<cfif isdefined("taxon_name_id") and len(taxon_name_id) gt 0>
@@ -245,7 +232,6 @@
 				</cfif>
 			</li>
 		</ul>
-        <a href="https://youtu.be/kHUJHa48m5E" class="external" title="link to taxonomy search tutorial video">Taxonomy Search Tutorial</a>
 	<hr>
 	<table width="100%">
 		<tr>
@@ -254,66 +240,59 @@
 				<h3>Search Terms</h3>
 				<form ACTION="/taxonomy.cfm##taxonsearchresults" METHOD="get" name="taxa" id="taxa">
 					<label for="taxon_name">Taxon Name</label>
-					<input type="text" name="taxon_name" id="taxon_name" value="#taxon_name#" onfocus="highlightHelp(this.id);">
+					<input type="text" name="taxon_name" id="taxon_name" value="#EncodeForHTML(canonicalize(taxon_name,true,true))#" onfocus="highlightHelp(this.id);">
 					<span class="infoLink" onclick="var e=document.getElementById('taxon_name');e.value='='+e.value;">
 							[ Prefix with = for exact match ]
 					</span>
+					<!----
+						https://github.com/ArctosDB/arctos/issues/7865
 					<span class="infoLink" onclick="var e=document.getElementById('taxon_name');e.value='%'+e.value;">
 							[ Prefix with % for contains ]
 					</span>
-
+					---->
 					<label for="name_type">Name Type</label>
 					<select name="taxon_name_type" id="taxon_name_type" onfocus="highlightHelp(this.id);">
 						<option value=""></option>
 						<cfloop query="cttaxon_name_type">
 							<option value="#taxon_name_type#">#taxon_name_type#</option>
-							</cfloop>
+						</cfloop>
 					</select>
 
 					<label for="taxon_term">Taxon Term</label>
-					<input type="text" name="taxon_term" id="taxon_term" value="#taxon_term#" onfocus="highlightHelp(this.id);">
+					<input type="text" name="taxon_term" id="taxon_term" value="#EncodeForHTML(canonicalize(taxon_term,true,true))#" onfocus="highlightHelp(this.id);">
 					<span class="infoLink" onclick="var e=document.getElementById('taxon_term');e.value='='+e.value;">
 						[ Prefix with = for exact match ]
 					</span>
-					<!----
-					<span class="infoLink" onclick="var e=document.getElementById('taxon_term');e.value='%'+e.value;">
-						[ Prefix with % for contains ]
-					</span>
-					---->
-
 					<label for="term_type">Term Type</label>
-					<input type="text" name="term_type" id="term_type" value="#term_type#" onfocus="highlightHelp(this.id);">
+					<input type="text" name="term_type" id="term_type" value="#EncodeForHTML(canonicalize(term_type,true,true))#" onfocus="highlightHelp(this.id);">
 					<span class="infoLink" onclick="var e=document.getElementById('term_type');e.value='='+e.value;">
 						[ Prefix with = for exact match ]
 					</span>
+					<!----
+						https://github.com/ArctosDB/arctos/issues/7865
 					<span class="infoLink" onclick="var e=document.getElementById('term_type');e.value='%'+e.value;">
 						[ Prefix with % for contains ]
 					</span>
+					---->
 					<span class="infoLink" onclick="var e=document.getElementById('term_type').value='NULL';">
 						[ NULL ]
 					</span>
 
 					<label for="source">Source</label>
-					<input type="text" name="source" id="source" value="#source#" onfocus="highlightHelp(this.id);">
+					<input type="text" name="source" id="source" value="#EncodeForHTML(canonicalize(source,true,true))#" onfocus="highlightHelp(this.id);">
 					<span class="infoLink" onclick="var e=document.getElementById('source');e.value='='+e.value;">
 						[ Prefix with = for exact match ]
 					</span>
 
-					<label for="common_name">Common Name</label>
-					<input type="text" name="common_name" id="common_name" value="#common_name#" onfocus="highlightHelp(this.id);">
-					<span class="infoLink" onclick="var e=document.getElementById('common_name');e.value='%'+e.value;">
-						[ Prefix with % for contains ]
-					</span>
-
-					<br><br>
-
-					<!--- buttons --->
+				
+					<label for="creator">Creator</label>
+					<input type="text" name="creator" id="creator" value="#EncodeForHTML(canonicalize(creator,true,true))#" onfocus="highlightHelp(this.id);">
+					<br>
 					<input value="Search" class="schBtn" type="submit">&nbsp;&nbsp;&nbsp;
 					<input type="button" class="clrBtn" onclick="resetForm()" value="Clear Form">
 				</form>
 			</td>
 
-			<!--- help text table --->
 			<td valign="top">
 				<div style="margin-left:2em;" id="taxSrchHlp">
 					<!--- and help/about/etc. gets 1/2 ---->
@@ -343,9 +322,7 @@
 							<strong>Source</strong> indicates the source of a classification (NOT a taxon name). Some classifications	are <a href="/info/ctDocumentation.cfm?table=CTTAXONOMY_SOURCE" class="newWinLocal">local</a>; most come from <a href="http://www.globalnames.org/" target="_blank" class="external" title="link out to Gloabl Names website">GlobalNames</a>.
 						</li>
 
-						<li id="help_common_name">
-							<strong>Common Names</strong> are vernacular terms associated with taxon names, and are not necessarily English, correct, or common.
-						</li>
+					
 
 					</ul>
 				</div>
@@ -365,299 +342,189 @@
 
 	<!---------- begin search results ------------>
 	<!----- always display search ---------->
-	<cfif len(taxon_name) gt 0 or len(taxon_term) gt 0 or len(common_name) gt 0 or len(source) gt 0 or len(term_type) gt 0 or len(taxon_name_type) gt 0>
+	<cfif len(taxon_name) gt 0 or len(taxon_term) gt 0 or len(source) gt 0 or len(term_type) gt 0 or len(taxon_name_type) gt 0 or len(creator) gt 0> 
         <hr>
-        <a id="taxonsearchresults" name="taxonsearchresults"></a>
+		<a id="taxonsearchresults" name="taxonsearchresults"></a>
 		<div class="left_indent">
 		  <h2>Taxonomy Search Results</h2>
-      <cfset tabls="taxon_name">
+      		<cfset tabls="taxon_name">
 			<cfset tbljoin="">
 			<cfset whr="">
 			<cfset qp=[]>
 
-                <h3>Search terms</h3>
-			<ul>
-
-				<!--- display for taxon name search --->
-				<cfif len(taxon_name) gt 0>
-
-					<!--- display for taxon name equal to --->
-					<cfif left(taxon_name,1) is "=">
-
-						<cfset thisrow={}>
-						<cfset thisrow.l="false">
-						<cfset thisrow.d="cf_sql_varchar">
-						<cfset thisrow.t="upper(taxon_name.scientific_name)">
-						<cfset thisrow.o="=">
-						<cfset thisrow.v='#ucase(right(taxon_name,len(taxon_name)-1))#'>
-						<cfset arrayappend(qp,thisrow)>
-
-						<li>Taxon Name IS #right(taxon_name,len(taxon_name)-1)#</li>
-
-					<!--- display for taxon name contains --->
-					<cfelseif left(taxon_name,1) is "%">
-
-						<cfset thisrow={}>
-						<cfset thisrow.l="false">
-						<cfset thisrow.d="cf_sql_varchar">
-						<cfset thisrow.t="upper(taxon_name.scientific_name)">
-						<cfset thisrow.o="like">
-						<cfset thisrow.v='%#ucase(right(taxon_name,len(taxon_name)-1))#%'>
-						<cfset arrayappend(qp,thisrow)>
-
-						<li>Taxon Name CONTAINS #right(taxon_name,len(taxon_name)-1)#</li>
-
-					<!--- display for taxon name starts with --->
-					<cfelse>
-
-						<cfset thisrow={}>
-						<cfset thisrow.l="false">
-						<cfset thisrow.d="cf_sql_varchar">
-						<cfset thisrow.t="upper(taxon_name.scientific_name)">
-						<cfset thisrow.o="like">
-						<cfset thisrow.v='#ucase(taxon_name)#%'>
-						<cfset arrayappend(qp,thisrow)>
-
-						<li>Taxon Name STARTS WITH #taxon_name#</li>
-
-					</cfif>
-				</cfif>
-
-				<!--- display for taxon name type search --->
-				<cfif len(taxon_name_type) gt 0>
-
-				<!--- display for taxon name type equal to --->
+			<cfif len(taxon_name) gt 0>
+				<!--- display for taxon name equal to --->
+				<cfif left(taxon_name,1) is "=">
 					<cfset thisrow={}>
 					<cfset thisrow.l="false">
 					<cfset thisrow.d="cf_sql_varchar">
-					<cfset thisrow.t="taxon_name.name_type">
+					<cfset thisrow.t="upper(taxon_name.scientific_name)">
 					<cfset thisrow.o="=">
-					<cfset thisrow.v=taxon_name_type>
+					<cfset thisrow.v='#ucase(right(taxon_name,len(taxon_name)-1))#'>
 					<cfset arrayappend(qp,thisrow)>
-
-					<li>Name Type IS #taxon_name_type#</li>
+				<cfelseif left(taxon_name,1) is "%">
+					<cfset thisrow={}>
+					<cfset thisrow.l="false">
+					<cfset thisrow.d="cf_sql_varchar">
+					<cfset thisrow.t="upper(taxon_name.scientific_name)">
+					<cfset thisrow.o="like">
+					<cfset thisrow.v='%#ucase(right(taxon_name,len(taxon_name)-1))#%'>
+					<cfset arrayappend(qp,thisrow)>
+				<cfelse>
+					<cfset thisrow={}>
+					<cfset thisrow.l="false">
+					<cfset thisrow.d="cf_sql_varchar">
+					<cfset thisrow.t="upper(taxon_name.scientific_name)">
+					<cfset thisrow.o="like">
+					<cfset thisrow.v='#ucase(taxon_name)#%'>
+					<cfset arrayappend(qp,thisrow)>
 				</cfif>
-
-				<!--- display for taxon term search --->
-				<cfif len(taxon_term) gt 0>
-
-					<!--- join taxon term and taxon name --->
-					<cfif tabls does not contain "taxon_term">
-						<cfset tabls=tabls & " inner join taxon_term on  taxon_name.taxon_name_id=taxon_term.taxon_name_id ">
-					</cfif>
-
-					<!--- display for taxon term equal to --->
-					<cfif  left(taxon_term,1) is "=">
-
-						<cfset thisrow={}>
-						<cfset thisrow.l="false">
-						<cfset thisrow.d="cf_sql_varchar">
-						<cfset thisrow.t="term">
-						<cfset thisrow.o="ilike">
-						<cfset thisrow.v='#right(taxon_term,len(taxon_term)-1)#'>
-						<cfset arrayappend(qp,thisrow)>
-
-						<li>Taxon Term IS #right(taxon_term,len(taxon_term)-1)#</li>
-					
-					<!--- display for taxon term contains ---->
-					<cfelseif left(taxon_term,1) is "%">
-
-						<cfset thisrow={}>
-						<cfset thisrow.l="false">
-						<cfset thisrow.d="cf_sql_varchar">
-						<cfset thisrow.t="term">
-						<cfset thisrow.o="ilike">
-						<cfset thisrow.v='%#right(taxon_term,len(taxon_term)-1)#%'>
-						<cfset arrayappend(qp,thisrow)>
-
-						<li>Taxon Term CONTAINS #right(taxon_term,len(taxon_term)-1)#</li>
-
-					<!--- display for taxon term starts with --->
-					<cfelse>
-
-						<cfset thisrow={}>
-						<cfset thisrow.l="false">
-						<cfset thisrow.d="cf_sql_varchar">
-						<cfset thisrow.t="term">
-						<cfset thisrow.o="ilike">
-						<cfset thisrow.v='#taxon_term#%'>
-						<cfset arrayappend(qp,thisrow)>
-						<li>Taxon Term STARTS WITH #taxon_term#</li>
-					</cfif>
-				</cfif>
-
-				<!--- display for taxon term type search --->
-				<cfif len(term_type) gt 0>
-
-					<cfif tabls does not contain "taxon_term">
-						<cfset tabls=tabls & " inner join taxon_term on  taxon_name.taxon_name_id=taxon_term.taxon_name_id ">
-					</cfif>
-
-					<!--- display for taxon term type is equal to --->
-					<cfif  left(term_type,1) is "=">
-
-						<cfset thisrow={}>
-						<cfset thisrow.l="false">
-						<cfset thisrow.d="cf_sql_varchar">
-						<cfset thisrow.t="upper(term_type)">
-						<cfset thisrow.o="=">
-						<cfset thisrow.v='#ucase(right(term_type,len(term_type)-1))#'>
-						<cfset arrayappend(qp,thisrow)>
-
-						<li>Term Type IS #right(term_type,len(term_type)-1)#</li>
-
-					<!--- display for taxon term type is NULL --->
-					<cfelseif term_type is "NULL">
-						<cfset whr=whr & " and term_type is null">
-
-						<cfset thisrow={}>
-						<cfset thisrow.l="false">
-						<cfset thisrow.d="isnull">
-						<cfset thisrow.t="term_type">
-						<cfset thisrow.o="">
-						<cfset thisrow.v=''>
-						<cfset arrayappend(qp,thisrow)>
-
-						<li>Term Type IS NULL</li>
-
-					<!--- display for taxon term type contains --->
-					<cfelseif left(term_type,1) is "%">
-
-						<cfset thisrow={}>
-						<cfset thisrow.l="false">
-						<cfset thisrow.d="cf_sql_varchar">
-						<cfset thisrow.t="term_type">
-						<cfset thisrow.o="ilike">
-						<cfset thisrow.v='%#right(term_type,len(term_type)-1)#%'>
-						<cfset arrayappend(qp,thisrow)>
-
-						<li>Term Type CONTAINS #term_type#</li>
-
-					<cfelse>
-
-						<!--- display for taxon term type starts with --->
-
-						<cfset thisrow={}>
-						<cfset thisrow.l="false">
-						<cfset thisrow.d="cf_sql_varchar">
-						<cfset thisrow.t="term_type">
-						<cfset thisrow.o="ilike">
-						<cfset thisrow.v=term_type>
-						<cfset arrayappend(qp,thisrow)>
-
-
-						<li>Term Type STARTS WITH #term_type#</li>
-
-					</cfif>
-				</cfif>
-
-				<!--- display for source search --->
-				<cfif len(trim(source)) gt 0>
-					<cftry>
-						<cfif tabls does not contain "taxon_term">
-							<cfset tabls=tabls & " inner join taxon_term on  taxon_name.taxon_name_id=taxon_term.taxon_name_id ">
-						</cfif>
-						<!--- display for source search equal to LOCAL --->
-						<cfif source is "LOCAL">
-							<cfset tabls=tabls & " inner join CTTAXONOMY_SOURCE on  taxon_term.source=taxon_term.source ">
-							<li>Source IS LOCAL</li>
-						<!--- display for source search equal to --->
-						<cfelseif left(source,1) is "=">
-							<cfset thisrow={}>
-							<cfset thisrow.l="false">
-							<cfset thisrow.d="cf_sql_varchar">
-							<cfset thisrow.t="upper(source)">
-							<cfset thisrow.o="=">
-							<cfset thisrow.v='#ucase(right(source,len(source)-1))#'>
-							<cfset arrayappend(qp,thisrow)>
-							<li>Source IS #right(source,len(source)-1)#</li>
-						<!--- display for source search starts with --->
-						<cfelse>
-							<cfset thisrow={}>
-							<cfset thisrow.l="false">
-							<cfset thisrow.d="cf_sql_varchar">
-							<cfset thisrow.t="upper(source)">
-							<cfset thisrow.o="like">
-							<cfset thisrow.v='#ucase(source)#%'>
-							<cfset arrayappend(qp,thisrow)>
-							<li>Source STARTS WITH #source#</li>
-						</cfif>
-					<cfcatch><!----whatever ----></cfcatch>
-					</cftry>
-				</cfif>
-
-				<!--- display for common name search --->
-				<cfif len(common_name) gt 0>
-					<cftry>
-						<cfif tabls does not contain "common_name">
-							<cfset tabls=tabls & " inner join common_name on  taxon_name.taxon_name_id=common_name.taxon_name_id ">
-						</cfif>
-
-						<!--- display for common name search equal to --->
-						<cfif  left(common_name,1) is "=">
-
-							<cfset thisrow.l="false">
-							<cfset thisrow.d="cf_sql_varchar">
-							<cfset thisrow.t="upper(common_name)">
-							<cfset thisrow.o="=">
-							<cfset thisrow.v='#ucase(right(common_name,len(common_name)-1))#'>
-							<cfset arrayappend(qp,thisrow)>
-							<li>Common Name IS #right(common_name,len(common_name)-1)#</li>
-						<!--- display for common name search contains --->
-						<cfelseif left(common_name,1) is "%">
-
-							<cfset thisrow.l="false">
-							<cfset thisrow.d="cf_sql_varchar">
-							<cfset thisrow.t="upper(common_name)">
-							<cfset thisrow.o="LIKE">
-							<cfset thisrow.v='%#ucase(right(common_name,len(common_name)-1))#%'>
-							<cfset arrayappend(qp,thisrow)>
-							<li>Common Name CONTAINS #right(common_name,len(common_name)-1)#</li>
-							<!--- display for common name search starts with --->
-						<cfelse>
-							<cfset thisrow.l="false">
-							<cfset thisrow.d="cf_sql_varchar">
-							<cfset thisrow.t="upper(common_name)">
-							<cfset thisrow.o="LIKE">
-							<cfset thisrow.v='#ucase(common_name)#%'>
-							<cfset arrayappend(qp,thisrow)>
-
-							<li>Common Name STARTS WITH #common_name#</li>
-
-						</cfif>
-					<cfcatch><!----whatever ----></cfcatch>
-					</cftry>
-				</cfif>
-			</ul>
-            <hr>
-
-			<!--- build search results --->
-			<cfset qal=arraylen(qp)>
-
-			<cfif qal lt 1>
-				<cfabort>
 			</cfif>
-			<cfquery name="d_raw" datasource="uam_god" timeout="50">
-				<!--------select scientific_name,taxon_name_id from (---------->
-				select taxon_name.scientific_name, taxon_name.taxon_name_id from #tabls#
-				where 1=1
-				<cfif qal gt 0> and </cfif>
-				<cfloop from="1" to="#qal#" index="i">
-					#qp[i].t#
-					#qp[i].o#
-					<cfif qp[i].d is "isnull">
-						is null
-					<cfelseif qp[i].d is "notnull">
-						is not null
-					<cfelse>
-						<cfif #qp[i].o# is "in">(</cfif>
-						<cfqueryparam cfsqltype="#qp[i].d#" value="#preserveSingleQuotes(qp[i].v)#" null="false" list="#qp[i].l#">
-						<cfif #qp[i].o# is "in">)</cfif>
+
+			<cfif len(taxon_name_type) gt 0>
+				<cfset thisrow={}>
+				<cfset thisrow.l="false">
+				<cfset thisrow.d="cf_sql_varchar">
+				<cfset thisrow.t="taxon_name.name_type">
+				<cfset thisrow.o="=">
+				<cfset thisrow.v=taxon_name_type>
+				<cfset arrayappend(qp,thisrow)>
+			</cfif>
+			<cfif len(creator) gt 0>
+				<cfset tabls=tabls & " inner join agent_name on  taxon_name.created_by_agent_id=agent_name.agent_id ">
+				<cfset thisrow={}>
+				<cfset thisrow.l="false">
+				<cfset thisrow.d="cf_sql_varchar">
+				<cfset thisrow.t="agent_name.agent_name">
+				<cfset thisrow.o="ilike">
+				<cfset thisrow.v=creator>
+				<cfset arrayappend(qp,thisrow)>
+			</cfif>
+			<cfif len(taxon_term) gt 0>
+				<cfif tabls does not contain "taxon_term">
+					<cfset tabls=tabls & " inner join taxon_term on  taxon_name.taxon_name_id=taxon_term.taxon_name_id ">
+				</cfif>
+				<cfif  left(taxon_term,1) is "=">
+					<cfset thisrow={}>
+					<cfset thisrow.l="false">
+					<cfset thisrow.d="cf_sql_varchar">
+					<cfset thisrow.t="term">
+					<cfset thisrow.o="ilike">
+					<cfset thisrow.v='#right(taxon_term,len(taxon_term)-1)#'>
+					<cfset arrayappend(qp,thisrow)>
+				<cfelseif left(taxon_term,1) is "%">
+					<cfset thisrow={}>
+					<cfset thisrow.l="false">
+					<cfset thisrow.d="cf_sql_varchar">
+					<cfset thisrow.t="term">
+					<cfset thisrow.o="ilike">
+					<cfset thisrow.v='%#right(taxon_term,len(taxon_term)-1)#%'>
+					<cfset arrayappend(qp,thisrow)>
+				<cfelse>
+					<cfset thisrow={}>
+					<cfset thisrow.l="false">
+					<cfset thisrow.d="cf_sql_varchar">
+					<cfset thisrow.t="term">
+					<cfset thisrow.o="ilike">
+					<cfset thisrow.v='#taxon_term#%'>
+					<cfset arrayappend(qp,thisrow)>
+				</cfif>
+			</cfif>
+			<cfif len(term_type) gt 0>
+				<cfif tabls does not contain "taxon_term">
+					<cfset tabls=tabls & " inner join taxon_term on  taxon_name.taxon_name_id=taxon_term.taxon_name_id ">
+				</cfif>
+				<cfif left(term_type,1) is "=">
+					<cfset thisrow={}>
+					<cfset thisrow.l="false">
+					<cfset thisrow.d="cf_sql_varchar">
+					<cfset thisrow.t="upper(term_type)">
+					<cfset thisrow.o="=">
+					<cfset thisrow.v='#ucase(right(term_type,len(term_type)-1))#'>
+					<cfset arrayappend(qp,thisrow)>
+				<cfelseif term_type is "NULL">
+					<cfset whr=whr & " and term_type is null">
+					<cfset thisrow={}>
+					<cfset thisrow.l="false">
+					<cfset thisrow.d="isnull">
+					<cfset thisrow.t="term_type">
+					<cfset thisrow.o="">
+					<cfset thisrow.v=''>
+					<cfset arrayappend(qp,thisrow)>
+				<cfelseif left(term_type,1) is "%">
+					<cfset thisrow={}>
+					<cfset thisrow.l="false">
+					<cfset thisrow.d="cf_sql_varchar">
+					<cfset thisrow.t="term_type">
+					<cfset thisrow.o="ilike">
+					<cfset thisrow.v='%#right(term_type,len(term_type)-1)#%'>
+					<cfset arrayappend(qp,thisrow)>
+				<cfelse>
+					<cfset thisrow={}>
+					<cfset thisrow.l="false">
+					<cfset thisrow.d="cf_sql_varchar">
+					<cfset thisrow.t="term_type">
+					<cfset thisrow.o="ilike">
+					<cfset thisrow.v=term_type>
+					<cfset arrayappend(qp,thisrow)>
+				</cfif>
+			</cfif>
+			<cfif len(trim(source)) gt 0>
+				<cftry>
+					<cfif tabls does not contain "taxon_term">
+						<cfset tabls=tabls & " inner join taxon_term on  taxon_name.taxon_name_id=taxon_term.taxon_name_id ">
 					</cfif>
-					<cfif i lt qal> and </cfif>
-				</cfloop>
-				limit 2000
-			</cfquery>
+					<cfif source is "LOCAL">
+						<cfset tabls=tabls & " inner join CTTAXONOMY_SOURCE on  taxon_term.source=taxon_term.source ">
+					<cfelseif left(source,1) is "=">
+						<cfset thisrow={}>
+						<cfset thisrow.l="false">
+						<cfset thisrow.d="cf_sql_varchar">
+						<cfset thisrow.t="upper(source)">
+						<cfset thisrow.o="=">
+						<cfset thisrow.v='#ucase(right(source,len(source)-1))#'>
+						<cfset arrayappend(qp,thisrow)>
+					<cfelse>
+						<cfset thisrow={}>
+						<cfset thisrow.l="false">
+						<cfset thisrow.d="cf_sql_varchar">
+						<cfset thisrow.t="upper(source)">
+						<cfset thisrow.o="like">
+						<cfset thisrow.v='#ucase(source)#%'>
+						<cfset arrayappend(qp,thisrow)>
+					</cfif>
+				<cfcatch><!----whatever ----></cfcatch>
+				</cftry>
+			</cfif>
+		</ul>
+        <hr>
+		<!--- build search results --->
+		<cfset qal=arraylen(qp)>
+
+		<cfif qal lt 1>
+			<cfabort>
+		</cfif>
+		<cfquery name="d_raw" datasource="uam_god" timeout="50">
+			<!--------select scientific_name,taxon_name_id from (---------->
+			select taxon_name.scientific_name, taxon_name.taxon_name_id from #tabls#
+			where 1=1
+			<cfif qal gt 0> and </cfif>
+			<cfloop from="1" to="#qal#" index="i">
+				#qp[i].t#
+				#qp[i].o#
+				<cfif qp[i].d is "isnull">
+					is null
+				<cfelseif qp[i].d is "notnull">
+					is not null
+				<cfelse>
+					<cfif #qp[i].o# is "in">(</cfif>
+					<cfqueryparam cfsqltype="#qp[i].d#" value="#preserveSingleQuotes(qp[i].v)#" null="false" list="#qp[i].l#">
+					<cfif #qp[i].o# is "in">)</cfif>
+				</cfif>
+				<cfif i lt qal> and </cfif>
+			</cfloop>
+			limit 2000
+		</cfquery>
 			<!---- 
 				group is slow, so just grab some extras then requery for uniques, sorta-works and performs much better 
 			----->
@@ -671,7 +538,6 @@
 			----->
 
 			<cfset title="Taxonomy Search Results">
-             <h3>Search Results</h3>
             <!-------
             <span style="font-weight: bold">#d.recordcount# taxon name(s) found</span> - click individual names for more information or <span id="s_showmetadata" class="likeLink" onclick="showmetadata()">[ Show Metadata ]</span> for names on this page.
             ------->
@@ -1227,28 +1093,6 @@
         </div>
         <hr>
 	</cfif>
-<!-------- Common Name Stuff -------->
-	<cfquery name="common_name" datasource="uam_god">
-		select
-			common_name
-		from
-			common_name
-		where
-			taxon_name_id=<cfqueryparam value="#taxon_name_id.taxon_name_id#" cfsqltype="cf_sql_int">
-	</cfquery>
-	<cfif common_name.recordcount gte 1>
-			<h3 id="seccommon">Common Names</h3>
-			<div class="left_indent" id="common_name">
-			<ul>
-				<cfloop query="common_name">
-					<li>
-						#common_name#
-					</li>
-				</cfloop>
-			</ul>
-			</div>
-        <hr>
-	</cfif>
 <!-------- Associated Publications -------->
 	<cfquery name="tax_pub" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		select
@@ -1299,7 +1143,7 @@
                 &nbsp;
                 <a class="external" target="_blank" href="http://resolver.globalnames.org/name_resolvers.html?names=#scientific_name.scientific_name#">GlobalNames (HTML)</a>
                 &nbsp;
-                <a class="external" target="_blank" href="http://resolver.globalnames.org/name_resolvers.xml?names=#scientific_name.scientific_name#">GlobalNames (XML)</a>
+                <a class="external" target="_blank" href="http://resolver.globalnames.org/name_resolvers.json?names=#scientific_name.scientific_name#">GlobalNames (JSON)</a>
                 <br><br>
             </div>
         </cfif>
@@ -1545,9 +1389,6 @@
 									<a class="taxLinksMore" rel="nofollow" href="#srclnk#">[ from this source ]</a>
 									<cfif isdefined("session.roles") and listfindnocase(session.roles,"manage_taxonomy") and listfind(valuelist(cttaxonomy_source.source),sources.source)>
 										<a href="/tools/downloadByTaxonName.cfm?term=#term#&TERM_TYPE=#sttyp#&source=#sources.source#"> [ download ]</a>
-										<!----
-										<a href="/tools/taxonomyTree.cfm?action=autocreateandseed&seed_term=#term#&source=&trm_rank="> [ seed hierarchy ]</a>
-										---->
 										<cfif sources.source is 'WoRMS (via Arctos)'>
 											<a href="/tools/requestWormsRefresh.cfm?term=#term#&term_type=#sttyp#"> [ WoRMS refresh ]</a>
 										</cfif>
@@ -1596,11 +1437,7 @@
 				</a>
 			</li>
 
-			<cfset thisSearch = "%22#scientific_name.scientific_name#%22">
-			<cfloop query="common_name">
-				<cfset thisSearch = "#thisSearch# OR %22#common_name#%22">
-			</cfloop>
-
+			<cfset thisSearch = "%22#scientific_name.scientific_name#%22">			
 
 			<li>
 				<a class="external" target="_blank" href="http://www.ncbi.nlm.nih.gov/Taxonomy/Browser/wwwtax.cgi?name=#srchName#">

@@ -44,10 +44,14 @@
 			<cfset did=attribute_determinerid.aid>
 		</cfif>
 		<cfquery name="ava" datasource="uam_god"  cachedwithin="#createtimespan(0,0,60,0)#">
-			select isValidLocalityAttribute('#d.attribute_type#','#d.attribute_value#','#d.attribute_units#') as c
+			select isValidLocalityAttribute(
+				<cfqueryparam value="#d.attribute_type#" CFSQLType="cf_sql_varchar">,
+				<cfqueryparam value="#d.attribute_value#" CFSQLType="cf_sql_varchar">,
+				<cfqueryparam value="#d.attribute_units#" CFSQLType="cf_sql_varchar">
+			) as c
 		</cfquery>
-		<cfif ava.c neq 1>
-			<cfset errs=listappend(errs,"failed validation; check code tables")>
+		<cfif ava.c neq 'valid'>
+			<cfset errs=listappend(errs,"failed validation; #ava.c#")>
 		</cfif>
 	    <cfif len(errs) gt 0>
 			<cfquery name="cleanupf" datasource="uam_god">

@@ -32,8 +32,8 @@
 		</p>
 		<h3>Catch up on GitHub</h3>
 		<p>
-			Review <a href="https://github.com/ArctosDB/arctos/issues/4554" class="external">stop low-information agents, do more with verbatim agents</a>
-			and associated Issues and meeting notes before creating an Agent. 
+			Review <a href="https://github.com/ArctosDB/arctos/labels/Function-Agents" class="external">Agent Issues</a>
+			before creating an Agent. 
 		</p>
 		<p>
 			Comment on an existing Issue, open a new Issue, or become involved in issues and governance meetings if you wish to participate, need clarification, 
@@ -44,7 +44,6 @@
 		<p>
 			Agents which will act only in various <a href="/info/ctDocumentation.cfm?table=ctcollector_role">collector roles</a>
 			seldom need to be created as Agents; simply use attribute <a href="/info/ctDocumentation.cfm?table=ctattribute_type#verbatim_agent">verbatim agent</a>.
-			No functionality will be lost under this method.
 		</p>
 
 		<h3>Do not create meaningless relationships</h3>
@@ -71,15 +70,44 @@
 	<cfquery name="ctAgent_Type" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 		select agent_type from ctagent_type order by agent_type
 	</cfquery>
-	<cfquery name="CTADDRESS_TYPE" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-		select ADDRESS_TYPE from CTADDRESS_TYPE order by ADDRESS_TYPE
+	
+	<cfquery name="ctagent_attribute_type_raw" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
+		select attribute_type,public,purpose,vocabulary from ctagent_attribute_type
 	</cfquery>
-	<cfquery name="CTAGENT_RELATIONSHIP" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-		select AGENT_RELATIONSHIP from CTAGENT_RELATIONSHIP order by AGENT_RELATIONSHIP
+
+	<cfquery name="a_w_v" dbtype="query">
+		select attribute_type,vocabulary from ctagent_attribute_type_raw where vocabulary is not null
 	</cfquery>
-	<cfquery name="ctagent_status" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-		select agent_status from ctagent_status order by agent_status
+	<cfset ja_w_v=serializeJSON(a_w_v,'struct')>
+	<input type="hidden" id="vocab_stash" value="#EncodeForHTML(canonicalize(ja_w_v,true,true))#">
+
+	<!---- special handling of status ---->
+	<cfquery name="ctagent_attribute_type" dbtype="query">
+		select attribute_type from ctagent_attribute_type_raw
+		<!----where attribute_type not in ( <cfqueryparam value="status" cfsqltype="cf_sql_varchar" list="true"> ) ---->
+		order by attribute_type
 	</cfquery>
+
+
+
+
+
+	<cfquery name="no_edit_attr_type" dbtype="query">
+		select attribute_type from ctagent_attribute_type_raw where purpose=<cfqueryparam value="history" cfsqltype="cf_sql_varchar">
+	</cfquery>
+
+
+
+	<!----------- exclude things we don't really want edited from this too---->
+	<cfquery name="cats" dbtype="query">
+		select purpose from ctagent_attribute_type_raw 
+		where  attribute_type not in ( <cfqueryparam value="#valuelist(no_edit_attr_type.attribute_type)#" cfsqltype="cf_sql_varchar" list="true"> )
+		group by purpose order by purpose
+	</cfquery>
+
+
+
+
 
 	<style>
 		/* override the error style for this page */
@@ -165,7 +193,7 @@
 			$("#preferred_agent_name").val(pname);
 		}
 		function autosuggestNameComponents(benice){
-			jQuery.getJSON("/component/api/v2/jsonutils.cfc",
+			jQuery.getJSON("/component/api/agent.cfc",
 				{
 					method : "splitAgentName",
 					returnformat : "json",
@@ -210,77 +238,11 @@
 			$("#status").val('unchecked');
 			$("#preCreateErrors").html('').removeClass().hide();
 		}
-		function preCreateCheck(){
-			// if status is pass or force, just submit the form
-			if ($("#status").val()!="unchecked"){
-				return true;
-			}
-			if ($("#agent_type").val()=='person'){
-				if ($("#first_name").val().length==0 && $("#last_name").val().length==0 && $("#middle_name").val().length==0){
-					alert('First, middle, or last name is required for person agents. Use the autogenerate button.');
-					$("#status").val('unchecked');
-					return false;
-				}
-			}
-			$("#createAgent").find(":submit").css('display', 'none');
-			$('<img id="ldgimg">').attr('src', '/images/indicator.gif').insertAfter($("#createAgent").find(":submit"));
-			jQuery.getJSON("/component/api/v2/jsonutils.cfc",
-				{
-					method : "check_agent",
-					returnformat : "json",
-					queryformat : 'struct',
-					preferred_name : $("#preferred_agent_name").val(),
-					agent_type : $("#agent_type").val(),
-					first_name : $("#first_name").val(),
-					middle_name : $("#middle_name").val(),
-					last_name : $("#last_name").val(),
-					api_key: $("#api_key").val()
-				},
-				function (r) {
-					console.log(r);
-					var hasFatalErrs=false;
-					if( r.length > 0) {
-						var q='There are potential problems with the agent you are trying to create.<ul>';
-						for (var i = 0; i < r.length; i++) {
-							if (r[i].severity=='fatal'){
-								hasFatalErrs=true;
-							}
-						    q+='<li>' + r[i].severity + ": " + r[i].message;
-						    if (r[i].link){
-						    	q+=' <a href="' + r[i].link + '">[ link ]</a>';
-						    }
-						    q+= '</li>';
-						    console.log(r[i]);
-						    console.log(q);
-						}
-						q+='</ul>';
-						if (hasFatalErrs=true){
-							q+='If you are absolutely sure that this agent is not a duplicate, you may ';
-							q+='<span onclick="forceSubmit()" class="infoLink">click here to force creation</span>';
-						}
-						q+='<p>Please scroll up and fix any problems.</p>';
 
-						//q+='<p><span onclick="removeErrDiv()" class="likeLink">return to create agent form</span></p>';
-						//$("#preCreateErrors").html(q).addClass('error').show();
-						$("#preCreateErrors").html(q).show();
-						$("#preCreateErrors").get(0).scrollIntoView();
-						$("#createAgent").find(":submit").css('display', 'block');
-						$("#ldgimg").remove();
-						return false;
-					}else{
-						$("#status").val('pass');
-						$("#createAgent").submit();
-					}
-				}
-			);
-			return false;
-		}
 	</script>
 	<cfoutput>
-		<cfquery name="ak" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-			select api_key from api_key inner join agent on api_key.issued_to=agent.agent_id where preferred_agent_name='arctos_api_user'
-		</cfquery>
-		<input type="hidden" id="api_key" value="#ak.api_key#">
+		<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
+		<input type="hidden" id="api_key" value="#api_key#">
 
 
 		<cfparam name="caller" default="">
@@ -289,7 +251,7 @@
 
 
 		<strong>Create Agent</strong>
-		<form name="prefdName" id="createAgent" onsubmit="return preCreateCheck()">
+		<form name="prefdName" id="createAgent" method="post" action="createagent.cfm"><!-------------onsubmit="return preCreateCheck()"----------->
 			<input type="hidden" name="action" value="makeNewAgent">
 			<input type="hidden" name="caller" value="#caller#">
 			<input type="hidden" name="agentIdFld" value="#agentIdFld#">
@@ -308,7 +270,6 @@
 					<option value="#ctAgent_Type.agent_type#">#ctAgent_Type.agent_type#</option>
 				</cfloop>
 			</select>
-			<input type="hidden" name="agent_name_type" value="preferred">
 			<label for="preferred_agent_name">Preferred Name</label>
 			<input type="text" name="preferred_agent_name" id="preferred_agent_name" size="50" class="reqdClr" value="#agentNameVal#">
 			<div id="newPersonAttrs" style="display:none;">
@@ -331,10 +292,10 @@
             </div>
 			<input type="text"  size="80" name="agent_remarks" id="agent_remarks">
 			<div style="text-align: center; border-top: 1px solid black; border-bottom: 1px solid black;padding:.5em;margin:.5em;">
-				At least one of the following is required to create. You may edit to add more information after creating. 
+				At least one of the following is highly recommended to create. You may edit to add more information after creating. 
 				<div style="font-size: small;">
 					Don't have sufficient information? 
-					Strongly consider using <a href="/info/ctDocumentation.cfm?table=ctattribute_type##verbatim_agent" target="_blank">verbatim agent</a>
+					Consider using <a href="/info/ctDocumentation.cfm?table=ctattribute_type##verbatim_agent" target="_blank">verbatim agent</a>
 					instead of creating a low-information Agent.
 				</div>
 			</div>
@@ -363,14 +324,39 @@
 				<label for="alive">Alive on Date</label>
 				<input type="datetime" name="alive" id="alive" placeholder="1988-08-08" size="80">
 
+
+<!----------------
+				<cfquery name="ctagent_attribute_type_raw" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
+					select attribute_type,public,purpose,vocabulary from ctagent_attribute_type
+				</cfquery>
+
+				<cfquery name="a_w_v" dbtype="query">
+					select attribute_type,vocabulary from ctagent_attribute_type_raw where vocabulary is not null
+				</cfquery>
+				<cfset ja_w_v=serializeJSON(a_w_v,'struct')>
+				<input type="hidden" id="vocab_stash" value="#EncodeForHTML(canonicalize(ja_w_v,true,true))#">
+
+				<!---- special handling of status ---->
+				<cfquery name="ctagent_attribute_type" dbtype="query">
+					select attribute_type from ctagent_attribute_type_raw
+					<!----where attribute_type not in ( <cfqueryparam value="status" cfsqltype="cf_sql_varchar" list="true"> ) ---->
+					order by attribute_type
+				</cfquery>
+
+				------->
+
+				<cfquery name="ctrelationship_types" dbtype="query">
+					select attribute_type from ctagent_attribute_type_raw where purpose='relationship' order by attribute_type
+				</cfquery>
+
 				<table>
 					<tr>
 						<td>
 							<label for="agent_relationship">Relationship</label>
 							<select name="agent_relationship" id="agent_relationship" size="1">
 								<option value="">pick relationship</option>
-								<cfloop query="CTAGENT_RELATIONSHIP">
-									<option value="#CTAGENT_RELATIONSHIP.AGENT_RELATIONSHIP#">#CTAGENT_RELATIONSHIP.AGENT_RELATIONSHIP#</option>
+								<cfloop query="ctrelationship_types">
+									<option value="#ctrelationship_types.attribute_type#">#ctrelationship_types.attribute_type#</option>
 								</cfloop>
 							</select>
 						</td>
@@ -397,20 +383,24 @@
 				</table>
 
 
+				<cfquery name="ctaddress" dbtype="query">
+					select attribute_type from ctagent_attribute_type_raw where purpose='address' order by attribute_type
+				</cfquery>
+
 				<table>
 					<tr>
 						<td>
 							<label for="address_type">Contact or Identifier Type</label>
 							<select name="address_type" id="address_type" size="1" onchange="setAddressType(this.value)">
 								<option value="">pick new</option>
-								<cfloop query="ctaddress_type">
-									<option value="#ctaddress_type.ADDRESS_TYPE#">#ctaddress_type.ADDRESS_TYPE#</option>
+								<cfloop query="ctaddress">
+									<option value="#ctaddress.attribute_type#">#ctaddress.attribute_type#</option>
 								</cfloop>
 							</select>
 						</td>
 						<td>
 							<label for="address">Contact Information or Identifier</label>
-							<input type="text" name="address" id="address" placeholder="add address">
+							<textarea class="smalltextarea" name="address" id="address" placeholder="add address"></textarea>
 						</td>
 						<td>
 							<label for="start_date">Start Date</label>
@@ -426,15 +416,21 @@
 						</td>
 					</tr>
 				</table>
-				
+
+
+				<cfquery name="ctevent" dbtype="query">
+					select vocabulary from ctagent_attribute_type_raw where attribute_type='event' 
+				</cfquery>
+
+
 				<table>
 					<tr>
 						<td>
-							<label for="agent_status">Status</label>
+							<label for="agent_status">Event</label>
 							<select name="agent_status" id="agent_status" size="1">
 								<option value="">pick status</option>
-								<cfloop query="ctagent_status">
-									<option value="#agent_status#">#agent_status#</option>
+								<cfloop list="#ctevent.vocabulary#" index="i">
+									<option value="#i#">#i#</option>
 								</cfloop>
 							</select>
 						</td>
@@ -448,8 +444,6 @@
 						</td>
 					</tr>
 				</table>
-
-
 			</div>
 
 			<br>
@@ -469,341 +463,374 @@
 <!------------------------------------------------>
 <cfif Action is "makeNewAgent">
 	<cfoutput>
-		<cfif 
-			len(agent_relationship) is 0 and 
-			len(address_type) is 0 and 
-			len(agent_status) is 0 and 
-			len(orcid) is 0 and 
-			len(github) is 0 and 
-			len(email) is 0 and 
-			len(birth) is 0 and 
-			len(death) is 0 and 
-			len(alive) is 0 and 
-			len(wikidata) is 0 and 
-			len(l_o_c) is 0>
-			<cfthrow message="Low-Information Agent Creation Denied" detail="Consider using Attribute verbatim agent if additional information about this agent is not available.">
-		</cfif>
-		<cfif agent_type is 'person' and (len(first_name) is 0 and len(last_name) is 0 and len(middle_name) is 0)>
-			<cfthrow message="Low-Information Agent Creation Denied" detail="Consider using Attribute verbatim agent if additional information about this agent is not available.">
-		</cfif>
-		<cftransaction>
-			<cfquery name="agentID" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-				select nextval('sq_agent_id') nextAgentId
-			</cfquery>
-			<cfquery name="insAgent" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-				INSERT INTO agent (
-					agent_id,
-					agent_type,
-					preferred_agent_name,
-					agent_remarks
-					)
-				VALUES (
-					<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-					<cfqueryparam cfsqltype="cf_sql_varchar" value="#agent_type#">,
-					<cfqueryparam cfsqltype="cf_sql_varchar" value="#preferred_agent_name#">,
-					<cfqueryparam cfsqltype="cf_sql_varchar" value="#agent_remarks#" null="#Not Len(Trim(agent_remarks))#">
-				)
-			</cfquery>
-			<cfif isdefined("first_name") and len(first_name) gt 0>
-				<cfquery name="insFName" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO agent_name (
-						agent_name_id,
-						agent_id,
-						agent_name_type,
-						agent_name
-					) VALUES (
-						nextval('sq_agent_name_id'),
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						'first name',
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#first_name#">
-					)
-				</cfquery>
-			</cfif>
-			<cfif isdefined("middle_name") and len(middle_name) gt 0>
-				<cfquery name="insMName" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO agent_name (
-						agent_name_id,
-						agent_id,
-						agent_name_type,
-						agent_name
-					) VALUES (
-						nextval('sq_agent_name_id'),
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						'middle name',
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#middle_name#">
-					)
-				</cfquery>
-			</cfif>
-			<cfif isdefined("last_name") and len(last_name) gt 0>
-				<cfquery name="insLName" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO agent_name (
-						agent_name_id,
-						agent_id,
-						agent_name_type,
-						agent_name
-					) VALUES (
-						nextval('sq_agent_name_id'),
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						'last name',
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#last_name#">
-					)
-				</cfquery>
-			</cfif>
-			<cfif len(address_type) gt 0>
-				<cfquery name="insAddr" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO address (
-						address_id,
-						agent_id,
-						address_type,
-						address,
-						address_remark,
-						start_date,
-						end_date
-					) VALUES (
-						nextval('sq_agent_name_id'),
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#address_type#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#address#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#address_remark#" null="#Not Len(Trim(address_remark))#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#start_date#" null="#Not Len(Trim(start_date))#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#end_date#" null="#Not Len(Trim(end_date))#">
-					)
-				</cfquery>
-			</cfif>
-			<cfif len(orcid) gt 0>
-				<cfquery name="insAddr" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO address (
-						address_id,
-						agent_id,
-						address_type,
-						address,
-						address_remark,
-						start_date,
-						end_date
-					) VALUES (
-						nextval('sq_agent_name_id'),
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="ORCID">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#orcid#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">
-					)
-				</cfquery>
-			</cfif>
-			<cfif len(github) gt 0>
-				<cfquery name="insAddr" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO address (
-						address_id,
-						agent_id,
-						address_type,
-						address,
-						address_remark,
-						start_date,
-						end_date
-					) VALUES (
-						nextval('sq_agent_name_id'),
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="GitHub">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#github#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">
-					)
-				</cfquery>
-			</cfif>
-			<cfif len(email) gt 0>
-				<cfquery name="insAddr" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO address (
-						address_id,
-						agent_id,
-						address_type,
-						address,
-						address_remark,
-						start_date,
-						end_date
-					) VALUES (
-						nextval('sq_agent_name_id'),
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="email">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#email#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">
-					)
-				</cfquery>
-			</cfif>
-			<cfif len(wikidata) gt 0>
-				<cfquery name="insAddr" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO address (
-						address_id,
-						agent_id,
-						address_type,
-						address,
-						address_remark,
-						start_date,
-						end_date
-					) VALUES (
-						nextval('sq_agent_name_id'),
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="Wikidata">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#wikidata#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">
-					)
-				</cfquery>
-			</cfif>
-			<cfif len(l_o_c) gt 0>
-				<cfquery name="insAddr" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO address (
-						address_id,
-						agent_id,
-						address_type,
-						address,
-						address_remark,
-						start_date,
-						end_date
-					) VALUES (
-						nextval('sq_agent_name_id'),
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="Library of Congress">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#l_o_c#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">
-					)
-				</cfquery>
-			</cfif>
-			<cfif len(agent_relationship) gt 0>
-				<cfquery name="insReln" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO agent_relations (
-						agent_id,
-						related_agent_id,
-						agent_relationship,
-						relationship_began_date,
-						relationship_end_date,
-						relationship_remarks,
-						created_by_agent_id,
-						created_on_date
-					) VALUES (
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						<cfqueryparam cfsqltype="cf_sql_int" value="#related_agent_id#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#agent_relationship#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#relationship_began_date#" null="#Not Len(Trim(relationship_began_date))#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#relationship_end_date#" null="#Not Len(Trim(relationship_end_date))#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#relationship_remarks#" null="#Not Len(Trim(relationship_remarks))#">,
-						<cfqueryparam cfsqltype="cf_sql_int" value="#session.myAgentId#">,
-						current_date
-					)
-				</cfquery>
-			</cfif>
-			<cfif len(agent_status) gt 0>
-				<cfquery name="insStatus" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO agent_status (
-						agent_id,
-						agent_status,
-						status_date,
-						status_reported_by,
-						status_reported_date,
-						status_remark
-					) VALUES (
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#agent_status#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#status_date#">,
-						<cfqueryparam cfsqltype="cf_sql_int" value="#session.myAgentId#">,
-						current_date,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#status_remark#" null="#Not Len(Trim(status_remark))#">
-					)
-				</cfquery>
-			</cfif>
-			<cfif len(birth) gt 0>
-				<cfquery name="insStatus" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO agent_status (
-						agent_id,
-						agent_status,
-						status_date,
-						status_reported_by,
-						status_reported_date,
-						status_remark
-					) VALUES (
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="born">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#birth#">,
-						<cfqueryparam cfsqltype="cf_sql_int" value="#session.myAgentId#">,
-						current_date,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">
-					)
-				</cfquery>
-			</cfif>
-			<cfif len(death) gt 0>
-				<cfquery name="insStatus" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO agent_status (
-						agent_id,
-						agent_status,
-						status_date,
-						status_reported_by,
-						status_reported_date,
-						status_remark
-					) VALUES (
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="died">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#death#">,
-						<cfqueryparam cfsqltype="cf_sql_int" value="#session.myAgentId#">,
-						current_date,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">
-					)
-				</cfquery>
-			</cfif>
-			<cfif len(alive) gt 0>
-				<cfquery name="insStatus" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					INSERT INTO agent_status (
-						agent_id,
-						agent_status,
-						status_date,
-						status_reported_by,
-						status_reported_date,
-						status_remark
-					) VALUES (
-						<cfqueryparam cfsqltype="cf_sql_int" value="#agentID.nextAgentId#">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="alive">,
-						<cfqueryparam cfsqltype="cf_sql_varchar" value="#alive#">,
-						<cfqueryparam cfsqltype="cf_sql_int" value="#session.myAgentId#">,
-						current_date,
-						<cfqueryparam cfsqltype="cf_sql_varchar" null="true">
-					)
-				</cfquery>
-			</cfif>
-		</cftransaction>
-		<cfif isdefined("status") and status is "force">
-			<cfsavecontent variable="msg">
-				#session.username# just force-created agent
-				<a href="#Application.serverRootUrl#/agents.cfm?agent_id=#agentID.nextAgentId#">#preferred_agent_name#</a>.
-				<p>
-					That's probably a bad idea.
-				</p>
-			</cfsavecontent>
-			<cfinvoke component="/component/functions" method="deliver_notification">
-				<cfinvokeargument name="usernames" value="#Application.agent_notifications#,#Application.log_notifications#">
-				<cfinvokeargument name="subject" value="force agent creation">
-				<cfinvokeargument name="message" value="#msg#">
-				<cfinvokeargument name="email_immediate" value="">
-			</cfinvoke>
-		</cfif>
-		<br>Agent created successfully.
 
-		<cfif caller is "findAgent">
-			<script>
-				var guts = "/picks/findAgentModal.cfm?agentIdFld=#agentIdFld#&agentNameFld=#agentNameFld#&name=#preferred_agent_name#";
-				parent.$('##dialog').attr('src', guts);
-			</script>
+		<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
+
+		<!---- turn the weird create form into the standard check/create object ---->
+
+		<cfset sobj=[=]>
+
+		<cfset sobj["agent_type"]=agent_type>
+		<cfset sobj["agent_id"]=''>
+		<cfset sobj["preferred_agent_name"]=preferred_agent_name>
+		<cfset sobj["created_by_agent_id"]=session.myAgentId>
+
+		<cfset attribute_id_list="">
+		<cfset attribute_id=1>
+
+		<cfif len(first_name) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='first name'>
+			<cfset sobj["attribute_value_#attribute_id#"]=first_name>
+			<cfset sobj["begin_date_#attribute_id#"]=''>
+			<cfset sobj["end_date_#attribute_id#"]=''>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=''>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+		<cfif len(middle_name) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='middle name'>
+			<cfset sobj["attribute_value_#attribute_id#"]=middle_name>
+			<cfset sobj["begin_date_#attribute_id#"]=''>
+			<cfset sobj["end_date_#attribute_id#"]=''>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=''>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+		<cfif len(last_name) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='last name'>
+			<cfset sobj["attribute_value_#attribute_id#"]=last_name>
+			<cfset sobj["begin_date_#attribute_id#"]=''>
+			<cfset sobj["end_date_#attribute_id#"]=''>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=''>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+		<cfif len(agent_remarks) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='remarks'>
+			<cfset sobj["attribute_value_#attribute_id#"]=agent_remarks>
+			<cfset sobj["begin_date_#attribute_id#"]=''>
+			<cfset sobj["end_date_#attribute_id#"]=''>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=''>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+		<cfif len(orcid) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='ORCID'>
+			<cfset sobj["attribute_value_#attribute_id#"]=orcid>
+			<cfset sobj["begin_date_#attribute_id#"]=''>
+			<cfset sobj["end_date_#attribute_id#"]=''>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=''>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+		<cfif len(github) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='GitHub'>
+			<cfset sobj["attribute_value_#attribute_id#"]=github>
+			<cfset sobj["begin_date_#attribute_id#"]=''>
+			<cfset sobj["end_date_#attribute_id#"]=''>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=''>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+		<cfif len(wikidata) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='Wikidata'>
+			<cfset sobj["attribute_value_#attribute_id#"]=wikidata>
+			<cfset sobj["begin_date_#attribute_id#"]=''>
+			<cfset sobj["end_date_#attribute_id#"]=''>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=''>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+		<cfif len(l_o_c) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='Library of Congress'>
+			<cfset sobj["attribute_value_#attribute_id#"]=l_o_c>
+			<cfset sobj["begin_date_#attribute_id#"]=''>
+			<cfset sobj["end_date_#attribute_id#"]=''>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=''>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+		<cfif len(email) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='email'>
+			<cfset sobj["attribute_value_#attribute_id#"]=email>
+			<cfset sobj["begin_date_#attribute_id#"]=''>
+			<cfset sobj["end_date_#attribute_id#"]=''>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=''>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+		<cfif len(birth) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='event'>
+			<cfset sobj["attribute_value_#attribute_id#"]='born'>
+			<cfset sobj["begin_date_#attribute_id#"]=birth>
+			<cfset sobj["end_date_#attribute_id#"]=''>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=''>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+
+
+		<cfif len(death) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='event'>
+			<cfset sobj["attribute_value_#attribute_id#"]='died'>
+			<cfset sobj["begin_date_#attribute_id#"]=''>
+			<cfset sobj["end_date_#attribute_id#"]=death>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=''>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+
+		<cfif len(alive) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='event'>
+			<cfset sobj["attribute_value_#attribute_id#"]='alive'>
+			<cfset sobj["begin_date_#attribute_id#"]=alive>
+			<cfset sobj["end_date_#attribute_id#"]=''>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=''>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+
+
+		<cfif len(agent_relationship) gt 0 and len(related_agent_id) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]=agent_relationship>
+			<cfset sobj["attribute_value_#attribute_id#"]=related_agent>
+			<cfset sobj["begin_date_#attribute_id#"]=relationship_began_date>
+			<cfset sobj["end_date_#attribute_id#"]=relationship_end_date>
+			<cfset sobj["related_agent_id_#attribute_id#"]=related_agent_id>
+			<cfset sobj["related_agent_#attribute_id#"]=related_agent>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=relationship_remarks>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+
+
+		<cfif len(address_type) gt 0 and len(address) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]=address_type>
+			<cfset sobj["attribute_value_#attribute_id#"]=address>
+			<cfset sobj["begin_date_#attribute_id#"]=start_date>
+			<cfset sobj["end_date_#attribute_id#"]=end_date>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=address_remark>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+
+		<cfif len(agent_status) gt 0>
+			<cfset sobj["attribute_type_#attribute_id#"]='event'>
+			<cfset sobj["attribute_value_#attribute_id#"]=agent_status>
+			<cfset sobj["begin_date_#attribute_id#"]=status_date>
+			<cfset sobj["end_date_#attribute_id#"]=''>
+			<cfset sobj["related_agent_id_#attribute_id#"]=''>
+			<cfset sobj["related_agent_#attribute_id#"]=''>
+			<cfset sobj["determined_date_#attribute_id#"]=''>
+			<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+			<cfset sobj["attribute_method_#attribute_id#"]=''>
+			<cfset sobj["attribute_remark_#attribute_id#"]=status_remark>
+			<cfset sobj["created_by_agent_id_#attribute_id#"]=session.myAgentId>
+			
+			<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
+			<cfset attribute_id=attribute_id+1>
+		</cfif>
+
+		<cfset sobj["attribute_id_list"]=attribute_id_list>
+
+		<cfset sobj=serializeJSON(sobj)>
+
+	
+		<cfinvoke component="/component/api/agent" method="check_agent" returnvariable="x">
+			<cfinvokeargument name="api_key" value="#api_key#">
+			<cfinvokeargument name="usr" value="#session.dbuser#">
+			<cfinvokeargument name="pwd" value="#session.epw#">
+			<cfinvokeargument name="pk" value="#session.sessionKey#">
+			<cfinvokeargument name="data" value="#sobj#">
+		</cfinvoke>
+
+		<!----
+		<cfdump var="#x#">
+		---->
+
+
+
+		<cfset thisProbs=x.problems>
+
+		<cfif arraylen(thisProbs) gt 0>
+			<p>
+				Please carefully check the following before proceeding with creation.
+			</p>
+			<table border="1">
+				<tr>
+					<th>Agent</th>
+					<th>Agent Type</th>
+					<th>WhatsUp</th>
+				</tr>
+				<cfloop array="#thisProbs#" index="i">
+					<tr>
+						<td>
+							<a href="/agent/#i["AGENT_ID"]#" class="external">#i["PREFERRED_AGENT_NAME"]#</a>
+						</td>
+						<td>#i["AGENT_TYPE"]#</td>
+						<td>#i["SUBJECT"]#</td>
+					</tr>
+				</cfloop>
+			</table>
+
+			<form name="f" method="post" action="createagent.cfm">
+				<input type="hidden" name="caller" value="#caller#">
+				<input type="hidden" name="agentIdFld" value="#agentIdFld#">
+				<input type="hidden" name="agentNameFld" value="#agentNameFld#">
+				<input type="hidden" name="preferred_agent_name" value="#preferred_agent_name#">
+				<input type="hidden" name="action" value="finalcreate">
+				<input type="hidden" name="sobj" value="#EncodeForHTML(sobj)#">
+				<input type="submit" class="insBtn" value="Force-Create as requested">
+			</form>
 		<cfelse>
-			<!-- default: from agent form --->
+			<form name="f" id="autopost" method="post" action="createagent.cfm">
+				<input type="hidden" name="caller" value="#caller#">
+				<input type="hidden" name="agentIdFld" value="#agentIdFld#">
+				<input type="hidden" name="agentNameFld" value="#agentNameFld#">
+				<input type="hidden" name="preferred_agent_name" value="#preferred_agent_name#">
+				<input type="hidden" name="action" value="finalcreate">
+				<input type="hidden" name="sobj" value="#EncodeForHTML(sobj)#">
+			</form>
 			<script>
-				parent.loadEditAgent(#agentID.nextAgentId#);
-				parent.$(".ui-dialog-titlebar-close").addClass('obvious').trigger('click');
+				$("##autopost").submit();
 			</script>
 		</cfif>
-		If you're seeing this something is broken so file a bug report!
+	</cfoutput>
+</cfif>
+
+<cfif Action is "finalcreate">
+	<cfoutput>
+		<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
+
+		<cfinvoke component="/component/api/tools" method="create_agent" returnvariable="x">
+			<cfinvokeargument name="api_key" value="#api_key#">
+			<cfinvokeargument name="usr" value="#session.dbuser#">
+			<cfinvokeargument name="pwd" value="#session.epw#">
+			<cfinvokeargument name="pk" value="#session.sessionKey#">
+			<cfinvokeargument name="data" value="#sobj#">
+		</cfinvoke>
+
+		<cfif x.message is "success">
+			Success! Reloading....
+			<cfif caller is "findAgent">
+				<script>
+					var guts = "/picks/findAgentModal.cfm?agentIdFld=#agentIdFld#&agentNameFld=#agentNameFld#&agent_name=#preferred_agent_name#";
+					parent.$('##dialog').attr('src', guts);
+				</script>
+			<cfelse>
+				<!---- default: from agent form --->
+				<script>
+					top.location.href = '/agent/#x.agent_id#';
+				</script>
+			</cfif>
+		<cfelse>
+			<cfset htdet="">
+			<cfif structKeyExists(x, "dump")>
+				<cfif structKeyExists(x.dump, "Message")>
+					<cfset htdet=htdet & "<div>Message: " & SanitizeHtml(x.dump.Message) & "</div>">
+				</cfif>
+				<cfif structKeyExists(x.dump, "Sql")>
+					<cfset htdet=htdet & "<div>SQL: " & SanitizeHtml(x.dump.Sql) & "</div>">
+				</cfif>
+			</cfif>
+			<cfthrow message="#x.message#" detail="#htdet#" extendedInfo="#SanitizeHtml(serialize(x))#">
+		</cfif>
 	</cfoutput>
 </cfif>

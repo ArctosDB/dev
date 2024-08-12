@@ -59,75 +59,61 @@ New field (free text) OR build with "Data Quality Contact (Year of last edit to 
 	    <cfloop from ="1" to="#ntabs#" index="ti">
 			<cfset btbs=btbs & chr(9)>
 		</cfloop>
-		<!--- can't use the get_address function here; it concatenates ---->
-		<!--- two queries to somewhat normalize ---->
-		<cfquery name="cc" datasource="uam_god">
+
+		<cfquery name="agntatrs" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 			select
-				collection_contacts.CONTACT_AGENT_ID agent_id,
-				agent_name.agent_name_type,
-				agent_name.agent_name
+				agent_attribute.agent_id,
+				agent_attribute.attribute_type,
+				agent_attribute.attribute_value
 			from
-				collection_contacts,
-				agent_name
+				collection_contacts
+				inner join agent_attribute on collection_contacts.contact_agent_id=agent_attribute.agent_id
 			where
-				collection_contacts.CONTACT_AGENT_ID=agent_name.agent_id and
-				COLLECTION_ID=#COLLECTION_ID# and
-				CONTACT_ROLE='#role#'
+				agent_attribute.deprecation_type is null and
+				collection_contacts.collection_id=<cfqueryparam value="#collection_id#" cfsqltype="cf_sql_int"> and
+				collection_contacts.CONTACT_ROLE=<cfqueryparam value="#role#" cfsqltype="cf_sql_varchar">
 		</cfquery>
-		<cfquery name="aa" datasource="uam_god">
-			select
-				collection_contacts.CONTACT_AGENT_ID agent_id,
-				address.address,
-				address.address_type
-			from
-				collection_contacts,
-				address
-			where
-				address.end_date is null and
-				collection_contacts.CONTACT_AGENT_ID=address.agent_id and
-				COLLECTION_ID=#COLLECTION_ID# and
-				CONTACT_ROLE='#role#'
-		</cfquery>
+
 		<cfquery name="da" dbtype="query">
-			select agent_id from cc group by agent_id order by agent_id
+			select agent_id from agntatrs group by agent_id order by agent_id
 		</cfquery>
 		<cfset x="">
 		<cfloop query="da">
 			<cfquery name="thisJSONA" dbtype="query">
-				select address from aa where agent_id=#da.agent_id# and address_type='formatted JSON'
+				select attribute_value from agntatrs where agent_id=<cfqueryparam value="#da.agent_id#" cfsqltype="cf_sql_int"> and attribute_type='formatted JSON'
 			</cfquery>
 			<cfset x=x & chr(10) & btbs & '<#lbl#>'>
 			<cfset x=x & chr(10) & btbs & chr(9) & '<individualName>'>
 			<cfquery name="thisQ" dbtype="query">
-				select agent_name from cc where agent_id=#da.agent_id# and agent_name_type='first name'
+				select attribute_value from agntatrs where agent_id=<cfqueryparam value="#da.agent_id#" cfsqltype="cf_sql_int">  and attribute_type='first name'
 			</cfquery>
 			<cfloop query="thisQ">
-				<cfset x=x & chr(10) & btbs & chr(9) & chr(9) & '<givenName>#EncodeForXML(thisQ.agent_name)#</givenName>'>
+				<cfset x=x & chr(10) & btbs & chr(9) & chr(9) & '<givenName>#EncodeForXML(thisQ.attribute_value)#</givenName>'>
 			</cfloop>
 			<cfquery name="thisQ" dbtype="query">
-				select agent_name from cc where  agent_id=#da.agent_id# and agent_name_type='last name'
+				select attribute_value from agntatrs where  agent_id=<cfqueryparam value="#da.agent_id#" cfsqltype="cf_sql_int"> and attribute_type='last name'
 			</cfquery>
 			<cfloop query="thisQ">
-				<cfset x=x & chr(10) & btbs & chr(9) & chr(9) & '<surName>#EncodeForXML(thisQ.agent_name)#</surName>'>
+				<cfset x=x & chr(10) & btbs & chr(9) & chr(9) & '<surName>#EncodeForXML(thisQ.attribute_value)#</surName>'>
 			</cfloop>
 			<cfset x=x & chr(10) & btbs & chr(9) & '</individualName>'>
 			<cfloop query="thisJSONA">
-				<cfif isjson(address)>
-					<cfset jadr=DeserializeJSON(address)>
+				<cfif isjson(attribute_value)>
+					<cfset jadr=DeserializeJSON(attribute_value)>
 					<cfif structkeyexists(jadr,"ORGANIZATION")>
 						<cfset x=x & chr(10) & btbs & chr(9) & '<organizationName>#EncodeForXML(jadr.ORGANIZATION)#</organizationName>'>
 					</cfif>
 				</cfif>
 			</cfloop>
 			<cfquery name="thisQ" dbtype="query">
-				select agent_name from cc where agent_id=#da.agent_id# and agent_name_type='job title'
+				select attribute_value from agntatrs where agent_id=<cfqueryparam value="#da.agent_id#" cfsqltype="cf_sql_int"> and attribute_type='job title'
 			</cfquery>
 			<cfloop query="thisQ">
-				<cfset x=x & chr(10) & btbs & chr(9) &  '<positionName>#thisQ.agent_name#</positionName>'>
+				<cfset x=x & chr(10) & btbs & chr(9) &  '<positionName>#thisQ.attribute_value#</positionName>'>
 			</cfloop>
 			<cfloop query="thisJSONA">
-				<cfif isjson(address)>
-					<cfset jadr=DeserializeJSON(address)>
+				<cfif isjson(attribute_value)>
+					<cfset jadr=DeserializeJSON(attribute_value)>
 					<cfset x=x & chr(10) & btbs & chr(9) & '<address>'>
 
 					<cfif structkeyexists(jadr,"STREET")>
@@ -149,28 +135,28 @@ New field (free text) OR build with "Data Quality Contact (Year of last edit to 
 				</cfif>
 			</cfloop>
 			<cfquery name="thisQ" dbtype="query">
-				select address from aa where agent_id=#da.agent_id# and address_type='phone'
+				select attribute_value from agntatrs where agent_id=<cfqueryparam value="#da.agent_id#" cfsqltype="cf_sql_int"> and attribute_type='phone'
 			</cfquery>
 			<cfloop query="thisQ">
-				<cfset x=x & chr(10) & btbs & chr(9) & '<phone>#EncodeForXML(thisQ.address)#</phone>'>
+				<cfset x=x & chr(10) & btbs & chr(9) & '<phone>#EncodeForXML(thisQ.attribute_value)#</phone>'>
 			</cfloop>
 			<cfquery name="thisQ" dbtype="query">
-				select address from aa where  agent_id=#da.agent_id# and address_type='email'
+				select attribute_value from agntatrs where  agent_id=<cfqueryparam value="#da.agent_id#" cfsqltype="cf_sql_int"> and attribute_type='email'
 			</cfquery>
 			<cfloop query="thisQ">
-				<cfset x=x & chr(10) & btbs & chr(9) & '<electronicMailAddress>#EncodeForXML(thisQ.address)#</electronicMailAddress>'>
+				<cfset x=x & chr(10) & btbs & chr(9) & '<electronicMailAddress>#EncodeForXML(thisQ.attribute_value)#</electronicMailAddress>'>
 			</cfloop>
 			<cfquery name="thisQ" dbtype="query">
-				select address from aa where  agent_id=#da.agent_id# and address_type='url'
+				select attribute_value from agntatrs where  agent_id=<cfqueryparam value="#da.agent_id#" cfsqltype="cf_sql_int"> and attribute_type='url'
 			</cfquery>
 			<cfloop query="thisQ">
-				<cfset x=x & chr(10) & btbs & chr(9) & '<onlineUrl>#EncodeForXML(thisQ.address)#</onlineUrl>'>
+				<cfset x=x & chr(10) & btbs & chr(9) & '<onlineUrl>#EncodeForXML(thisQ.attribute_value)#</onlineUrl>'>
 			</cfloop>
 			<cfquery name="thisQ" dbtype="query">
-				select address from aa where  agent_id=#da.agent_id# and address_type='ORCID'
+				select attribute_value from agntatrs where  agent_id=<cfqueryparam value="#da.agent_id#" cfsqltype="cf_sql_int"> and attribute_type='ORCID'
 			</cfquery>
 			<cfloop query="thisQ">
-				<cfset x=x & chr(10) & btbs & chr(9) & '<userId directory="http://orcid.org/">#EncodeForXML(thisQ.address)#</userId>'>
+				<cfset x=x & chr(10) & btbs & chr(9) & '<userId directory="http://orcid.org/">#EncodeForXML(thisQ.attribute_value)#</userId>'>
 			</cfloop>
 
 
@@ -178,6 +164,8 @@ New field (free text) OR build with "Data Quality Contact (Year of last edit to 
 		</cfloop>
 	    <cfreturn x>
 	</cffunction>
+
+
 	<cfquery name="ctg" datasource="uam_god">
 		select guid_prefix from collection order by guid_prefix
 	</cfquery>
@@ -201,7 +189,7 @@ New field (free text) OR build with "Data Quality Contact (Year of last edit to 
 			select
 				collection.collection_id,
 				collection.institution || ' ' || collection.collection collection,
-				collection.descr,
+				descr.attribute_value descr,
 				collection.citation,
 				collection.web_link,
 				collection_terms.display as collection_terms_display,
@@ -213,30 +201,60 @@ New field (free text) OR build with "Data Quality Contact (Year of last edit to 
 				collection_cde,
 				institution_acronym,
 				collection.guid_prefix,
-				GEOGRAPHIC_DESCRIPTION,
-				WEST_BOUNDING_COORDINATE,
-				EAST_BOUNDING_COORDINATE,
-				NORTH_BOUNDING_COORDINATE,
-				SOUTH_BOUNDING_COORDINATE,
-				GENERAL_TAXONOMIC_COVERAGE,
-				TAXON_NAME_RANK,
-				TAXON_NAME_VALUE,
-				PURPOSE_OF_COLLECTION,
-				alternate_identifier_1,
-				alternate_identifier_2,
-				specimen_preservation_method,
-				time_coverage
+				GEOGRAPHIC_DESCRIPTION.attribute_value GEOGRAPHIC_DESCRIPTION,
+				westboundingcoordinate.attribute_value WEST_BOUNDING_COORDINATE,
+				eastboundingcoordinate.attribute_value EAST_BOUNDING_COORDINATE,
+				northboundingcoordinate.attribute_value NORTH_BOUNDING_COORDINATE,
+				southboundingcoordinate.attribute_value SOUTH_BOUNDING_COORDINATE,
+				GENERAL_TAXONOMIC_COVERAGE.attribute_value GENERAL_TAXONOMIC_COVERAGE,
+				TAXON_NAME_RANK.attribute_value TAXON_NAME_RANK,
+				TAXON_NAME_VALUE.attribute_value TAXON_NAME_VALUE,
+				PURPOSE_OF_COLLECTION.attribute_value PURPOSE_OF_COLLECTION,
+				alternate_identifier_1.attribute_value alternate_identifier_1,
+				alternate_identifier_2.attribute_value alternate_identifier_2,
+				specimen_preservation_method.attribute_value specimen_preservation_method,
+				time_coverage.attribute_value time_coverage
 			from
 				collection
 				left outer join ctdata_license external_license on collection.external_license_id=external_license.data_license_id
 				left outer join ctcollection_terms collection_terms on collection.collection_terms_id=collection_terms.collection_terms_id
+				left outer join collection_attributes descr on collection.collection_id=descr.collection_id 
+					and descr.attribute_type='description'
+				left outer join collection_attributes GEOGRAPHIC_DESCRIPTION on collection.collection_id=GEOGRAPHIC_DESCRIPTION.collection_id 
+					and GEOGRAPHIC_DESCRIPTION.attribute_type='geographic description'
+				left outer join collection_attributes westboundingcoordinate on collection.collection_id=westboundingcoordinate.collection_id 
+					and westboundingcoordinate.attribute_type='west bounding coordinate'
+				left outer join collection_attributes eastboundingcoordinate on collection.collection_id=eastboundingcoordinate.collection_id 
+					and eastboundingcoordinate.attribute_type='east bounding coordinate'
+				left outer join collection_attributes northboundingcoordinate on collection.collection_id=northboundingcoordinate.collection_id 
+					and northboundingcoordinate.attribute_type='north bounding coordinate'
+				left outer join collection_attributes southboundingcoordinate on collection.collection_id=southboundingcoordinate.collection_id 
+					and southboundingcoordinate.attribute_type='south bounding coordinate'
+				left outer join collection_attributes GENERAL_TAXONOMIC_COVERAGE on collection.collection_id=GENERAL_TAXONOMIC_COVERAGE.collection_id 
+					and GENERAL_TAXONOMIC_COVERAGE.attribute_type='general taxonomic coverage'
+				left outer join collection_attributes TAXON_NAME_RANK on collection.collection_id=TAXON_NAME_RANK.collection_id 
+					and TAXON_NAME_RANK.attribute_type='taxon name rank'
+				left outer join collection_attributes TAXON_NAME_VALUE on collection.collection_id=TAXON_NAME_VALUE.collection_id 
+					and TAXON_NAME_VALUE.attribute_type='taxon name value'
+				left outer join collection_attributes PURPOSE_OF_COLLECTION on collection.collection_id=PURPOSE_OF_COLLECTION.collection_id 
+					and PURPOSE_OF_COLLECTION.attribute_type='purpose of collection'
+				left outer join collection_attributes specimen_preservation_method on collection.collection_id=specimen_preservation_method.collection_id 
+					and specimen_preservation_method.attribute_type='specimen preservation method'
+				left outer join collection_attributes time_coverage on collection.collection_id=time_coverage.collection_id 
+					and time_coverage.attribute_type='time coverage'
+				left outer join (select collection_id, min(attribute_value) attribute_value from collection_attributes where attribute_type='alternate identifier' group by collection_id)
+					 alternate_identifier_1 on collection.collection_id=alternate_identifier_1.collection_id 
+				left outer join (select collection_id, max(attribute_value) attribute_value from collection_attributes where attribute_type='alternate identifier' group by collection_id)
+					 alternate_identifier_2 on collection.collection_id=alternate_identifier_2.collection_id 
 			where
 				collection.guid_prefix=<CFQUERYPARAM VALUE="#guid_prefix#"  CFSQLType="CF_SQL_VARCHAR"   MAXLENGTH="20">
 				order by guid_prefix
 		</cfquery>
 
 		<cfif d.recordcount is not 1>
-			fail<cfabort>
+			fail, unexpected recordcount, check collection settings for redundancy
+			<cfdump var="#d#">
+			<cfabort>
 		</cfif>
 
 

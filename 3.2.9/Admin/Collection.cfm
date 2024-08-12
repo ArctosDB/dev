@@ -28,8 +28,43 @@
 			display: flex;
 		}
 		.mc_dp_l{}
+		.ww{font-size: x-small;}
 	</style>
 	<script>
+		function attribute_type_change(i){
+			console.log('attribute_type_change: ' + i);
+			var theVal=$("#attribute_type_new" + i).val();
+			console.log('theVal: ' + theVal);
+
+
+			var numTypeList=$("#numTypeList").val().split(',');
+			console.log('numTypeList: ' + numTypeList);
+			console.log(numTypeList);
+			var lngTxtList=$("#lngTxtList").val().split(',');
+			console.log('lngTxtList: ' + lngTxtList);
+
+			if (numTypeList.includes(theVal)){
+				console.log('is numTypeList');
+				var theElem='<input type="number" name="attribute_value_new' + i + '" id="attribute_value_new' + i + '">';
+			} else if (lngTxtList.includes(theVal)){
+				console.log('is lngTxtList');
+
+				var theElem='<textarea name="attribute_value_new' + i + '" id="attribute_value_new' + i + '" rows="5" cols="80"></textarea>';
+
+
+
+			} else {
+
+				console.log('is default');
+
+				var theElem='<input type="text" size="80" name="attribute_value_new' + i + '" id="attribute_value_new' + i + '">';
+			}
+			$("#av_new" + i).html(theElem);
+
+
+
+
+		}
 		function pushID(v){
 			var ex=$("#preferred_identifiers").val();
 			var exa = ex.split(',');
@@ -37,6 +72,47 @@
 			exa = exa.filter((a) => a);
 			var j=exa.join(',');
 			$("#preferred_identifiers").val(j);
+		}
+
+		function removeIssAgnt(aid){
+			console.log(aid);
+			var eids=$("#preferred_identifier_issuers").val();
+			var eida=eids.split(',');
+			const index = eida.indexOf(aid);
+			eida.splice(index, 1); // 2nd parameter means remove one item only
+			// remove any blanks
+			eida = eida.filter(value => Object.keys(value).length !== 0);
+			var eida=[...new Set(eida)];
+			var nids=eida.join(',');
+			$("#preferred_identifier_issuers").val(nids);
+			$("#iad_" + aid).html('-removed-').removeAttr('id');
+			$("#rbtn_" + aid).remove();
+
+		}
+		function addIssAgnt(){
+			console.log('addIssAgnt');
+			var selID=$("#selected_agent_id").val();
+			var selAN=$("#selected_agent").val();
+			if (selID.length==0 || selAN.length==0){
+				alert('pick an agent, then click');
+				return false;
+			}
+			var eids=$("#preferred_identifier_issuers").val();
+			var eida=eids.split(',');
+			eida.push(selID);
+			// remove any blanks
+			eida = eida.filter(value => Object.keys(value).length !== 0);
+			var eida=[...new Set(eida)];
+			var nids=eida.join(',');
+			$("#preferred_identifier_issuers").val(nids);
+
+			var ntr='<tr><td><div id="iad_' + selID + '">';
+			ntr+='<a href="/agent/' + selID + '" class="external">' + selAN + '</a>';
+			ntr+='</div></td><td>';
+			ntr+='<input type="button" class="delBtn" value="remove" onclick="removeIssAgnt(\'' + selID + '\');">';
+			ntr+='</td></tr>';
+			$('#iss_agnt_tbl tr:last').after(ntr);
+
 		}
 	</script>
 	<cfoutput>
@@ -61,8 +137,7 @@
 					COLLECTION_CDE,
 					INSTITUTION_ACRONYM,
 					INSTITUTION,
-					DESCR,
-					COLLECTION,
+					collection,
 					COLLECTION_ID,
 					WEB_LINK,
 					WEB_LINK_TEXT,
@@ -70,25 +145,13 @@
 					guid_prefix,
 					catalog_number_format,
 					citation,
-					GEOGRAPHIC_DESCRIPTION,
-					WEST_BOUNDING_COORDINATE,
-					EAST_BOUNDING_COORDINATE,
-					NORTH_BOUNDING_COORDINATE,
-					SOUTH_BOUNDING_COORDINATE,
-					GENERAL_TAXONOMIC_COVERAGE,
-					TAXON_NAME_RANK,
-					TAXON_NAME_VALUE,
-					PURPOSE_OF_COLLECTION,
-					alternate_identifier_1,
-					alternate_identifier_2,
-					specimen_preservation_method,
-					time_coverage,
 					genbank_collection,
 					internal_license_id,
 					external_license_id,
 					collection_terms_id,
 					default_cat_item_type,
-					array_to_string(collection.preferred_identifiers,',') preferred_identifiers
+					array_to_string(collection.preferred_identifiers,',') preferred_identifiers,
+					array_to_string(collection.preferred_identifier_issuers::varchar[],',') preferred_identifier_issuers
 				from collection
 		  		where
 		  		 guid_prefix=<cfqueryparam value="#guid_prefix#" CFSQLType="cf_sql_varchar">
@@ -102,6 +165,14 @@
 			</cfquery>			
 			<cfquery name="coll_tax" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 				select * from collection_taxonomy_source where collection_id = <cfqueryparam value="#collection.collection_id#" CFSQLType="cf_sql_int"> order by preference_order
+			</cfquery>
+
+			<cfquery name="ctcollection_cde"  datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
+				select collection_cde from ctcollection_cde order by collection_cde
+			</cfquery>
+
+			<cfquery name="ctcollection_attribute_type" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
+				select attribute_type from ctcollection_attribute_type order by attribute_type
 			</cfquery>
 
 			<cfquery name="CTMEDIA_LICENSE"  datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
@@ -148,12 +219,19 @@
 
 					<div class="lblGrp">
 						<label for="collection_cde">
-							Collection Type: Comes from <a href="/info/ctDocumentation.cfm?table=ctcollection_cde">ctcollection_cde</a>, controls access to some 
-							authority values. May be used as the second half of GUID_Prefix, but does not need to be. Can only be changed with the help of a DBA.
+							collection_cde: Comes from <a href="/info/ctDocumentation.cfm?table=ctcollection_cde">ctcollection_cde</a>, used to filter some 
+							authority value selection, otherwise nonfunctional. May be used as the second half of GUID_Prefix, but does not need to be.
 						</label>
-						<div class="nochange">
-							#collection.collection_cde#
-						</div>
+						<select name="collection_cde" id="collection_cde" class="reqdClr">
+							<cfloop query="ctcollection_cde">
+								<option
+									<cfif collection.collection_cde is ctcollection_cde.collection_cde>
+										selected="selected"
+									</cfif>
+									value="#ctcollection_cde.collection_cde#">#ctcollection_cde.collection_cde#
+								</option>
+							</cfloop>
+						</select>
 					</div>
 					<div class="lblGrp">
 						<label for="institution_acronym">
@@ -173,7 +251,7 @@
 					</div>
 					<div class="lblGrp">
 						<label for="collection">
-							Collection: Best practice is to synchronize this with other collections of similar type. Example: All Bird collections *should* use "Bird specimens" for this value.
+							Collection: Short description of the collection eg 'Bird Collection.'
 						</label>
 						<input type="text" id="collection" name="collection" value="#collection.collection#" size="80" class="reqdClr" required>
 					</div>
@@ -217,7 +295,6 @@
 				<cfquery name="ctContactRole" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 					select contact_role from ctcoll_contact_role order by contact_role
 				</cfquery>
-				<cfset i=1>
 				<h3>Collection Contacts</h3>
 				<p>
 					<ul>
@@ -232,17 +309,25 @@
 						</li>
 					</ul>
 				</p>
-				<cfloop query="contact">
-					<form name="contact#i#" method="post" action="Collection.cfm">
-						<input type="hidden" name="action" value="updateContact">
-						<input type="hidden" name="collection_id" value="#collection.collection_id#">
-						<input type="hidden" name="guid_prefix" value="#collection.guid_prefix#">
-						<input type="hidden" name="collection_contact_id" value="#collection_contact_id#">
-						<input type="hidden" name="contact_agent_id" id="contact_agent_id_#i#" value="#contact_agent_id#">
-						<div class="mc_dp">
-							<div class="mc_dp_l">
-								<label for="contact_role">Contact Role</label>
-								<select name="contact_role" size="1" class="reqdClr">
+
+				<table border="1">
+					<tr>
+						<th>Contact Role</th>
+						<th>Contact Agent</th>
+						<th>Control</th>
+					</tr>
+					<cfset i=1>
+					<cfloop query="contact">
+						<form id="contact#i#" name="contact#i#" method="post" action="Collection.cfm">
+							<input type="hidden" name="action" value="updateContact">
+							<input type="hidden" name="collection_id" value="#collection.collection_id#">
+							<input type="hidden" name="guid_prefix" value="#collection.guid_prefix#">
+							<input type="hidden" name="collection_contact_id" value="#collection_contact_id#">
+							<input type="hidden" name="contact_agent_id" id="contact_agent_id_#i#" value="#contact_agent_id#">
+						</form>
+						<tr>
+							<td>
+								<select form="contact#i#" name="contact_role" size="1" class="reqdClr">
 									<cfset thisContactRole = #contact_role#>
 									<cfloop query="ctContactRole">
 										<option
@@ -250,110 +335,51 @@
 											value="#contact_role#">#contact_role#</option>
 									</cfloop>
 								</select>
-								
-							 </div>
-							<div class="mc_dp_c">
-								<label for="contact">Contact Agent</label>
-								<input type="text" name="contact" id="contact_#i#" class="reqdClr" value="#contact_name#"
+							</td>
+							<td>
+								<input form="contact#i#" type="text" name="contact" id="contact_#i#" class="reqdClr" value="#contact_name#"
 									onchange="pickAgentModal('contact_agent_id_#i#',this.id,this.value);"
-							 		onKeyPress="return noenter(event);">
-							</div>
-							<div class="mc_dp_r">
-								<label for="">control</label>
-								<input type="button" value="Save" class="savBtn"
-									onClick="contact#i#.action.value='updateContact';submit();">
-								<input type="button" value="Delete" class="delBtn"
-									onClick="contact#i#.action.value='deleteContact';confirmDelete('contact#i#');">
-							</div>
-						</div>
-					</form>
-					<cfset i=i+1>
-				</cfloop>
-				<form name="newContact#i#" method="post" action="Collection.cfm">
-					<input type="hidden" name="action" value="newContact">
-					<input type="hidden" name="collection_id" value="#collection.collection_id#">
-					<input type="hidden" name="guid_prefix" value="#collection.guid_prefix#">
-					<input type="hidden" name="contact_agent_id" id="contact_agent_id_#i#" >
-					<div class="mc_dp newRec">
-						<div class="mc_dp_l">
-							<label for="contact_role">Add Contact Role</label>
-							<select name="contact_role" size="1" class="reqdClr">
-								<option></option>
-								<cfloop query="ctContactRole">
-									<option value="#contact_role#">#contact_role#</option>
-								</cfloop>
-							</select>
-						 </div>
-						<div class="mc_dp_c">
-							<label for="contact">Add Contact Agent</label>
-							<input type="text" name="contact" id="contact_#i#" class="reqdClr" 
-								onchange="pickAgentModal('contact_agent_id_#i#',this.id,this.value);"
-						 		onKeyPress="return noenter(event);">
-						</div>
-						<div class="mc_dp_r">
-							<label for="">create</label>
-							<input type="submit" value="Create" class="insBtn">
-						</div>
-					</div>
-					<cfset i=i+1>
-				</form>
-				<form name="newContact#i#" method="post" action="Collection.cfm">
-					<input type="hidden" name="action" value="newContact">
-					<input type="hidden" name="collection_id" value="#collection.collection_id#">
-					<input type="hidden" name="guid_prefix" value="#collection.guid_prefix#">
-					<input type="hidden" name="contact_agent_id" id="contact_agent_id_#i#" >
-					<div class="mc_dp newRec">
-						<div class="mc_dp_l">
-							<label for="contact_role">Add Contact Role</label>
-							<select name="contact_role" size="1" class="reqdClr">
-								<option></option>
-								<cfloop query="ctContactRole">
-									<option value="#contact_role#">#contact_role#</option>
-								</cfloop>
-							</select>
-						 </div>
-						<div class="mc_dp_c">
-							<label for="contact">Add Contact Agent</label>
-							<input type="text" name="contact" id="contact_#i#" class="reqdClr" 
-								onchange="pickAgentModal('contact_agent_id_#i#',this.id,this.value);"
-						 		onKeyPress="return noenter(event);">
-						</div>
-						<div class="mc_dp_r">
-							<label for="">create</label>
-							<input type="submit" value="Create" class="insBtn">
-						</div>
-					</div>
-					<cfset i=i+1>
-				</form>
-				<form name="newContact#i#" method="post" action="Collection.cfm">
-					<input type="hidden" name="action" value="newContact">
-					<input type="hidden" name="collection_id" value="#collection.collection_id#">
-					<input type="hidden" name="guid_prefix" value="#collection.guid_prefix#">
-					<input type="hidden" name="contact_agent_id" id="contact_agent_id_#i#" >
-					<div class="mc_dp newRec">
-						<div class="mc_dp_l">
-							<label for="contact_role">Add Contact Role</label>
-							<select name="contact_role" size="1" class="reqdClr">
-								<option></option>
-								<cfloop query="ctContactRole">
-									<option value="#contact_role#">#contact_role#</option>
-								</cfloop>
-							</select>
-						 </div>
-						<div class="mc_dp_c">
-							<label for="contact">Add Contact Agent</label>
-							<input type="text" name="contact" id="contact_#i#" class="reqdClr" 
-								onchange="pickAgentModal('contact_agent_id_#i#',this.id,this.value);"
-						 		onKeyPress="return noenter(event);">
-						</div>
-						<div class="mc_dp_r">
-							<label for="">create</label>
-							<input type="submit" value="Create" class="insBtn">
-						</div>
-					</div>
-					<cfset i=i+1>
-				</form>
-			</div>
+									onKeyPress="return noenter(event);">
+							</td>
+							<td>
+								<input form="contact#i#" type="button" value="Save" class="savBtn" onClick="contact#i#.action.value='updateContact';submit();">
+								<input form="contact#i#" type="button" value="Delete" class="delBtn" onClick="contact#i#.action.value='deleteContact';confirmDelete('contact#i#');">
+								<a href="/agent/#contact_agent_id#" class="external">
+									<input type="button" class="lnkBtn" value="agent">
+								</a>
+							</td>
+						</tr>
+						<cfset i=i+1>
+					</cfloop>
+					<cfset lt=i+3>
+					<cfloop from="#i#" to="#lt#" index="i">
+						<form id="newContact#i#" name="newContact#i#" method="post" action="Collection.cfm">
+							<input type="hidden" name="action" value="newContact">
+							<input type="hidden" name="collection_id" value="#collection.collection_id#">
+							<input type="hidden" name="guid_prefix" value="#collection.guid_prefix#">
+							<input type="hidden" name="contact_agent_id" id="contact_agent_id_#i#">
+						</form>
+						<tr class="newRec">
+							<td>
+								<select form="newContact#i#" name="contact_role" size="1" class="reqdClr">
+									<option></option>
+									<cfloop query="ctContactRole">
+										<option value="#contact_role#">#contact_role#</option>
+									</cfloop>
+								</select>
+							</td>
+							<td>
+								<input form="newContact#i#" type="text" name="contact" id="contact_#i#" class="reqdClr" 
+									onchange="pickAgentModal('contact_agent_id_#i#',this.id,this.value);"
+									onKeyPress="return noenter(event);">
+							</td>
+							<td>
+								<input form="newContact#i#" type="submit" value="Create" class="insBtn">
+							</td>
+						</tr>
+					</cfloop>
+				</table>
+
 			<div class="mc_section_div" id="chd_div">
 				<h3>Collection Header</h3>
                 <p>Data in this section provides customization for the collection header in individual catalog records and on the collection detail page.</p>
@@ -502,7 +528,7 @@
 						</select>
 					</div>
 					<div class="lblGrp">
-						<label for="descr">Loan Policy URL: Where users can find more information about using data or material.</label>
+						<label for="loan_policy_url">Loan Policy URL: Where users can find more information about using data or material.</label>
 						<input type="text" name="loan_policy_url" id="loan_policy_url" value='#collection.loan_policy_url#' size="50" class="reqdClr" required>
 					</div>
 					<p>
@@ -597,7 +623,7 @@
 					</div>
 
 					<cfquery name="ctcoll_other_id_type" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-   						select OTHER_ID_TYPE from ctcoll_other_id_type order by sort_order,OTHER_ID_TYPE
+   						select OTHER_ID_TYPE from ctcoll_other_id_type order by OTHER_ID_TYPE
    					</cfquery>
 
 					<div class="lblGrp">
@@ -605,7 +631,7 @@
 							<tr>
 								<td>
 									<label for="preferred_identifiers">
-										preferred_identifiers: display on top of GUID-pages. Blank, single value, or comma list.
+										preferred identifiers by type: display on top of GUID-pages. Blank, single value, or comma list.
 									</label>
 									<input type="text" name="preferred_identifiers" id="preferred_identifiers" value='#collection.preferred_identifiers#' size="50">
 								</td>
@@ -628,6 +654,47 @@
 									</div>
 								</td>
 							</tr>
+							<!---- https://github.com/ArctosDB/arctos/issues/7493 ---->
+							<tr>
+								<td>
+									<label for="preferred_identifier_issuers">
+										preferred identifiers by issuing agent: display on top of GUID-pages.
+									</label>
+									<cfquery name="getAgents" datasource="uam_god">
+										select agent_id,preferred_agent_name from agent where agent_id in ( 
+											<cfqueryparam value="#collection.preferred_identifier_issuers#" cfsqltype="cf_sql_int" list="true" null="#Not Len(Trim(collection.preferred_identifier_issuers))#"> 
+										)
+									</cfquery>
+									<table border="1" id="iss_agnt_tbl">
+										<tr>
+											<th>Issuing Agent</th>
+											<th>Remove</th>
+										</tr>
+										<cfloop query="getAgents">
+											<tr>
+												<td>
+													<div id="iad_#agent_id#">
+														<a href="/agent/#agent_id#" class="external">#preferred_agent_name#</a>
+													</div>
+												</td>
+												<td>
+													<input id="rbtn_#agent_id#" type="button" class="delBtn" value="remove" onclick="removeIssAgnt('#agent_id#');">
+												</td>
+											</tr>
+										</cfloop>
+									</table>
+
+									<input type="hidden" name="preferred_identifier_issuers" id="preferred_identifier_issuers" value="#collection.preferred_identifier_issuers#">
+								</td>
+								<td>
+									<label for="selected_agent">To add, select an agent then click the button</label>
+									<input type="hidden" id="selected_agent_id" name="selected_agent_id" value="">
+									<input type="text" name="selected_agent" id="selected_agent"
+										onchange="pickAgentModal('selected_agent_id',this.id,this.value);"
+									onkeypress="return noenter(event);" placeholder="type+tab: issuing agent" class="pickInput">
+									<input type="button" class="savBtn" value="add" onclick="addIssAgnt();">
+								</td>
+							</tr>
 						</table>
 					</div>
 					<div class="lblGrp">
@@ -637,7 +704,16 @@
 								Collection's Parts: Choose existing parts for use in <a href="/Admin/codeTableCollection.cfm?table=ctspecimen_part_name&guid_prefix=#guid_prefix#" class="external"><input type="button" class="lnkBtn" value="collection settings"></a>
 							</li>
 							<li>
-								<a href="https://github.com/ArctosDB/arctos/issues/new?assignees=&labels=Function-CodeTables&projects=&template=code-table-request.md&title=Code+Table+Request+-+" class="external">Open an Issue</a> to request new Authority values, or make existing values (excluding parts) available to the collection.
+								Collection's Attributes: Choose existing record attributes in <a href="/Admin/codeTableCollection.cfm?table=ctattribute_type&guid_prefix=#guid_prefix#" class="external"><input type="button" class="lnkBtn" value="collection settings"></a>
+							</li>
+							<li>
+								Collection's Sex Codes: Choose existing sex for use in <a href="/Admin/codeTableCollection.cfm?table=ctsex_cde&guid_prefix=#guid_prefix#" class="external"><input type="button" class="lnkBtn" value="collection settings"></a>
+							</li>
+							<li>
+								Collection's Life Stage: Choose existing life stage for use in <a href="/Admin/codeTableCollection.cfm?table=ctlife_stage&guid_prefix=#guid_prefix#" class="external"><input type="button" class="lnkBtn" value="collection settings"></a>
+							</li>
+							<li>
+								<a href="https://github.com/ArctosDB/arctos/issues/new?assignees=&labels=Function-CodeTables&projects=&template=code-table-request.md&title=Code+Table+Request+-+" class="external">Open an Issue</a> to request new Authority values.
 							</li>
 						</ul>
 					</div>
@@ -647,12 +723,8 @@
 				</form>
 			</div>
 			<div class="mc_section_div" id="clsmr_div">
-
 				<h3>Summary Information</h3>
-
 				<p>Important for portal pages and biodiversity data aggregators</p>
-
-
 				<form name="fcldfs_div" method="post" action="Collection.cfm">
 					<input type="hidden" name="action" value="upcollectionsummary">
 					<input type="hidden" name="collection_id" value="#collection.collection_id#">
@@ -663,82 +735,14 @@
 							Genbank Collection: Collection identifier as <a href="https://handbook.arctosdb.org/documentation/genbank.html" class="external">registered with GenBank</a>
 						</label>
 						<input type="text" name="genbank_collection" id="genbank_collection" value='#collection.genbank_collection#' size="50">
+						<cfif len(collection.genbank_collection) gt 0>
+							<a href="https://www.ncbi.nlm.nih.gov/nuccore/?cmd=search&term=collection #collection.genbank_collection#[prop] loprovarctos[filter]" class="external">open</a>
+						</cfif>
 					</div>
 
-
-
-
-					<div class="lblGrp">
-						<label for="descr">Description: A description of the collection.</label>
-						<textarea class="mediumtextarea" name="descr" id="descr" rows="3" cols="40">#collection.descr#</textarea>
-					</div>
 					<div class="lblGrp">
 						<label for="citation">Citation: How the collection (not records in the collection) would like to be cited.</label>
 						<textarea name="citation" id="citation" rows="3" cols="40">#collection.citation#</textarea>
-					</div>
-
-
-
-					<div class="lblGrp">
-						<label for="geographic_description">GeographicDescription: Used in EML generation, See <a href="https://ipt.gbif.org/manual/en/ipt/latest/gbif-metadata-profile##geographic-coverage" class="external">GBIF Metadata Profile – How-to Guide</a> .</label>
-						<textarea name="geographic_description" id="geographic_description" rows="3" cols="40">#collection.geographic_description#</textarea>
-					</div>
-					<div class="lblGrp">
-						<label for="coverage">Coverage Coordinates: Used in EML generation, See <a href="https://ipt.gbif.org/manual/en/ipt/latest/gbif-metadata-profile##geographic-coverage" class="external">GBIF Metadata Profile – How-to Guide</a>.</label>
-						<table border>
-							<tr>
-								<th>W</th>
-								<th>E</th>
-								<th>N</th>
-								<th>S</th>
-							</tr>
-							<tr>
-								<td>
-									<input type="number" id="west_bounding_coordinate" name="west_bounding_coordinate" value="#collection.west_bounding_coordinate#">
-								</td>
-								<td>
-									<input type="number" id="east_bounding_coordinate" name="east_bounding_coordinate" value="#collection.east_bounding_coordinate#">
-								</td>
-								<td>
-									<input type="number" id="north_bounding_coordinate" name="north_bounding_coordinate" value="#collection.north_bounding_coordinate#">
-								</td>
-								<td>
-									<input type="number" id="south_bounding_coordinate" name="south_bounding_coordinate" value="#collection.south_bounding_coordinate#">
-								</td>
-							</tr>
-						</table>
-					</div>
-					<div class="lblGrp">
-						<label for="general_taxonomic_coverage">GeneralTaxonomicCoverage: Used in EML generation, See <a href="https://ipt.gbif.org/manual/en/ipt/latest/gbif-metadata-profile##taxonomic-coverage" class="external">GBIF Metadata Profile – How-to Guide</a>.</label>
-						<textarea name="general_taxonomic_coverage" id="general_taxonomic_coverage" rows="3" cols="40">#collection.general_taxonomic_coverage#</textarea>
-					</div>
-					<div class="lblGrp">
-						<label for="taxon_name_rank">Taxon Rank Name: The highest taxon classification rank that describes the collection. Used in EML generation, See <a href="https://ipt.gbif.org/manual/en/ipt/latest/gbif-metadata-profile##taxonomic-coverage" class="external">GBIF Metadata Profile – How-to Guide</a>.</label>
-						<textarea name="taxon_name_rank" id="taxon_name_rank" rows="3" cols="40">#collection.taxon_name_rank#</textarea>
-					</div>
-					<div class="lblGrp">
-						<label for="taxon_name_value">Taxon Rank Value: The taxon name or names (comma separated) that corresponds to the taxon rank name chosen above. Used in EML generation, See <a href="https://ipt.gbif.org/manual/en/ipt/latest/gbif-metadata-profile##taxonomic-coverage" class="external">GBIF Metadata Profile – How-to Guide</a>.</label>
-						<textarea name="taxon_name_value" id="taxon_name_value" rows="3" cols="40">#collection.taxon_name_value#</textarea>
-					</div>
-					<div class="lblGrp">
-						<label for="purpose_of_collection">Purpose of Collection: Used in EML generation, See <a href="https://ipt.gbif.org/manual/en/ipt/latest/gbif-metadata-profile##methods" class="external">GBIF Metadata Profile – How-to Guide</a>.</label>
-						<textarea name="purpose_of_collection" id="purpose_of_collection" rows="3" cols="40">#collection.purpose_of_collection#</textarea>
-					</div>
-					<div class="lblGrp">
-						<label for="alternate_identifier_1">alternate_identifier_1: Used in EML generation, See <a href="https://ipt.gbif.org/manual/en/ipt/latest/gbif-metadata-profile##dataset-resource" class="external">GBIF Metadata Profile – How-to Guide</a>.</label>
-						<textarea name="alternate_identifier_1" id="alternate_identifier_1" rows="3" cols="40">#collection.alternate_identifier_1#</textarea>
-					</div>
-					<div class="lblGrp">
-						<label for="alternate_identifier_2">alternate_identifier_2: Used in EML generation, See <a href="https://ipt.gbif.org/manual/en/ipt/latest/gbif-metadata-profile##dataset-resource" class="external">GBIF Metadata Profile – How-to Guide</a>.</label>
-						<textarea name="alternate_identifier_2" id="alternate_identifier_2" rows="3" cols="40">#collection.alternate_identifier_2#</textarea>
-					</div>
-					<div class="lblGrp">
-						<label for="specimen_preservation_method">specimen_preservation_method: Used in EML generation, GBIF may have documentation.</label>
-						<textarea name="specimen_preservation_method" id="specimen_preservation_method" rows="3" cols="40">#collection.specimen_preservation_method#</textarea>
-					</div>
-					<div class="lblGrp">
-						<label for="time_coverage">Temporal Coverage: Used in EML generation, See <a href="https://ipt.gbif.org/manual/en/ipt/latest/gbif-metadata-profile##temporal-coverage" class="external">GBIF Metadata Profile – How-to Guide</a>.</label>
-						<textarea name="time_coverage" id="time_coverage" rows="3" cols="40">#collection.time_coverage#</textarea>
 					</div>
 					<div class="lblGrp">
 						<label for="web_link">Web Link: URL that should contain more information about the collection.</label>
@@ -754,11 +758,159 @@
 					</p>
 				</form>
 			</div>
+			<cfquery name="cln_attrs" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+				select
+					collection_attribute_id,
+					attribute_type,
+					attribute_value,
+					attribute_remark,
+					created_date,
+					created_agent_id,
+					getPreferredAgentName(created_agent_id) created_agent
+				from
+					collection_attributes
+				where
+					collection_id=<cfqueryparam value="#collection.collection_id#" cfsqltype="cf_sql_int">
+				order by
+				    CASE
+				      WHEN attribute_type='west bounding coordinate' THEN 1
+				      WHEN attribute_type='east bounding coordinate' THEN 2
+				      WHEN attribute_type='north bounding coordinate' THEN 3
+				      WHEN attribute_type='south bounding coordinate' THEN 4
+				      WHEN attribute_type='taxon name rank' THEN 5
+				      WHEN attribute_type='taxon name value' THEN 6
+				    END,
+					attribute_type,
+					attribute_type
+			</cfquery>
+			<div class="mc_section_div" id="clsmr_div">
+				<h3>Collection Attributes</h3>
+				<form name="fcclatr_div" method="post" action="Collection.cfm">
+					<input type="hidden" name="action" value="upcollectionattrs">
+					<input type="hidden" name="collection_id" value="#collection.collection_id#">
+					<input type="hidden" name="guid_prefix" value="#collection.guid_prefix#">
+					<table border="1">
+						<tr>
+							<th>Attribute</th>
+							<th>Value</th>
+							<th>Remark</th>
+							<th>W/W</th>
+						</tr>
+						<cfloop query="cln_attrs">
+							<tr>
+								<td>
+									<select name="attribute_type_#collection_attribute_id#" id="attribute_type_#collection_attribute_id#">
+										<option value="delete">DELETE</option>
+										<option selected="selected" value="#attribute_type#">#attribute_type#</option>
+									</select>
+								</td>
+								<!---- try to add a little order to this ---->
+								<cfset numTypeList="west bounding coordinate,east bounding coordinate,north bounding coordinate,south bounding coordinate">
+								<cfset shrtTxtList="time coverage,specimen preservation method,general taxonomic coverage,taxon name rank,taxon name value,alternate identifier">
+								<cfset lngTxtList="description,collection type,geographic description">
+								<input type="hidden" id="numTypeList" value="#numTypeList#">
+								<input type="hidden" id="lngTxtList" value="#lngTxtList#">
+								<td>
+									<cfif listfind(numTypeList,attribute_type)>
+										<input type="number" name="attribute_value_#collection_attribute_id#" id="attribute_value_#collection_attribute_id#" value="#attribute_value#">
+									<cfelseif listfind(lngTxtList,attribute_type)>
+										<textarea name="attribute_value_#collection_attribute_id#" id="attribute_value_#collection_attribute_id#" rows="5" cols="80">#attribute_value#</textarea>
+									<cfelse>
+										<input type="text" size="80" name="attribute_value_#collection_attribute_id#" id="attribute_value_#collection_attribute_id#" value="#attribute_value#">
+									</cfif>
+								</td>
+								<td>										
+									<textarea name="attribute_remark_#collection_attribute_id#" id="attribute_remark_#collection_attribute_id#" rows="5" cols="80">#attribute_remark#</textarea>
+								</td>
+								<td>
+									<div class="ww">
+										<div><a href="/agent/#created_agent_id#">#created_agent#</a></div>
+										<div>#created_date#</div>
+									</div>
+								</td>
+							</tr>
+						</cfloop>
+						<cfloop from="1" to="3" index="i">
+							<tr class="newRec">
+								<td>
+									<select name="attribute_type_new#i#" id="attribute_type_new#i#" onchange="attribute_type_change(#i#)">
+										<option value=""></option>
+										<cfloop query="ctcollection_attribute_type">
+											<option value="#attribute_type#">#attribute_type#</option>
+										</cfloop>
+									</select>
+								</td>
+								<td>
+									<div id="av_new#i#">
+										<input type="hidden" name="attribute_value_new#i#" id="attribute_value_new#i#">
+									</div>
+								</td>
+								<td>										
+									<textarea name="attribute_remark_new#i#" id="attribute_remark_new#i#" rows="5" cols="80"></textarea>
+								</td>
+								<td>
+									<div class="ww">
+										<div><a href="/agent/#session.myAgentID#">#session.username#</a></div>
+										<div>#now()#</div>
+									</div>
+								</td>
+							</tr>
+						</cfloop>
+					</table>
+					<input type="submit" value="Save Collection Attributes" class="savBtn">
+				</form>
+			</div>
 		</cfif>
 	</cfoutput>
 </cfif>
+<cfif action is "upcollectionattrs">
+	<cfoutput>
+		<cftransaction>
+			<cfloop list="#form.fieldnames#" index="f">
+				<cfif left(f,15) is "attribute_type_">
+					<cfset thisID=listlast(f,'_')>
+					<cfset thisTyp=evaluate(f)>
+					<cfset thisVal=evaluate("attribute_value_" & thisID)>
+					<cfset thisRem=evaluate("attribute_remark_" & thisID)>
+					<cfif left(thisID,3) is 'new' and len(thisTyp) gt 0 and len(thisVal) gt 0>
+						<cfquery name="insAtt" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+							insert into collection_attributes (
+								collection_id,
+								attribute_type,
+								attribute_value,
+								attribute_remark,
+								created_date,
+								created_agent_id
+							) values (
+								<cfqueryparam value="#collection_id#" CFSQLType="cf_sql_int">,
+								<cfqueryparam value="#thisTyp#" CFSQLType="cf_sql_varchar">,
+								<cfqueryparam value="#thisVal#" CFSQLType="cf_sql_varchar">,
+								<cfqueryparam value="#thisRem#" CFSQLType="cf_sql_varchar" null="#Not Len(Trim(thisRem))#">,
+								<cfqueryparam value="#DateConvert('local2Utc',now())#" cfsqltype="cf_sql_timestamp">,
+								<cfqueryparam value="#session.myAgentID#" CFSQLType="cf_sql_int">
+							)
+						</cfquery>
+					<cfelseif left(thisID,3) neq 'new' and thisVal is 'delete'>
+						<cfquery name="delAtt" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+							delete from collection_attributes where collection_attribute_id=<cfqueryparam value="#thisID#" CFSQLType="cf_sql_int">
+						</cfquery>
+					<cfelseif left(thisID,3) neq 'new' and thisVal neq 'delete'>
+						<cfquery name="upAtt" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+							update collection_attributes set
+								attribute_value=<cfqueryparam value="#thisVal#" CFSQLType="cf_sql_varchar">,
+								attribute_remark=<cfqueryparam value="#thisRem#" CFSQLType="cf_sql_varchar" null="#Not Len(Trim(thisRem))#">
+							where
+								collection_attribute_id=<cfqueryparam value="#thisID#" CFSQLType="cf_sql_int">
+						</cfquery>
+					</cfif>
+				</cfif>
+			</cfloop>
+		</cftransaction>
+		<cflocation url="Collection.cfm?guid_prefix=#guid_prefix###clsmr_div" addtoken="false">
+	</cfoutput>
+</cfif>
 <!------------------------------------------------------------------------------------->
-<cfif #action# is "changeAppearance">
+<cfif action is "changeAppearance">
 <cfoutput>
 	 <cfquery name="insApp" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
  		update cf_collection set
@@ -783,21 +935,7 @@
 		<cfquery name="modColl" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			UPDATE collection SET
 				genbank_collection=<cfqueryparam value = "#genbank_collection#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(genbank_collection))#">,
-				DESCR=<cfqueryparam value = "#descr#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(descr))#">,
 				citation=<cfqueryparam value = "#citation#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(citation))#">,
-				GEOGRAPHIC_DESCRIPTION=<cfqueryparam value = "#GEOGRAPHIC_DESCRIPTION#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(GEOGRAPHIC_DESCRIPTION))#">,
-				WEST_BOUNDING_COORDINATE=<cfqueryparam value = "#WEST_BOUNDING_COORDINATE#" CFSQLType="cf_sql_int" null="#Not Len(Trim(WEST_BOUNDING_COORDINATE))#">,
-				EAST_BOUNDING_COORDINATE=<cfqueryparam value = "#EAST_BOUNDING_COORDINATE#" CFSQLType="cf_sql_int" null="#Not Len(Trim(EAST_BOUNDING_COORDINATE))#">,
-				NORTH_BOUNDING_COORDINATE=<cfqueryparam value = "#NORTH_BOUNDING_COORDINATE#" CFSQLType="cf_sql_int" null="#Not Len(Trim(NORTH_BOUNDING_COORDINATE))#">,
-				SOUTH_BOUNDING_COORDINATE=<cfqueryparam value = "#SOUTH_BOUNDING_COORDINATE#" CFSQLType="cf_sql_int" null="#Not Len(Trim(SOUTH_BOUNDING_COORDINATE))#">,
-				GENERAL_TAXONOMIC_COVERAGE=<cfqueryparam value = "#GENERAL_TAXONOMIC_COVERAGE#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(GENERAL_TAXONOMIC_COVERAGE))#">,
-				TAXON_NAME_RANK=<cfqueryparam value = "#TAXON_NAME_RANK#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(TAXON_NAME_RANK))#">,
-				TAXON_NAME_VALUE=<cfqueryparam value = "#TAXON_NAME_VALUE#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(TAXON_NAME_VALUE))#">,
-				PURPOSE_OF_COLLECTION=<cfqueryparam value = "#PURPOSE_OF_COLLECTION#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(PURPOSE_OF_COLLECTION))#">,
-				alternate_identifier_1=<cfqueryparam value = "#alternate_identifier_1#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(alternate_identifier_1))#">,
-				alternate_identifier_2=<cfqueryparam value = "#alternate_identifier_2#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(alternate_identifier_2))#">,
-				specimen_preservation_method=<cfqueryparam value = "#specimen_preservation_method#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(specimen_preservation_method))#">,
-				time_coverage=<cfqueryparam value = "#time_coverage#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(time_coverage))#">,
 				web_link=<cfqueryparam value = "#web_link#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(web_link))#">,
 				web_link_text=<cfqueryparam value = "#web_link_text#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(web_link_text))#">
 			WHERE COLLECTION_ID = #val(collection_id)#
@@ -811,7 +949,8 @@
 		<cfquery name="modColl" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			UPDATE collection SET
 				default_cat_item_type=<cfqueryparam value = "#default_cat_item_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(default_cat_item_type))#">,
-				preferred_identifiers=string_to_array(<cfqueryparam value = "#preferred_identifiers#" CFSQLType="cf_sql_varchar" null="#Not Len(Trim(preferred_identifiers))#">,',')
+				preferred_identifiers=string_to_array(<cfqueryparam value = "#preferred_identifiers#" CFSQLType="cf_sql_varchar" null="#Not Len(Trim(preferred_identifiers))#">,','),
+				preferred_identifier_issuers=string_to_array(<cfqueryparam value = "#preferred_identifier_issuers#" CFSQLType="cf_sql_varchar" null="#Not Len(Trim(preferred_identifier_issuers))#">,',')::int[]
 			WHERE COLLECTION_ID = #val(collection_id)#
 		</cfquery>
 
@@ -876,7 +1015,8 @@
 		<cfquery name="modColl" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			UPDATE collection SET
 				institution=<cfqueryparam value = "#institution#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(institution))#">,
-				collection=<cfqueryparam value = "#collection#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(collection))#">,
+				collection=<cfqueryparam value = "#collection#" CFSQLType="CF_SQL_VARCHAR">,
+				collection_cde=<cfqueryparam value = "#collection_cde#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(collection_cde))#">,
 				catalog_number_format=<cfqueryparam value = "#catalog_number_format#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(catalog_number_format))#">
 			WHERE COLLECTION_ID = #val(collection_id)#
 		</cfquery>
@@ -887,6 +1027,7 @@
 <!------------------------------------------------------------------------------------->
 <cfif #action# is "newContact">
 	<cfoutput>
+
 	<cftransaction>
 	<cfquery name="newContact" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		INSERT INTO collection_contacts (

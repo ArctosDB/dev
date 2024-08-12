@@ -80,6 +80,10 @@
 			This form requires table_name
 			<cfabort>
 		</cfif>
+		<!--- purge before and after, no idea what's going on with https://github.com/ArctosDB/arctos/issues/7766 but maybe?? ---->
+		<cfquery name="cleanup" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			delete from bulkloader_for_download where enteredby=<cfqueryparam value="#session.username#" CFSQLType="CF_SQL_VARCHAR" list="false">
+		</cfquery>
 		<cfquery name="data" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			select guid from #table_name#
 		</cfquery>

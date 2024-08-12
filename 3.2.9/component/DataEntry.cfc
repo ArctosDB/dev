@@ -93,37 +93,21 @@
       <cfthrow message="unauthorized">
     </cfif>
 	<cfquery name="isCtControlled" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-		select VALUE_CODE_TABLE,UNIT_CODE_TABLE from CTSPEC_PART_ATT_ATT where attribute_type='#attribute#'
+		select VALUE_CODE_TABLE,UNIT_CODE_TABLE from CTSPEC_PART_ATT_ATT where attribute_type=<cfqueryparam value="#attribute#" cfsqltype="cf_sql_varchar">
 	</cfquery>
 	<cfif isCtControlled.recordcount is 1>
 		<cfif len(isCtControlled.VALUE_CODE_TABLE) gt 0>
 			<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select column_name from information_schema.columns where table_name='#lcase(isCtControlled.value_code_table)#'
-				and column_name <> 'description' and column_name <> 'tissue_fg'
+				select column_name from information_schema.columns where 
+				table_name=<cfqueryparam value="#lcase(isCtControlled.value_code_table)#">
+				and column_name not in ('description','tissue_fg')
 			</cfquery>
 			<cfquery name="valCT" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
 				select * from #isCtControlled.value_code_table#
 			</cfquery>
-			<cfset collCode = "">
-			<cfset columnName = "">
-			<cfloop query="getCols">
-				<cfif getCols.column_name is "COLLECTION_CDE">
-					<cfset collCode = "yes">
-				  <cfelse>
-					<cfset columnName = "#getCols.column_name#">
-				</cfif>
-			</cfloop>
-			<cfif len(collCode) gt 0>
-				<cfquery name="valCodes" dbtype="query" >
-					SELECT #columnName# as valCodes from valCT
-					WHERE collection_cde='#collection_cde#'
-					order by #columnName#
-				</cfquery>
-			  <cfelse>
-				<cfquery name="valCodes" dbtype="query">
-					SELECT  #columnName# as valCodes from valCT order by #columnName#
-				</cfquery>
-			</cfif>
+			<cfquery name="valCodes" dbtype="query">
+				SELECT  #getCols.column_name# as valCodes from valCT order by #columnName#
+			</cfquery>
 			<cfset result = QueryNew("V")>
 			<cfset newRow = QueryAddRow(result, 1)>
 			<cfset temp = QuerySetCell(result, "v", "value",1)>
@@ -132,46 +116,20 @@
 			<cfset i=3>
 			<cfloop query="valCodes">
 				<cfset newRow = QueryAddRow(result, 1)>
-				<cfif valcodes is "yes">
-					<cfset rval="_yes_">
-				<cfelseif valcodes is "no">
-					<cfset rval="_no_">
-				<cfelse>
-					<cfset rval=valcodes>
-				</cfif>
-				<cfset temp = QuerySetCell(result, "v", rval,i)>
+				<cfset temp = QuerySetCell(result, "v", valcodes,i)>
 				<cfset i=i+1>
 			</cfloop>
-
 		<cfelseif #isCtControlled.UNIT_CODE_TABLE# gt 0>
 			<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 				select column_name from information_schema.columns where table_name='#lcase(isCtControlled.UNIT_CODE_TABLE)#'
 				and column_name <> 'description'
 			</cfquery>
-
 			<cfquery name="valCT" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
 				select * from #isCtControlled.UNIT_CODE_TABLE#
 			</cfquery>
-			<cfset collCode = "">
-			<cfset columnName = "">
-			<cfloop query="getCols">
-				<cfif getCols.column_name is "COLLECTION_CDE">
-					<cfset collCode = "yes">
-				  <cfelse>
-					<cfset columnName = "#getCols.column_name#">
-				</cfif>
-			</cfloop>
-			<cfif len(#collCode#) gt 0>
-				<cfquery name="valCodes" dbtype="query">
-					SELECT #columnName# as valCodes from valCT
-					WHERE collection_cde='#collection_cde#'
-					order by #columnName#
-				</cfquery>
-			  <cfelse>
-				<cfquery name="valCodes" dbtype="query">
-					SELECT #columnName# as valCodes from valCT order by #columnName#
-				</cfquery>
-			</cfif>
+			<cfquery name="valCodes" dbtype="query">
+				SELECT #getCols.column_name# as valCodes from valCT order by #columnName#
+			</cfquery>
 			<cfset result = "unit - #isCtControlled.UNIT_CODE_TABLE#">
 			<cfset result = QueryNew("V")>
 			<cfset newRow = QueryAddRow(result, 1)>
@@ -200,100 +158,6 @@
 	</cfif>
 	<cfreturn result>
 </cffunction>
-<!------------------------------------------------------------------------------->
-<cffunction name="checkExtendedData" access="remote" returnformat="json">
-	<cfargument name="collection_object_id" type="numeric" required="yes">
-
-	 <!---- this has to be called remotely, but only allow logged-in Operators access--->
-    <cfif not isdefined("session.roles") or not listFindNoCase(session.roles, 'COLDFUSION_USER')>
-      <cfthrow message="unauthorized">
-    </cfif>
-	<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		select uuid idval from bulkloader where uuid is not null and collection_object_id=#collection_object_id#
-	</cfquery>
-	<cfif d.recordcount is 0>
-		<cfset r="no extras found">
-	<cfelse>
-		<cfquery name="cf_temp_identification" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			select * from  cf_temp_identification  where other_id_number='#d.idval#'
-		</cfquery>
-		<cfif cf_temp_identification.recordcount gt 0>
-			<cfscript>
-		        var temp = {};
-		        for (var row in cf_temp_identification) {
-		            structAppend(temp, row);
-		        }
-		    </cfscript>
-			<cfset r.identifications=temp>
-		</cfif>
-		<cfquery name="cf_temp_specevent" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			select * from  cf_temp_specevent  where UUID='#d.idval#'
-		</cfquery>
-		<cfif cf_temp_specevent.recordcount gt 0>
-			<cfscript>
-		        var temp = {};
-		        for (var row in cf_temp_specevent) {
-		            structAppend(temp, row);
-		        }
-		    </cfscript>
-			<cfset r.spec_events=temp>
-		</cfif>
-
-		<cfquery name="cf_temp_parts" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			select * from  cf_temp_parts  where other_id_number='#d.idval#'
-		</cfquery>
-		<cfif cf_temp_parts.recordcount gt 0>
-			<cfscript>
-		        var temp = {};
-		        for (var row in cf_temp_parts) {
-		            structAppend(temp, row);
-		        }
-		    </cfscript>
-			<cfset r.spec_parts=temp>
-		</cfif>
-
-		<cfquery name="cf_temp_attributes" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			select * from  cf_temp_attributes  where other_id_number='#d.idval#'
-		</cfquery>
-		<cfif cf_temp_attributes.recordcount gt 0>
-			<cfscript>
-		        var temp = {};
-		        for (var row in cf_temp_attributes) {
-		            structAppend(temp, row);
-		        }
-		    </cfscript>
-			<cfset r.spec_attrs=temp>
-		</cfif>
-
-		<cfquery name="cf_temp_oids" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			select * from  cf_temp_oids  where uuid='#d.idval#'
-		</cfquery>
-		<cfif cf_temp_oids.recordcount gt 0>
-			<cfscript>
-		        var temp = {};
-		        for (var row in cf_temp_oids) {
-		            structAppend(temp, row);
-		        }
-		    </cfscript>
-			<cfset r.other_ids=temp>
-		</cfif>
-
-		<cfquery name="cf_temp_collector" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			select * from  cf_temp_collector  where other_id_number='#d.idval#'
-		</cfquery>
-		<cfif cf_temp_collector.recordcount gt 0>
-			<cfscript>
-		        var temp = {};
-		        for (var row in cf_temp_collector) {
-		            structAppend(temp, row);
-		        }
-		    </cfscript>
-			<cfset r.collectors=temp>
-		</cfif>
-	</cfif>
-	<cfreturn r>
-</cffunction>
-<!---------------------------------------------------------------->
 
 <!------------------------------------------------------------------------------->
 <cffunction name="isValidISODate"  access="remote">
@@ -312,28 +176,26 @@
 		<cfreturn false>
 	</cfif>
 </cffunction>
-
-
 <!---------------------------------------------------------------->
 <cffunction name="getLocAttCodeTbl"  access="remote">
-	<!---
-		get code table stuff for collecting event attributes
-		ASSUMPTION
-			- these will never be collection-specific; we'll just ignore that here
-	 --->
 	<cfargument name="attribute" type="string" required="yes">
-
-	 <!---- this has to be called remotely, but only allow logged-in Operators access--->
-    <cfif not isdefined("session.roles") or not listFindNoCase(session.roles, 'COLDFUSION_USER')>
-      <cfthrow message="unauthorized">
-    </cfif>
+	<!---- this has to be called remotely, but only allow logged-in Operators access--->
+	<cfif not isdefined("session.roles") or not listFindNoCase(session.roles, 'COLDFUSION_USER')>
+		<cfthrow message="unauthorized">
+	</cfif>
 	<cfquery name="isCtControlled" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-		select VALUE_CODE_TABLE,UNIT_CODE_TABLE from ctlocality_att_att where attribute_type='#attribute#'
+		select VALUE_CODE_TABLE,UNIT_CODE_TABLE from ctlocality_attribute_type where attribute_type=<cfqueryparam value="#attribute#" cfsqltype="cf_sql_varchar">
 	</cfquery>
 	<cfif len(isCtControlled.VALUE_CODE_TABLE) gt 0>
 		<cfset r.ctlfld='values'>
+		<!---- get this with
+			select column_name from information_schema.columns where table_name in (select value_code_table from ctlocality_attribute_type union select unit_code_table from ctlocality_attribute_type ) group by column_name order by column_name;
+		---->
+
 		<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-			select column_name from information_schema.columns where table_name='#lcase(isCtControlled.value_code_table)#' and upper(column_name) not in ( 'DESCRIPTION','COLLECTION_CDE')
+			select column_name from information_schema.columns where 
+				table_name=<cfqueryparam value="#lcase(isCtControlled.value_code_table)#" cfsqltype="cf_sql_varchar"> and 
+				column_name not in ( 'description','documentation_url','issue_url','search_terms','water_body_type')
 		</cfquery>
 		<cfquery name="gdata" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 			select distinct #getCols.column_name# d from #isCtControlled.value_code_table# order by d
@@ -345,7 +207,7 @@
 	<cfelseif isCtControlled.UNIT_CODE_TABLE gt 0>
 		<cfset r.ctlfld='units'>
 		<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-			select column_name from information_schema.columns where table_name='#lcase(isCtControlled.UNIT_CODE_TABLE)#' and upper(column_name) not in ( 'DESCRIPTION','COLLECTION_CDE')
+			select column_name from information_schema.columns where table_name=<cfqueryparam value="#lcase(isCtControlled.UNIT_CODE_TABLE)#" cfsqltype="cf_sql_varchar"> and upper(column_name) not in ( 'DESCRIPTION')
 		</cfquery>
 		<cfquery name="gdata" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 			select #getCols.column_name# d from #isCtControlled.UNIT_CODE_TABLE# order by d
@@ -361,8 +223,6 @@
 	</cfif>
 	<cfreturn r>
 </cffunction>
-
-
 <!---------------------------------------------------------------->
 <cffunction name="getPartAttCodeTbl"  access="remote">
 	<!---
@@ -379,7 +239,7 @@
 	<cfif len(isCtControlled.value_code_table) gt 0>
 		<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 			select column_name from information_schema.columns where table_name=<cfqueryparam value="#isCtControlled.value_code_table#" cfsqltype="cf_sql_varchar"> and 
-			column_name not in ( 'description','collection_cde','tissue_fg')
+			column_name not in ( 'description','tissue_fg')
 		</cfquery>
 		<cfquery name="gdata" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 			select #getCols.column_name# d from #isCtControlled.value_code_table# order by #getCols.column_name#
@@ -390,7 +250,7 @@
 	<cfelseif isCtControlled.unit_code_table gt 0>
 		<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 			select column_name from information_schema.columns where table_name=<cfqueryparam value="#isCtControlled.UNIT_CODE_TABLE#" cfsqltype="cf_sql_varchar"> and 
-			column_name not in ( 'description','collection_cde','tissue_fg')
+			column_name not in ( 'description','tissue_fg')
 		</cfquery>
 		<cfquery name="gdata" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 			select #getCols.column_name# d from #isCtControlled.unit_code_table# order by #getCols.column_name#
@@ -421,7 +281,7 @@
 	<cfif len(isCtControlled.VALUE_CODE_TABLE) gt 0>
 		<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 			select column_name from information_schema.columns where table_name=<cfqueryparam value="#isCtControlled.value_code_table#" cfsqltype="cf_sql_varchar"> and 
-			column_name not in ( 'description','collection_cde')
+			column_name not in ( 'description')
 		</cfquery>
 		<cfquery name="gdata" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 			select #getCols.column_name# d from #isCtControlled.value_code_table# order by #getCols.column_name#
@@ -435,7 +295,7 @@
 	<cfelseif isCtControlled.units_code_table gt 0>
 		<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 			select column_name from information_schema.columns where table_name=<cfqueryparam value="#isCtControlled.units_code_table#" cfsqltype="cf_sql_varchar"> and 
-			column_name not in ( 'description','collection_cde')
+			column_name not in ( 'description')
 		</cfquery>
 		<cfquery name="gdata" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 			select #getCols.column_name# d from #isCtControlled.units_code_table# order by #getCols.column_name#
@@ -466,7 +326,7 @@
 	<cfif len(isCtControlled.VALUE_CODE_TABLE) gt 0>
 		<cfset r.ctlfld='values'>
 		<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-			select column_name from information_schema.columns where table_name='#lcase(isCtControlled.value_code_table)#' and upper(column_name) not in ( 'DESCRIPTION','COLLECTION_CDE')
+			select column_name from information_schema.columns where table_name='#lcase(isCtControlled.value_code_table)#' and upper(column_name) not in ( 'DESCRIPTION')
 		</cfquery>
 		<cfquery name="gdata" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 			select #getCols.column_name# d from #isCtControlled.value_code_table#
@@ -478,7 +338,7 @@
 	<cfelseif isCtControlled.UNIT_CODE_TABLE gt 0>
 		<cfset r.ctlfld='units'>
 		<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-			select column_name from information_schema.columns where table_name='#lcase(isCtControlled.UNIT_CODE_TABLE)#' and upper(column_name) not in ( 'DESCRIPTION','COLLECTION_CDE')
+			select column_name from information_schema.columns where table_name='#lcase(isCtControlled.UNIT_CODE_TABLE)#' and upper(column_name) not in ( 'DESCRIPTION')
 		</cfquery>
 		<cfquery name="gdata" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 			select #getCols.column_name# d from #isCtControlled.UNIT_CODE_TABLE#
@@ -494,178 +354,89 @@
 	</cfif>
 	<cfreturn r>
 </cffunction>
-
-
 <!---------------------------------------------------------------------->
 <cffunction name="getAttributeCodeTable"  access="remote">
 	<!--- this is a luceeified version of getAttCodeTbl, which needs deprecated as things can be rebuilt to use this function --->
 	<cfargument name="attribute" type="string" required="yes">
 	<cfargument name="guid_prefix" type="string" required="yes">
 	<cfargument name="element" type="string" required="yes">
-	 <!---- this has to be called remotely, but only allow logged-in Operators access--->
-    <cfif not isdefined("session.roles") or not listFindNoCase(session.roles, 'COLDFUSION_USER')>
-      <cfthrow message="unauthorized">
-    </cfif>
-    <cfif len(attribute) is 0>
-    	<cfset result=[=]>
+	<!---- this has to be called remotely, but only allow logged-in Operators access--->
+	<cfif not isdefined("session.roles") or not listFindNoCase(session.roles, 'COLDFUSION_USER')>
+		<cfthrow message="unauthorized">
+	</cfif>
+	<cfif len(attribute) is 0>
+		<cfset result=[=]>
+		<cfset result.result_type='empty'>
+		<cfset result.element=element>
+		<cfset result.values="">
+		<cfreturn result>
+	</cfif>
+	<cfquery name="isCtControlled" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
+		select 
+			value_code_table,
+			unit_code_table 
+		from 
+			ctattribute_type 
+		where 
+			attribute_type=<cfqueryparam cfsqltype="cf_sql_varchar" value="#attribute#">
+	</cfquery>
+	<cfif isCtControlled.recordcount neq 1>
+		<cfset result=[=]>
 		<cfset result.result_type='empty'>
 		<cfset result.element=element>
 		<cfset result.values="">
 		<cfreturn result>
 	</cfif>
 
-
-	<cfquery name="isCtControlled" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-		select 
-			VALUE_CODE_TABLE,
-			UNITS_CODE_TABLE 
-		from 
-			ctattribute_code_tables 
-		where 
-			attribute_type=<cfqueryparam cfsqltype="cf_sql_varchar" value="#attribute#">
-	</cfquery>
-
-
-	<cfquery name="cc" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
-		select 
-			collection_cde 
-		from 
-			collection 
-		where 
-			guid_prefix=<cfqueryparam cfsqltype="cf_sql_varchar" value="#guid_prefix#">
-	</cfquery>
-	<cfset collection_cde=cc.collection_cde>
-
-
-	<cfif isCtControlled.recordcount is 1>
-		<cfif len(isCtControlled.VALUE_CODE_TABLE) gt 0>
-			<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select 
-					column_name,
-					data_type
-				from 
-					information_schema.columns 
-				where 
-					table_name=<cfqueryparam cfsqltype="cf_sql_varchar" value="#lcase(isCtControlled.value_code_table)#">
-			</cfquery>
-			<cfquery name="is_old_new" dbtype="query">
-				select count(*) c from getCols where data_type='ARRAY'
-			</cfquery>
-			<cfif is_old_new.c gt 0>
-				<cfset mdcols='description,collections,recommend_for_collection_type,search_terms,issue_url,documentation_url'>
-
-				<cfquery name="theColumnName" dbtype="query">
-					select column_name from getCols where column_name not in (<cfqueryparam cfsqltype="cf_sql_varchar" list="true" value="#mdcols#">)
-				</cfquery>
-				<cfquery name="valCodes" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-					select #theColumnName.column_name# as valCodes from #isCtControlled.value_code_table# where <cfqueryparam cfsqltype="cf_sql_varchar" value="#guid_prefix#"> = any(collections) order by #theColumnName.column_name#
-				</cfquery>
-
-
-
-
-				<cfset result=[=]>
-				<cfset result.result_type='values'>
-				<cfset result.element=element>				
-				<cfset result.values=queryColumnData( valCodes,'valCodes' )>
-
-
-			<cfelse>
-				<!--- old style ---->
-				<cfset clist=valuelist(getCols.column_name)>
-
-				<cfif listfind(clist,'description')>
-					<cfset clist=listDeleteAt(clist, listfind(clist,'description'))>
-				</cfif>
-
-				<cfset collCode = false>
-				<cfif listfind(clist,'collection_cde')>
-					<cfset collCode = true>
-					<cfset clist=listDeleteAt(clist, listfind(clist,'collection_cde'))>
-				</cfif>
-				<cfset columnName = clist>
-
-				<cfquery name="valCT" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-					select * from #isCtControlled.value_code_table#
-				</cfquery>
-
-				<cfif collCode>
-					<cfquery name="valCodes" dbtype="query" >
-						SELECT #columnName# as valCodes from valCT
-						WHERE collection_cde='#collection_cde#'
-						order by #columnName#
-					</cfquery>
-				  <cfelse>
-					<cfquery name="valCodes" dbtype="query">
-						SELECT  #columnName# as valCodes from valCT order by #columnName#
-					</cfquery>
-				</cfif>
-				<cfset result=[=]>
-				<cfset result.result_type='values'>
-				<cfset result.element=element>
-				<cfset result.values=queryColumnData( valCodes,'valCodes' )>
+	<cfif len(isCtControlled.VALUE_CODE_TABLE) gt 0>
+		<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
+			select 
+				column_name,
+				data_type
+			from 
+				information_schema.columns 
+			where 
+				table_name=<cfqueryparam cfsqltype="cf_sql_varchar" value="#lcase(isCtControlled.value_code_table)#">
+		</cfquery>
+		<cfset mdcols='description,collections,recommend_for_collection_type,search_terms,issue_url,documentation_url'>
+		<cfquery name="theColumnName" dbtype="query">
+			select column_name from getCols where column_name not in (<cfqueryparam cfsqltype="cf_sql_varchar" list="true" value="#mdcols#">)
+		</cfquery>
+		<cfquery name="valCodes" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
+			select #theColumnName.column_name# as valCodes from #isCtControlled.value_code_table# 
+			<cfif listfind(valuelist(getCols.column_name),'collections')>
+				where <cfqueryparam cfsqltype="cf_sql_varchar" value="#guid_prefix#"> = any(collections)
 			</cfif>
-
-		<cfelseif isCtControlled.UNITS_CODE_TABLE gt 0>
-			<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select 
-					column_name 
-				from 
-					information_schema.columns 
-				where 
-					table_name=<cfqueryparam cfsqltype="cf_sql_varchar" value="#lcase(isCtControlled.UNITS_CODE_TABLE)#"> and 
-					column_name <> 'description'
-			</cfquery>
-			<cfquery name="valCT" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-				select * from #isCtControlled.UNITS_CODE_TABLE#
-			</cfquery>
-			<cfset collCode = "">
-			<cfset columnName = "">
-			<cfloop query="getCols">
-				<cfif getCols.column_name is "COLLECTION_CDE">
-					<cfset collCode = "yes">
-				  <cfelse>
-					<cfset columnName = "#getCols.column_name#">
-				</cfif>
-			</cfloop>
-			<cfif len(collCode) gt 0>
-				<cfquery name="valCodes" dbtype="query">
-					SELECT #columnName# as valCodes from valCT
-					WHERE collection_cde='#collection_cde#'
-					order by #columnName#
-				</cfquery>
-			  <cfelse>
-				<cfquery name="valCodes" dbtype="query">
-					SELECT #columnName# as valCodes from valCT order by #columnName#
-				</cfquery>
-			</cfif>
-			<cfset result=[=]>
-			<cfset result.result_type='units'>
-			<cfset result.element=element>
-			<cfset result.values=queryColumnData( valCodes,'valCodes' )>
-		<cfelse>
-			<cfset result=[=]>
-			<cfset result.result_type='wtfisthis'>
-			<cfset result.element=element>
-			<cfset result.values="">
-		</cfif>
+			order by #theColumnName.column_name#
+		</cfquery>
+		<cfset result=[=]>
+		<cfset result.result_type='values'>
+		<cfset result.element=element>				
+		<cfset result.values=queryColumnData( valCodes,'valCodes' )>
+	<cfelseif isCtControlled.unit_code_table gt 0>
+		<cfquery name="getCols" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
+			select 
+				column_name 
+			from 
+				information_schema.columns 
+			where 
+				table_name=<cfqueryparam cfsqltype="cf_sql_varchar" value="#lcase(isCtControlled.unit_code_table)#"> and 
+				column_name <> 'description'
+		</cfquery>
+		<cfquery name="valCT" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
+			select #getCols.column_name# as valCodes from #isCtControlled.unit_code_table# order by #getCols.column_name#
+		</cfquery>
+		<cfset result=[=]>
+		<cfset result.result_type='units'>
+		<cfset result.element=element>
+		<cfset result.values=queryColumnData( valCT,'valCodes' )>
 	<cfelse>
 		<cfset result=[=]>
 		<cfset result.result_type='freetext'>
 		<cfset result.element=element>
 		<cfset result.values="">
-
-		<!----
-		<cfset result = QueryNew("V")>
-		<cfset newRow = QueryAddRow(result, 1)>
-		<cfset temp = QuerySetCell(result, "v", "NONE")>
-		<cfset newRow = QueryAddRow(result, 1)>
-		<cfset temp = QuerySetCell(result, "v", "#element#",2)>
-		---->
 	</cfif>
-
 	<cfreturn result>
-
 </cffunction>
 <!---------------------------------------------------------------->
 <cffunction name="getcatNumSeq" access="remote">
@@ -692,48 +463,6 @@
 	<cfelse>
 		<cfset result = b.nextnum>
 	</cfif>
-	<cfreturn result>
-</cffunction>
-<!---------------------------------------------------------------------------------------->
-<cffunction name="is_good_accn" access="remote">
-	<cfargument name="accn" type="string" required="yes">
-	<cfargument name="collection_cde" type="string" required="yes">
-	<cfargument name="institution_acronym" type="string" required="yes">
-	 <!---- this has to be called remotely, but only allow logged-in Operators access--->
-    <cfif not isdefined("session.roles") or not listFindNoCase(session.roles, 'COLDFUSION_USER')>
-      <cfthrow message="unauthorized">
-    </cfif>
-	<cftry>
-	<cfif accn contains "[" and accn contains "]">
-		<cfset p = find(']',accn)>
-		<cfset ic = mid(accn,2,p-2)>
-		<cfset ia=listgetat(ic,1,":")>
-		<cfset cc=listgetat(ic,2,":")>
-		<cfset ac = mid(accn,p+1,len(accn))>
-	<cfelse>
-		<cfset ac=accn>
-		<cfset ia=institution_acronym>
-		<cfset cc=collection_cde>
-	</cfif>
-	<cfquery name="q" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		select
-			count(*) cnt
-		FROM
-			accn,
-			trans,
-			collection
-		WHERE
-			accn.transaction_id = trans.transaction_id AND
-			trans.collection_id=collection.collection_id and
-			accn.accn_number = '#ac#' and
-			collection.institution_acronym = '#ia#' and
-			collection.collection_cde = '#cc#'
-	</cfquery>
-		<cfset result = "#q.cnt#">
-	<cfcatch>
-		<cfset result = "#cfcatch.detail#">
-	</cfcatch>
-	</cftry>
 	<cfreturn result>
 </cffunction>
 <!---------------------------------------------------------------------------------------->

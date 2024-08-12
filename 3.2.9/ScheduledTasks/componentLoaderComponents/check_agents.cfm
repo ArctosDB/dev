@@ -1,74 +1,3 @@
-<!---------------
-this checks, it does not load
-
-this relies on an indexed table
-
-drop table cf_agent_isitadup;
-
-create table cf_agent_isitadup as select
-current_date as build_date,
-agent_id,
-uppername,
-strippeduppername,
-upperstrippedagencyname
-from
-(select
-  agent_id,
-  trim(upper(agent_name.agent_name)) uppername,
-  trim(upper(regexp_replace(agent_name.agent_name,'[ .,-]', '','g'))) strippeduppername,
-         trim(
-          replace(
-            replace(
-              replace(
-                upper(
-                  regexp_replace(agent_name.agent_name,'[ .,-]', '','g')
-                )
-              ,'US','')
-            ,'UNITEDSTATES','')
-          ,'THE','')
-        ) upperstrippedagencyname
-         from
-         agent_name
-		union
-		select
-  agent_id,
-  trim(upper(preferred_agent_name)) uppername,
-  trim(upper(regexp_replace(preferred_agent_name,'[ .,-]', '','g'))) strippeduppername,
-         trim(
-          replace(
-            replace(
-              replace(
-                upper(
-                  regexp_replace(preferred_agent_name,'[ .,-]', '','g')
-                )
-              ,'US','')
-            ,'UNITEDSTATES','')
-          ,'THE','')
-        ) upperstrippedagencyname
-         from
-         agent
-		) x
-		group by
-         agent_id,
-uppername,
-strippeduppername,
-upperstrippedagencyname
-;
-
-create index ix_cf_agent_dupchk_id on cf_agent_isitadup (agent_id) ;
-create index ix_cf_agent_dupchk_un on cf_agent_isitadup (uppername) ;
-
-create index ix_cf_agent_dupchk_uns on cf_agent_isitadup (strippeduppername);
-create index ix_cf_agent_dupchk_unsa on cf_agent_isitadup (upperstrippedagencyname) ;
-
-
-update cf_agent_isitadup set build_date=current_date- interval '10 days';
-
-
-
-
----->
-
 
 <!--- first get records with a pure status ---->
 <cfquery name="d" datasource="uam_god" >
@@ -77,219 +6,151 @@ update cf_agent_isitadup set build_date=current_date- interval '10 days';
 <cfif debug is true>
 	<cfdump var=#d#>
 </cfif>
-<!--- no time delay, find or die for this form --->
-<cfoutput>
-	<!--- This form and the agent checker rely on a cache table; rebuild it every few days --->
-	<cfquery name="ck_cache" datasource="uam_god">
-		select build_date from cf_agent_isitadup limit 1
-	</cfquery>
-	<cfif #datediff('d',ck_cache.build_date,now())# gt 5>
-		<cfquery name="flush_cache" datasource="uam_god">
-			delete from cf_agent_isitadup
-		</cfquery>
-		<cfquery name="re_cache" datasource="uam_god">
-			insert into cf_agent_isitadup (
-				build_date,
-				agent_id,
-				uppername,
-				strippeduppername,
-				upperstrippedagencyname
-			) (
-				select
-					current_date as build_date,
-					agent_id,
-					uppername,
-					strippeduppername,
-					upperstrippedagencyname
-					from
-					(select
-					  agent_id,
-					  trim(upper(agent_name.agent_name)) uppername,
-					  trim(upper(regexp_replace(agent_name.agent_name,'[ .,-]', '','g'))) strippeduppername,
-					         trim(
-					          replace(
-					            replace(
-					              replace(
-					                upper(
-					                  regexp_replace(agent_name.agent_name,'[ .,-]', '','g')
-					                )
-					              ,'US','')
-					            ,'UNITEDSTATES','')
-					          ,'THE','')
-					        ) upperstrippedagencyname
-					         from
-					         agent_name
-							union
-							select
-					  agent_id,
-					  trim(upper(preferred_agent_name)) uppername,
-					  trim(upper(regexp_replace(preferred_agent_name,'[ .,-]', '','g'))) strippeduppername,
-					         trim(
-					          replace(
-					            replace(
-					              replace(
-					                upper(
-					                  regexp_replace(preferred_agent_name,'[ .,-]', '','g')
-					                )
-					              ,'US','')
-					            ,'UNITEDSTATES','')
-					          ,'THE','')
-					        ) upperstrippedagencyname
-					         from
-					         agent
-							) x
-							group by
-					         agent_id,
-					uppername,
-					strippeduppername,
-					upperstrippedagencyname
-				)
-		</cfquery>
-		<cfif debug>cf_agent_isitadup refreshed</cfif>
-	</cfif>
-	<cfif d.recordcount gt 0>
-		<cfset thisRan=true>
+
+<cfif d.recordcount gt 0>
+	<cfset thisRan=true>
+	<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
+	<cfoutput>
 		<cfloop query="d">
-			<cfif debug>
-				<hr>
-				<hr>
-				<p>
-					running for key #d.key#
-				</p>
-			</cfif>
-			<cfset nobj=structNew()>
-			<cfset probs="">
+			<cfset thisRan=true>
+			<cftry>
+				<cfset errs="">
+				<cfset sobj=[=]>
+				<cfset sobj["agent_type"]=agent_type>
+				<cfset sobj["agent_id"]=''>
+				<cfset sobj["preferred_agent_name"]=preferred_agent_name>
+				<cfquery name="getAgentid" datasource="uam_god"  cachedwithin="#createtimespan(0,0,60,0)#">
+					select getAgentid(<cfqueryparam value="#username#" CFSQLType="CF_SQL_VARCHAR">) as theAgentId
+				</cfquery>
+				<cfset creator_agent_id=getAgentid.theAgentId>
+				<cfset sobj["created_by_agent_id"]=creator_agent_id>
+				<cfset attribute_id_list="">
+				<cfloop from="1" to="10" index="attribute_id">
+					<cfset thisAttType=evaluate("attribute_type_" & attribute_id)>
+					<cfset thisAttVal=evaluate("attribute_value_" & attribute_id)>
+					<cfset thisRelAgent=evaluate("related_agent_" & attribute_id)>
+					<cfif len(thisAttType) gt 0 and (len(thisAttVal) gt 0 or len(thisRelAgent) gt 0)>
+						<cfset sobj["attribute_type_#attribute_id#"]=thisAttType>
+						<cfset sobj["attribute_value_#attribute_id#"]=thisAttVal>
 
-			<cfset fn=''>
-			<cfset mn=''>
-			<cfset ninc=0>
-			<cfset naddr=0>
-			<cfloop from="1" to="6" index="i">
-				<cfset thisNameType=evaluate("d.other_name_type_" & i)>
-				<cfset thisName=evaluate("d.other_name_" & i)>
+						<cfset sobj["begin_date_#attribute_id#"]=evaluate("begin_date_" & attribute_id)>
+						<cfset sobj["end_date_#attribute_id#"]=evaluate("end_date_" & attribute_id)>
+						<cfif len(thisRelAgent) gt 0>
+							<cfquery name="getAgentid" datasource="uam_god"  cachedwithin="#createtimespan(0,0,60,0)#">
+								select getAgentid(<cfqueryparam value="#thisRelAgent#" CFSQLType="CF_SQL_VARCHAR">) as theAgentId
+							</cfquery>
+							<cfif getAgentid.recordcount neq 1>
+								<cfset errs="related agent not resolved">
+								<cfquery name="fail" datasource="uam_god">
+									update cf_temp_pre_bulk_agent set status='related agent not resolved' where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+								</cfquery>
+								<cfcontinue />
+							</cfif>
+							<cfset sobj["related_agent_id_#attribute_id#"]=getAgentid.theAgentId>
+						<cfelse>
+							<cfset sobj["related_agent_id_#attribute_id#"]=''>
+						</cfif>
+						<cfset sobj["determined_date_#attribute_id#"]=evaluate("determined_date_" & attribute_id)>
 
-				<cfif (len(thisNameType) gt 0 and len(thisName) is 0) or (len(thisNameType) is 0 and len(thisName) gt 0)>
-					<cfset probs=listAppend(probs, '(other_name_type_n,other_name_n) must be paired.', '#chr(10)#')>
-				</cfif>
+						<cfset thisDetr=evaluate("determiner_" & attribute_id)>
+						<cfif len(thisDetr) gt 0>
+							<cfquery name="getAgentid" datasource="uam_god"  cachedwithin="#createtimespan(0,0,60,0)#">
+								select getAgentid(<cfqueryparam value="#thisDetr#" CFSQLType="CF_SQL_VARCHAR">) as theAgentId
+							</cfquery>
+							<cfif getAgentid.recordcount neq 1>
+								<cfquery name="fail" datasource="uam_god">
+									update cf_temp_pre_bulk_agent set status='determiner agent not resolved' where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+								</cfquery>
+								<cfcontinue />
+							</cfif>
+							<cfset sobj["attribute_determiner_id_#attribute_id#"]=getAgentid.theAgentId>
+						<cfelse>
+							<cfset sobj["attribute_determiner_id_#attribute_id#"]=''>
+						</cfif>
 
-				<cfif thisNameType is "first name">
-					<cfset nobj["first_name"]=thisName>
-				<cfelseif thisNameType is "middle name">
-					<cfset nobj["middle_name"]=thisName>
-				<cfelseif thisNameType is "last name">
-					<cfset nobj["last_name"]=thisName>
-				<cfelse>
-					<cfset ninc=ninc+1>
-					<cfset nobj["name_#ninc#"]=thisName>
-					<cfset nobj["name_type_#ninc#"]=thisNameType>
-				</cfif>
+						<cfset sobj["attribute_method_#attribute_id#"]=evaluate("method_" & attribute_id)>
+						<cfset sobj["attribute_remark_#attribute_id#"]=evaluate("remark_" & attribute_id)>
 
-				<cfset thisAddrType=evaluate("d.address_type_" & i)>
-				<cfset thisAddr=evaluate("d.address_" & i)>
-
-				<cfif (len(thisAddrType) gt 0 and len(thisAddr) is 0) or (len(thisAddrType) is 0 and len(thisAddr) gt 0)>
-					<cfset probs=listAppend(probs, '(address_type_n,address_n) must be paired.', '#chr(10)#')>
-				</cfif>
-				<cfif len(thisAddrType) gt 0 and len(thisAddr) gt 0>
-					<cfset naddr=naddr+1>
-					<cfset nobj["address_#naddr#"]=thisAddr>
-					<cfset nobj["address_type_#naddr#"]=thisAddrType>
-				</cfif>
-			</cfloop>
-
-			<cfif debug>
-				<cfdump var="#nobj#">
-			</cfif>
-
-			<cfinvoke component="/component/agent" method="checkAgentJson" returnvariable="fnProbs">
-				<cfinvokeargument name="preferred_name" value="#d.preferred_name#">
-				<cfinvokeargument name="agent_type" value="#d.agent_type#">
-				<cfif structKeyExists(nobj, "first_name")>
-					<cfinvokeargument name="first_name" value="#nobj.first_name#">
-				</cfif>
-				<cfif structKeyExists(nobj, "middle_name")>
-					<cfinvokeargument name="middle_name" value="#nobj.middle_name#">
-				</cfif>
-				<cfif structKeyExists(nobj, "last_name")>
-					<cfinvokeargument name="last_name" value="#nobj.last_name#">
-				</cfif>
-				<cfloop from="1" to="#ninc#" index="i">
-					<cfset n=nobj["name_#i#"]>
-					<cfset nt=nobj["name_type_#i#"]>
-					<cfinvokeargument name="name_#i#" value="#n#">
-					<cfinvokeargument name="name_type_#i#" value="#nt#">
-				</cfloop>
-
-				<cfloop from="1" to="#naddr#" index="i">
-					<cfset n=nobj["address_#i#"]>
-					<cfset nt=nobj["address_type_#i#"]>
-					<cfinvokeargument name="address_#i#" value="#n#">
-					<cfinvokeargument name="address_type_#i#" value="#nt#">
-				</cfloop>
-			</cfinvoke>
-
-
-			<cfif debug>
-				<cfdump var="#fnProbs#">
-			</cfif>
-
-			
-
-			<cfloop query="fnProbs">
-				<cfset thisRow="[#severity#]|#message#|{#link#}">
-				<cfset probs=listAppend(probs, thisRow, '#chr(10)#')>
-			</cfloop>
-
-			<cfloop from="1" to="3" index="i">
-				<cfset thisRelAgt=evaluate("d.related_agent_" & i)>
-				<cfif len(thisRelAgt) gt 0>
-					<cfquery name="check_rel_agent" datasource="uam_god"  cachedwithin="#createtimespan(0,0,60,0)#">
-						select getAgentid(<cfqueryparam value="#thisRelAgt#" CFSQLType="CF_SQL_VARCHAR">) as theAgentId
-					</cfquery>
-					<cfif check_rel_agent.recordcount neq 1 or len(check_rel_agent.theAgentId) lt 1>
-						<cfset probs=listAppend(probs, 'Related Agent #i# notfound', '#chr(10)#')>
+						<cfset sobj["created_by_agent_id_#attribute_id#"]=creator_agent_id>
+						
+						<cfset attribute_id_list=listAppend(attribute_id_list, attribute_id)>
 					</cfif>
+				</cfloop>
+
+				<cfset sobj["attribute_id_list"]=attribute_id_list>
+
+				<cfif debug>
+					========PACKAGE=========
+					<cfdump var="#sobj#">
 				</cfif>
-			</cfloop>
-
-			 CREATE OR REPLACE FUNCTION isValidAddress (typ text,addr text) RETURNS text AS $body$
-
-
-
-
-
-
-
-			<!--- other key checks are built into the structure, nothing else is necessary here---->
-			<!--- make sure we got one additional requirement ---->
-			<cfset hasRequiredExtra=false>
-			<cfloop from="1" to="2" index="i">
-				<cfset thisIsThere=evaluate('agent_status_' & i)>
-				<cfif len(thisIsThere) gt 0>
-					<cfset hasRequiredExtra=true>
+				<cfset sobj=serializeJSON(sobj)>
+				<cfinvoke component="/component/api/agent" method="check_agent" returnvariable="x">
+					<cfinvokeargument name="api_key" value="#api_key#">
+					<cfinvokeargument name="usr" value="#session.dbuser#">
+					<cfinvokeargument name="pwd" value="#session.epw#">
+					<cfinvokeargument name="pk" value="#session.sessionKey#">
+					<cfinvokeargument name="data" value="#sobj#">
+				</cfinvoke>
+				<cfif debug>
+					========RESULT=========
+					<cfdump var="#x#">
 				</cfif>
-			</cfloop>
-			<cfloop from="1" to="3" index="i">
-				<cfset thisIsThere=evaluate('address_type_' & i)>
-				<cfif len(thisIsThere) gt 0>
-					<cfset hasRequiredExtra=true>
+
+				<cfset thisProbs=x.problems>
+
+				<!---- JSON result 
+
+				<cfif arraylen(thisProbs) gt 0>
+					<cfquery name="fail" datasource="uam_god">
+						update cf_temp_pre_bulk_agent set status=<cfqueryparam value="#serializeJSON(thisProbs)#" cfsqltype="cf_sql_varchar"> where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+					</cfquery>
+				<cfelse>
+					<cfquery name="fail" datasource="uam_god">
+						update cf_temp_pre_bulk_agent set status=<cfqueryparam value="#serializeJSON('no problems detected')#" cfsqltype="cf_sql_varchar"> where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+					</cfquery>
 				</cfif>
-			</cfloop>
-			<cfloop from="1" to="3" index="i">
-				<cfset thisIsThere=evaluate('agent_relationship_' & i)>
-				<cfif len(thisIsThere) gt 0>
-					<cfset hasRequiredExtra=true>
+
+				-------->
+
+				<!---- text result ---->
+				<cfif arraylen(thisProbs) gt 0>
+					<cfset p="">
+					<cfloop array="#thisProbs#" index="i">
+						<cfset itm=i["SUBJECT"]>
+						<cfif len(i["AGENT_ID"]) gt 0>
+							<cfset itm=itm & ' <a href="#application.serverRootURL#/agent/' & i["AGENT_ID"] & '">' & i["PREFERRED_AGENT_NAME"] & '</a> ' & i["AGENT_TYPE"]>
+						</cfif>
+						<cfset p=listappend(p,itm,'|')>
+					</cfloop>
+					<cfquery name="fail" datasource="uam_god">
+						update cf_temp_pre_bulk_agent set status=<cfqueryparam value="#p#" cfsqltype="cf_sql_varchar"> where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+					</cfquery>
+				<cfelse>
+					<cfquery name="fail" datasource="uam_god">
+						update cf_temp_pre_bulk_agent set status=<cfqueryparam value="no problems detected" cfsqltype="cf_sql_varchar"> where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+					</cfquery>
 				</cfif>
-			</cfloop>
-			<cfif hasRequiredExtra is false>
-				<cfset probs=listAppend(probs, 'At least one address, status, or relationship is required')>
-			</cfif>
-			<cfif len(probs) eq 0>
-				<cfset probs="CHECKED">
-			</cfif>
-			<cfquery name="logit" datasource="uam_god">
-				update cf_temp_pre_bulk_agent set status=<cfqueryparam value="#probs#" CFSQLType="CF_SQL_VARCHAR"> where key=#val(d.key)#
-			</cfquery>
+			<cfcatch>
+				<cfif debug>
+					<p>FAIL!!!!</p>
+					<cfdump var="#cfcatch#">
+				</cfif>
+
+
+				<cfset errm="">
+				<cfif structKeyExists(cfcatch, "message")>
+					<cfset errm=listappend(errm,cfcatch.message)>
+				</cfif>
+				<cfif structKeyExists(cfcatch, "detail")>
+					<cfset errm=listappend(errm,cfcatch.detail)>
+				</cfif>
+
+				<cfquery name="fail" datasource="uam_god">
+						update cf_temp_pre_bulk_agent set status=<cfqueryparam value="#errm#" cfsqltype="cf_sql_varchar"> where key=<cfqueryparam value="#d.key#" CFSQLType="cf_sql_int">
+					</cfquery>
+				</cfcatch>
+
+			</cftry>
 		</cfloop>
-	</cfif>
-</cfoutput>
+	</cfoutput>
+</cfif>

@@ -81,8 +81,6 @@
 			<li>Check Results column to include in summary</li>
 		</ul>
 	</p>
-
-
 	<cfparam name="result_columns" default="">
 	<form id="qfrm" name="qfrm" method="post" action="record_summary.cfm">
 		<input type="hidden" name="get_csv" id="get_csv" value="false">

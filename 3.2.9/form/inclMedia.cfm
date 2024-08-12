@@ -1,3 +1,4 @@
+<cfinclude template="/includes/_includeCheck.cfm">
 <cfif not isdefined("typ")>
 	<cfabort>
 </cfif>
@@ -19,8 +20,6 @@
 	<cfelse>
 		<cfset cachetime=createtimespan(0,0,60,0)>
 	</cfif>
-
-
 	<cfif typ is "taxon">
 		<cfset srchall="/MediaSearch.cfm?action=search&taxon_name_id=#val(q)#">
 		<cfset mrdescr="Includes media linked directly to the taxon name and media linked to catalog records with the taxon name in identifications.">
@@ -424,7 +423,7 @@
          media_relations.cataloged_item_id =<cfqueryparam value = '#q#' CFSQLType="cf_sql_int">
 		</cfquery>
 	<cfelseif typ is "agent">
-        <cfset srchall="/MediaSearch.cfm?agent_id=#val(q)#">
+        <cfset srchall="/MediaSearch.cfm?action=search&agent_id=#val(q)#">
 		<cfset mrdescr="Media linked to this Agent.">
 
 		<cfquery name="mediaResultsQuery" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#cachetime#">
@@ -446,7 +445,7 @@
 		         media_relations.agent_id =<cfqueryparam value = '#q#' CFSQLType="cf_sql_int">
 		</cfquery>
 	<cfelseif typ is "shows_agent">
-        <cfset srchall="/MediaSearch.cfm?agent_id=#val(q)#">
+        <cfset srchall="/MediaSearch.cfm?action=search&agent_id=#val(q)#">
 		<cfset mrdescr="Media showing this Agent.">
 
 		<cfquery name="mediaResultsQuery" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#cachetime#">
@@ -474,7 +473,7 @@
 	<cfif mediaResultsQuery.recordcount is 0>
 		<cfabort>
 		<div style="margin-left:2em;font-weight:bold;font-style:italic;">
-			No <div class="hasTitle" title="#mrdescr#">Media</div> Found
+			No Media Found
 		</div>
 	</cfif>
 	<cfset cnt=mediaResultsQuery.recordcount>

@@ -358,7 +358,7 @@ alter table cf_temp_media_relations_ldr add related_term varchar;
 								% agent
 							</td>
 							<td>
-								https://arctos.database.museum/agents.cfm?agent_id=2072
+								https://arctos.database.museum/agent/2072
 							</td>
 							<td>
 								2072

@@ -491,8 +491,9 @@
 	 <cfif not isdefined("session.roles") or not listFindNoCase(session.roles, 'COLDFUSION_USER')>
       <cfthrow message="unauthorized">
     </cfif>
+    <!---- https://github.com/ArctosDB/PG/issues/30 - calling manual refresh requests a 2 ---->
 	<cfquery name="rr" datasource="uam_god">
-		update flat set stale_flag=1 where stale_flag != 1 and guid=<cfqueryparam value="#guid#" CFSQLType="CF_SQL_VARCHAR">
+		update flat set stale_flag=2 where stale_flag not in ( <cfqueryparam value="1,2,3,4,5,6,7,8,9,10" cfsqltype="cf_sql_int" list="true"> ) and guid=<cfqueryparam value="#guid#" CFSQLType="CF_SQL_VARCHAR">
 	</cfquery>
 	<cfreturn "ok">
 </cffunction>
@@ -723,166 +724,6 @@
 </cffunction>
 <!----------------------------------------------------------------------------------------------------->
 
-<!------------------------------------------------------------------->
-<cffunction name="agentCollectionContacts" access="public">
-	<!--------- get usernames of people who have some involvement with agent(s) ---->
-	<cfargument name="agent_id" type="string" required="yes">
-	<cfquery name="colns" datasource="uam_god">
-		select distinct agent_name from (
-			select 
-				agent_name.agent_name
-			from
-				agent
-				inner join agent_name on agent.created_by_agent_id=agent_name.agent_id
-			where agent_name.agent_name_type='login' and agent.agent_id in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-			union
-			select 
-				agent_name.agent_name
-			from
-				agent
-				inner join agent_name on agent.last_edit_by=agent_name.agent_id
-			where agent_name.agent_name_type='login' and agent.agent_id in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-			union
-			select
-				agent_name.agent_name
-			from
-				agent_name
-			 where agent_name_type='login' and agent_id in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-			union
-			select
-				agent_name.agent_name
-			from
-				agent_relations
-				inner join agent_name on agent_relations.CREATED_BY_AGENT_ID=agent_name.agent_id and agent_name_type='login'
-			where
-				agent_relations.agent_id in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-			union
-			select
-				agent_name.agent_name
-			from
-				collection_contacts
-				inner join agent_name on collection_contacts.CONTACT_AGENT_ID=agent_name.agent_id and agent_name_type='login'
-			where
-				CONTACT_ROLE='data quality' and
-				collection_contacts.collection_id in  (
-				select
-					cataloged_item.collection_id
-				from
-					cataloged_item
-					inner join citation on cataloged_item.collection_object_id=citation.collection_object_id 
-					inner join publication_agent on citation.publication_id=publication_agent.publication_id
-				where
-					publication_agent.agent_id in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-				union
-				select
-					cataloged_item.collection_id
-				from
-					collector
-					inner join cataloged_item on collector.collection_object_id = cataloged_item.collection_object_id
-				where
-					collector.agent_id in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-				union
-				select
-					cataloged_item.collection_id
-				from
-					cataloged_item
-				where
-					created_agent_id in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-				union
-					select
-						cataloged_item.collection_id
-					from
-						attributes
-						inner join cataloged_item on cataloged_item.collection_object_id=attributes.collection_object_id
-					where
-						attributes.determined_by_agent_id in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-				union
-					select
-							cataloged_item.collection_id
-						 from
-						 	encumbrance
-						 	inner join coll_object_encumbrance on encumbrance.encumbrance_id = coll_object_encumbrance.encumbrance_id
-						 	inner join cataloged_item on coll_object_encumbrance.collection_object_id=cataloged_item.collection_object_id
-						 where
-						 	encumbrance.encumbering_agent_id in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-				union
-					select
-						cataloged_item.collection_id
-					from
-			        	identification
-			        	inner join identification_agent on identification.identification_id=identification_agent.identification_id
-						inner join cataloged_item on cataloged_item.collection_object_id=identification.collection_object_id
-			        where
-			        	identification_agent.agent_id in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-				union
-					select
-						cataloged_item.collection_id
-					from
-						cataloged_item
-						inner join specimen_event on cataloged_item.collection_object_id=specimen_event.collection_object_id
-					where
-						specimen_event.ASSIGNED_BY_AGENT_ID in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-				union
-					select
-							trans.collection_id
-						from
-							shipment
-							inner join loan on shipment.transaction_id=loan.transaction_id 
-							inner join trans on loan.transaction_id =trans.transaction_id
-						where
-							shipment.PACKED_BY_AGENT_ID in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-				union
-					select
-						trans.collection_id
-					from
-						shipment
-						inner join loan on shipment.transaction_id=loan.transaction_id
-						inner join trans on loan.transaction_id =trans.transaction_id
-						inner join address on shipment.SHIPPED_TO_ADDR_ID=address.address_id
-					where
-						address.agent_id in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-				union
-					select
-						trans.collection_id
-						from
-							shipment
-							inner join address on shipment.SHIPPED_FROM_ADDR_ID=address.address_id							
-							inner join loan on shipment.transaction_id=loan.transaction_id
-							inner join trans on loan.transaction_id =trans.transaction_id
-						where
-							address.agent_id in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-				union
-						select
-							trans.collection_id
-						from
-							trans_agent
-							inner join loan on trans_agent.transaction_id=loan.transaction_id
-							inner join trans on loan.transaction_id=trans.transaction_id
-						where
-							AGENT_ID in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-				union
-						select
-							trans.collection_id
-						from
-							trans_agent
-							inner join  accn on trans_agent.transaction_id=accn.transaction_id
-							inner join trans on accn.transaction_id=trans.transaction_id
-						where
-							AGENT_ID in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-				union
-						select
-							trans.collection_id
-						from
-							trans
-							inner join loan on trans.transaction_id=loan.transaction_id
-							inner join loan_item on loan.transaction_id=loan_item.transaction_id 
-						where
-							RECONCILED_BY_PERSON_ID in (<cfqueryparam value = "#agent_id#" CFSQLType = "cf_sql_int" list="true">)
-			)
-		) x
-	</cfquery>
-	<cfreturn colns>
-</cffunction>
 <cffunction name="getPubCitSts" access="remote" returnformat="json" queryFormat="column">
 	<cfargument name="doilist" required="true" type="string">
 	<!--- this is accessible to public users ---->
@@ -1150,76 +991,103 @@
 	<cfparam name="orderDir" default="asc">
 	<cfparam name="start" default="0">
 	<cfparam name="length" default="10">
-	<cfif len(length) is 0 or length is 0 or not isnumeric(length)>
-		<cfset length=10>
-	</cfif>
+
 	<cftry>
-		<cfset srtColumn=StructFind(form,"order[0][column]")>
-		<cfset orderby=StructFind(form,"columns[#srtColumn#][data]")>
-		<cfcatch>
-			<cfset orderby="guid">
+		<cfif len(length) is 0 or length is 0 or not isnumeric(length)>
+			<cfset length=10>
+		</cfif>
+		<cftry>
+			<cfset srtColumn=StructFind(form,"order[0][column]")>
+			<cfset orderby=StructFind(form,"columns[#srtColumn#][data]")>
+			<cfcatch>
+				<cfset orderby="guid">
+			</cfcatch>
+		</cftry>
+		<cftry>
+			<cfset orderDir=StructFind(form,"order[0][dir]")>
+			<cfcatch>
+				<cfset orderDir="asc">
+			</cfcatch>
+		</cftry>
+		<cfif orderDir is not 'asc' and orderDir is not 'desc'>
+			<cfset orderDir='asc'>
+		</cfif>
+		<!----
+			https://github.com/ArctosDB/arctos/issues/6028#issuecomment-1793101702 - add last_scan_date
+		---->
+		<cfquery name="raw" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" timeout="30">
+			 select distinct
+			 	count(*) OVER() AS full_count,
+	            flat.guid,
+	            flat.collection_object_id,
+	            flat.guid_prefix as collection,
+	            concat(specimen_part.part_name,' [',concatPartAttributes(specimen_part.collection_object_id),']') as part_name,
+	            specimen_part.condition,
+	            specimen_part.sampled_from_obj_id,
+	            item_descr,
+	            item_instructions,
+	            loan_item_remarks,
+	            specimen_part.disposition,
+	            scientific_name,
+	            concatencumbrances(flat.collection_object_id) as encumbrances,
+	            loan_number,
+	            specimen_part.collection_object_id as part_id,
+	            concatSingleOtherId(flat.collection_object_id,'#session.CustomOtherIdentifier#') AS customid,
+	            to_char(pbc.last_date,'YYYY-MM-DD"T"HH24:MI:SS') last_date,
+				pbc.barcode as part_barcode,
+				p_pbc.barcode as parent_barcode,
+				getLastContainerScanDate(pbc.container_id) as last_scan_date
+	         from
+	            loan
+	            inner join loan_item on loan.transaction_id = loan_item.transaction_id
+	            inner join specimen_part on loan_item.part_id = specimen_part.collection_object_id
+	            inner join flat on specimen_part.derived_from_cat_item = flat.collection_object_id
+	            left outer join coll_obj_cont_hist on specimen_part.collection_object_id=coll_obj_cont_hist.collection_object_id
+	            left outer join container partc on coll_obj_cont_hist.container_id=partc.container_id
+	            left outer join container pbc on partc.parent_container_id=pbc.container_id
+	            left outer join specimen_part parent_part on specimen_part.sampled_from_obj_id=parent_part.collection_object_id
+				left outer join coll_obj_cont_hist p_coh on parent_part.collection_object_id = p_coh.collection_object_id
+				left outer join container p_partc on p_coh.container_id=p_partc.container_id
+				left outer join container p_pbc on p_partc.parent_container_id=p_pbc.container_id
+	        WHERE
+	            loan_item.transaction_id = <cfqueryparam value="#transaction_id#" cfsqltype="cf_sql_int">
+	            <cfif len(srchguid) gt 0>
+	            	and flat.guid in ( <cfqueryparam list="true" value="#srchguid#" cfsqltype="cf_sql_varchar"> )
+	            </cfif>
+	            <cfif len(srchprts) gt 0>
+	            	and specimen_part.part_name in ( <cfqueryparam list="true" value="#srchprts#" cfsqltype="cf_sql_varchar"> )
+	            </cfif>
+	            order by #orderby# #orderDir# limit #length# offset #start#
+		</cfquery>
+		<cfset r["recordsTotal"]=raw.full_count>
+		<cfset r["recordsFiltered"]=raw.full_count>
+		<cfset r["data"]=raw>
+		<cfreturn r>
+	<cfcatch>
+			<cfheader statuscode="400" statustext="an error has occurred">
+		<cfset r["draw"]=1>
+			<cfset r["recordsTotal"]= "null">
+			<cfset r["recordsFiltered"]="null">
+			<cfset errmsg='An error has occurred. Please include the ErrorID as text in any communications. #chr(10)#ErrorID: ' &  request.uuid>
+			<cfif (structKeyExists(cfcatch,"message"))>
+				<cfset errmsg=errmsg & '#chr(10)#Mesasge: ' & trim(cfcatch.message)>
+			</cfif>
+			<cfif (structKeyExists(cfcatch,"detail"))>
+				<cfset errmsg=errmsg & '#chr(10)#Details: ' & trim(cfcatch.detail)>
+			</cfif>
+			<cfif (structKeyExists(cfcatch,"sql"))>
+				<cfset qsql=cfcatch.sql>
+				<cfset qsql=replace(qsql,chr(10),' ','all')>
+				<cfset qsql=replace(qsql,chr(13),' ','all')>
+				<cfset qsql=replace(qsql,chr(9),' ','all')>
+				<cfset qsql=replace(qsql,'  ',' ','all')>
+				<cfset r["sql"]=qsql>
+			</cfif>
+			<cfset r["error"]=cfcatch>
+			<cfset r["Message"]=errmsg>
+			<cfreturn r>
 		</cfcatch>
 	</cftry>
-	<cftry>
-		<cfset orderDir=StructFind(form,"order[0][dir]")>
-		<cfcatch>
-			<cfset orderDir="asc">
-		</cfcatch>
-	</cftry>
-	<cfif orderDir is not 'asc' and orderDir is not 'desc'>
-		<cfset orderDir='asc'>
-	</cfif>
-	<!----
-		https://github.com/ArctosDB/arctos/issues/6028#issuecomment-1793101702 - add last_scan_date
-	---->
-	<cfquery name="raw" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		 select distinct
-		 	count(*) OVER() AS full_count,
-            flat.guid,
-            flat.collection_object_id,
-            flat.guid_prefix as collection,
-            concat(specimen_part.part_name,' [',concatPartAttributes(specimen_part.collection_object_id),']') as part_name,
-            specimen_part.condition,
-            specimen_part.sampled_from_obj_id,
-            item_descr,
-            item_instructions,
-            loan_item_remarks,
-            specimen_part.disposition,
-            scientific_name,
-            concatencumbrances(flat.collection_object_id) as encumbrances,
-            loan_number,
-            specimen_part.collection_object_id as part_id,
-            concatSingleOtherId(flat.collection_object_id,'#session.CustomOtherIdentifier#') AS customid,
-            to_char(pbc.last_date,'YYYY-MM-DD"T"HH24:MI:SS') last_date,
-			pbc.barcode as part_barcode,
-			p_pbc.barcode as parent_barcode,
-			getLastContainerScanDate(pbc.container_id) as last_scan_date
-         from
-            loan
-            inner join loan_item on loan.transaction_id = loan_item.transaction_id
-            inner join specimen_part on loan_item.part_id = specimen_part.collection_object_id
-            inner join flat on specimen_part.derived_from_cat_item = flat.collection_object_id
-            left outer join coll_obj_cont_hist on specimen_part.collection_object_id=coll_obj_cont_hist.collection_object_id
-            left outer join container partc on coll_obj_cont_hist.container_id=partc.container_id
-            left outer join container pbc on partc.parent_container_id=pbc.container_id
-            left outer join specimen_part parent_part on specimen_part.sampled_from_obj_id=parent_part.collection_object_id
-			left outer join coll_obj_cont_hist p_coh on parent_part.collection_object_id = p_coh.collection_object_id
-			left outer join container p_partc on p_coh.container_id=p_partc.container_id
-			left outer join container p_pbc on p_partc.parent_container_id=p_pbc.container_id
-        WHERE
-            loan_item.transaction_id = <cfqueryparam value="#transaction_id#" cfsqltype="cf_sql_int">
-            <cfif len(srchguid) gt 0>
-            	and flat.guid in ( <cfqueryparam list="true" value="#srchguid#" cfsqltype="cf_sql_varchar"> )
-            </cfif>
-            <cfif len(srchprts) gt 0>
-            	and specimen_part.part_name in ( <cfqueryparam list="true" value="#srchprts#" cfsqltype="cf_sql_varchar"> )
-            </cfif>
-            order by #orderby# #orderDir#	limit #length# offset #start#
-	</cfquery>
-	<cfset r["recordsTotal"]=raw.full_count>
-	<cfset r["recordsFiltered"]=raw.full_count>
-	<cfset r["data"]=raw>
-	<cfreturn r>
 </cffunction>
 <!---------------------------------------------------------------------------->
 <cffunction name="getMediaRelations" access="public" output="false" returntype="any">
@@ -1274,7 +1142,7 @@
             <cfset temp = QuerySetCell(result, "link", "/place.cfm?action=detail&geog_auth_rec_id=#related_primary_key#", i)>
 		<cfelseif #table_name# is "agent">
 			<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-				select agent_name as data from preferred_agent_name where agent_id=<cfqueryparam value = '#related_primary_key#' CFSQLType="cf_sql_int">
+				select preferred_agent_name as data from agent where agent_id=<cfqueryparam value = '#related_primary_key#' CFSQLType="cf_sql_int">
 			</cfquery>
 			<cfset temp = QuerySetCell(result, "summary", "#d.data#", i)>
 		<cfelseif table_name is "collecting_event">
@@ -2180,34 +2048,6 @@
 	</cfif>
 	<cfreturn r>
 </cffunction>
-<!------------------------------------------------------------------->
-<cffunction name="flagDupAgent" access="remote">
-	<cfargument name="bad" type="numeric" required="yes">
-	<cfargument name="good" type="numeric" required="yes">
-	 <!---- this has to be called remotely, but only allow logged-in Operators access--->
-    <cfif not isdefined("session.roles") or not listcontainsNoCase(session.roles, 'COLDFUSION_USER')>
-      <cfthrow message="unauthorized">
-    </cfif>
-	<cftry>
-		<cfquery name="c" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			insert into agent_relations (agent_id,related_agent_id,agent_relationship) values (#bad#,#good#,'bad duplicate of')
-		</cfquery>
-		<cfset result = querynew("STATUS,GOOD,BAD,MSG")>
-		<cfset temp = queryaddrow(result,1)>
-		<cfset temp = QuerySetCell(result, "status", "success", 1)>
-		<cfset temp = QuerySetCell(result, "GOOD", "#good#", 1)>
-		<cfset temp = QuerySetCell(result, "BAD", "#bad#", 1)>
-		<cfcatch>
-			<cfset result = querynew("STATUS,GOOD,BAD,MSG")>
-			<cfset temp = queryaddrow(result,1)>
-			<cfset temp = QuerySetCell(result, "status", "fail", 1)>
-			<cfset temp = QuerySetCell(result, "GOOD", "#good#", 1)>
-			<cfset temp = QuerySetCell(result, "BAD", "#bad#", 1)>
-			<cfset temp = QuerySetCell(result, "MSG", "#cfcatch.message#: #cfcatch.detail#", 1)>
-		</cfcatch>
-	</cftry>
-	<cfreturn result>
-</cffunction>
 <!---------------------------------------------------------------->
 <cffunction name="removeAccnContainer" access="remote">
 	<cfargument name="transaction_id" type="numeric" required="yes">
@@ -2354,27 +2194,6 @@
 	<cfreturn k>
 </cffunction>
 <!------------------------------------------------------->
-<cffunction name="insertAgentName" access="remote">
-	<cfargument name="name" type="string" required="yes">
-	<cfargument name="id" type="numeric" required="yes">
-	 <!---- this has to be called remotely, but only allow logged-in Operators access--->
-    <cfif not isdefined("session.roles") or not listcontainsNoCase(session.roles, 'COLDFUSION_USER')>
-      <cfthrow message="unauthorized">
-    </cfif>
-	<cftry>
-		<cfquery name="k" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			INSERT INTO agent_name (
-				agent_name_id, agent_id, agent_name_type, agent_name)
-			VALUES (
-				nextval('sq_agent_name_id'), #id#, 'aka','#name#')
-		</cfquery>
-		<cfreturn "success">
-	<cfcatch>
-		<cfreturn cfcatch.message & ': ' & cfcatch.detail>
-	</cfcatch>
-	</cftry>
-</cffunction>
-<!------------------------------------------------------->
 <cffunction name="encumberThis" access="remote">
 	<cfargument name="cid" type="numeric" required="yes">
 	<cfargument name="eid" type="numeric" required="yes">
@@ -2396,11 +2215,9 @@
 
 <cffunction name="cloneCatalogedItem" access="remote" output="true">
 	<cfargument name="collection_object_id" type="numeric" required="yes">
-	<cfargument name="numRecs" type="numeric" required="yes">
 	<cfargument name="refType" type="string" required="yes">
 	<cfargument name="taxon_name" type="string" required="yes">
 	<cfargument name="collection_id" type="numeric" required="yes">
-	<cfset status="spiffy">
 	<cftry>
 		<cfquery name="gg" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			select guid,cat_num from flat where collection_object_id=<cfqueryparam value="#collection_object_id#" CFSQLType="cf_sql_int" list="false">
@@ -2445,7 +2262,7 @@
 			select * from bulkloader where 1=2
 		</cfquery>
 		<cfset insertingColumns=bulk_column.columnList>
-		<cfquery name="mv" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+		<cfquery name="mv" result="mv_ins" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			insert into bulkloader ( 
 				#insertingColumns#
 			) (select #insertingColumns# from bulkloader_for_download where enteredby=<cfqueryparam value="#session.username#" CFSQLType="CF_SQL_VARCHAR" list="false">)
@@ -2453,60 +2270,19 @@
 		<cfquery name="cln" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			delete from bulkloader_for_download where enteredby=<cfqueryparam value="#session.username#" CFSQLType="CF_SQL_VARCHAR" list="false">
 		</cfquery>
+		<cfset r["key"]=mv_ins.key>
+		<cfset r["status"]="success">
+
 		<cfcatch>
 			<cfquery name="cln" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 				delete from bulkloader_for_download where enteredby=<cfqueryparam value="#session.username#" CFSQLType="CF_SQL_VARCHAR" list="false">
 			</cfquery>
-			<cfset status="fail: #cfcatch.message# #cfcatch.detail#">
+			<cfset r["key"]=''>
+			<cfset r["status"]="fai;">
+			<cfset r["detail"]="#cfcatch.message# #cfcatch.detail#">
 		</cfcatch>
 	</cftry>
-	<cfreturn status>
-</cffunction>
-<!------------------------------------------------------->
-<cffunction name="getLocalityAttributeValues" access="remote">
-	<cfargument name="attribute" type="string" required="no">
-	 <!---- this has to be called remotely, but only allow logged-in Operators access--->
-    <cfif not isdefined("session.roles") or not listcontainsNoCase(session.roles, 'COLDFUSION_USER')>
-      <cfthrow message="unauthorized">
-    </cfif>
-	<cfoutput>
-	<cfif isdefined("attribute") and len(attribute) gt 0>
-		<cfquery name="getTbl" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-			select * from ctlocality_att_att where attribute_type='#attribute#'
-		</cfquery>
-		<cfif getTbl.recordcount is not 1>
-			<cfset r.status='success'>
-			<cfset r.ctl_type="freetext">
-		<cfelse>
-			<cfif len(getTbl.value_code_table) gt 0>
-				<cfset r.status='success'>
-				<cfset r.ctl_type="value">
-				<cfset theTble=getTbl.value_code_table>
-			<cfelse>
-				<cfset r.status='success'>
-				<cfset r.ctl_type="unit">
-				<cfset theTble=getTbl.unit_code_table>
-			</cfif>
-			<!--- avoid definitions and the metadata in ctinternational_chronostratigraphy ---->
-			<cfquery name="tblcols" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
-				select column_name as cname from information_schema.columns where table_name='#theTble#' and column_name not in (
-					'icsid',
-					'term_type',
-					'begin_mya',
-					'end_mya',
-					'description'
-				)
-			</cfquery>
-			<cfquery name="valvals" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
-				select distinct #tblcols.cname# as v from #theTble# order by #tblcols.cname#
-			</cfquery>
-			<cfset r.data=ValueArray(valvals, "v")>
-		</cfif>
-		<cfreturn r>
-	<cfelse>
-		<cfreturn ''>
-	</cfif>
-	</cfoutput>
+	<cfreturn r>
 </cffunction>
 <cffunction name="revokeAgentRank" access="remote">
 	<cfargument name="agent_rank_id" type="numeric" required="yes">
@@ -2783,31 +2559,6 @@
 	</CFTRY>
 	<cfset result = ReReplace(result,"[#CHR(10)##CHR(13)#]","","ALL")>
 	<cfreturn result>
-</cffunction>
-<cffunction name="getAgentId" access="remote">
-	<cfargument name="agent_name" required="yes">
-	 <!---- this has to be called remotely, but only allow logged-in Operators access--->
-    <cfif not isdefined("session.roles") or not listcontainsNoCase(session.roles, 'COLDFUSION_USER')>
-      <cfthrow message="unauthorized">
-    </cfif>
-	<cfif len(agent_name) is 0>
-		<cfset result = querynew("agent_name,agent_id,status")>
-		<cfset queryaddrow(result,1)>
-		<cfset QuerySetCell(result, "agent_name", agent_name, 1)>
-		<cfreturn result>
-	</cfif>
-	<cfquery name="t" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
-		select '#agent_name#' agent_name, '' status, getAgentID('#agent_name#') agent_id
-	</cfquery>
-	<cfif t.recordcount is 1>
-		<cfreturn t>
-	<cfelse>
-		<cfset result = querynew("agent_name,agent_id,status")>
-		<cfset queryaddrow(result,1)>
-		<cfset QuerySetCell(result, "agent_name", agent_name, 1)>
-		<cfset QuerySetCell(result, "status", 'found #t.recordcount# matches', 1)>
-		<cfreturn result>
-	</cfif>
 </cffunction>
 <cffunction name="getCatalogedItemCitation" access="remote">
 	<cfargument name="guid" type="string" required="yes">
@@ -3587,78 +3338,6 @@
 	</cftry>
 	<cfreturn result>
 </cffunction>
-<cffunction name="changeAttDetr" access="remote">
-	<cfargument name="attribute_id" type="numeric" required="yes">
-	<cfargument name="i" type="numeric" required="yes">
-	<cfargument name="attribute_determiner" type="string" required="yes">
-
-	<!---- this has to be called remotely, but only allow logged-in Operators access--->
-    <cfif not isdefined("session.roles") or not listcontainsNoCase(session.roles, 'COLDFUSION_USER')>
-      <cfthrow message="unauthorized">
-    </cfif>
-	  	<cfquery name="names" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			select agent_name,agent_id
-			from preferred_agent_name
-			where upper(agent_name) like '%#ucase(attribute_determiner)#%'
-		</cfquery>
-		<cfif #names.recordcount# is 0>
-			<cfset result = "Nothing matched.">
-		<cfelseif #names.recordcount# is 1>
-			<cftry>
-				<cfquery name="upatt" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					update attributes set DETERMINED_BY_AGENT_ID = #names.agent_id#
-					where attribute_id = #attribute_id#
-				</cfquery>
-				<cfset result = '#i#::#names.agent_name#'>
-			<cfcatch>
-				<cfset result = 'A database error occured!'>
-			</cfcatch>
-			</cftry>
-		<cfelse>
-			<cfset result = "#i#::">
-			<cfloop query="names">
-				<cfset result = "#result#|#agent_name#">
-			</cfloop>
-		</cfif>
-	  <cfset result = ReReplace(result,"[#CHR(10)##CHR(13)#]","","ALL")>
-		<cfreturn result>
-</cffunction>
-<cffunction name="changeAttDetrId" access="remote">
-	<cfargument name="attribute_id" type="numeric" required="yes">
-	<cfargument name="i" type="numeric" required="yes">
-	<cfargument name="agent_id" type="numeric" required="yes">
-
-	<!---- this has to be called remotely, but only allow logged-in Operators access--->
-    <cfif not isdefined("session.roles") or not listcontainsNoCase(session.roles, 'COLDFUSION_USER')>
-      <cfthrow message="unauthorized">
-    </cfif>
-	<cfquery name="names" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		select agent_name,agent_id
-		from preferred_agent_name
-		where agent_id = #agent_id#
-	</cfquery>
-	<cfif #names.recordcount# is 0>
-		<cfset result = "Nothing matched.">
-	<cfelseif #names.recordcount# is 1>
-		<cftry>
-			<cfquery name="upatt" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-				update attributes set DETERMINED_BY_AGENT_ID = #names.agent_id#
-				where attribute_id = #attribute_id#
-			</cfquery>
-			<cfset result = '#i#::#names.agent_name#'>
-		<cfcatch>
-			<cfset result = 'A database error occured!'>
-		</cfcatch>
-		</cftry>
-	<cfelse>
-		<cfset result = "#i#::">
-		<cfloop query="names">
-			<cfset result = "#result#|#agent_name#">
-		</cfloop>
-	</cfif>
-	<cfset result = ReReplace(result,"[#CHR(10)##CHR(13)#]","","ALL")>
-	<cfreturn result>
-</cffunction>
 <cffunction name="addAnnotation" access="remote">
 	<cfargument name="idType" type="string" required="yes">
 	<cfargument name="idvalue" type="string" required="yes">
@@ -3689,12 +3368,12 @@
 			</cfloop>
 			<cfquery name="whoTo" datasource="uam_god">
 				select
-					agent_name
+					cf_users.username
 				FROM
 					cataloged_item
 					inner join collection on cataloged_item.collection_id = collection.collection_id 
 					inner join collection_contacts on collection.collection_id = collection_contacts.collection_id
-					inner join agent_name on collection_contacts.contact_agent_id=agent_name.agent_id and agent_name_type='login'
+					inner join cf_users on collection_contacts.contact_agent_id=cf_users.operator_agent_id
 				WHERE
 					collection_contacts.CONTACT_ROLE = 'data quality' and
 					<cfif idType is "collection_object_id">
@@ -3724,7 +3403,7 @@
 						1=0
 					</cfif>
 				group by
-					agent_name
+					cf_users.username
 			</cfquery>
 			<cfif idType is "collection_object_id">
 				<cfset atype='specimen'>
@@ -3736,6 +3415,8 @@
 				<cfset atype='publication'>
 			<cfelseif idType is "media_id">
 				<cfset atype='media'>
+			<cfelseif idType is "agent_id">
+				<cfset atype='agent'>
 			</cfif>
 			<cfsavecontent variable="msg">
 				An Arctos user (<cfif len(session.username) gt 0>#session.username#<cfelse>Anonymous</cfif> - #email#) has created an Annotation
@@ -3751,7 +3432,7 @@
 
 			
 			<cfinvoke component="/component/functions" method="deliver_notification">
-				<cfinvokeargument name="usernames" value="#valuelist(whoTo.agent_name)#">
+				<cfinvokeargument name="usernames" value="#valuelist(whoTo.username)#">
 				<cfinvokeargument name="subject" value="Annotation Submitted">
 				<cfinvokeargument name="message" value="#msg#">
 				<cfinvokeargument name="email_immediate" value="">
@@ -3981,17 +3662,15 @@
 					<cfquery name="a" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
 						select * from (
 							select
-								preferred_agent_name.agent_name,
-								preferred_agent_name.agent_id
+								agent.preferred_agent_name,
+								agent.agent_id
 							from
-								preferred_agent_name,
-								agent_name
+								agent
 							where
-								preferred_agent_name.agent_id=agent_name.agent_id and
-								upper(agent_name.agent_name) like '%#ucase(thisAltFullName)#%'
+								agent.preferred_agent_name ilike <cfqueryparam value="%#thisAltFullName#%" cfsqltype="cf_sql_varchar">
 							group by
-								preferred_agent_name.agent_name,
-								preferred_agent_name.agent_id
+								agent.preferred_agent_name,
+								agent.agent_id
 						) x limit 5
 					</cfquery>
 					<cfif a.recordcount lt 1>
@@ -3999,17 +3678,17 @@
 						<cfquery name="a" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
 							select * from (
 								select
-									preferred_agent_name.agent_name,
-									preferred_agent_name.agent_id
+									agent.preferred_agent_name,
+									agent.agent_id
 								from
-									preferred_agent_name,
-									agent_name
+									agent
+									inner join agent_attribute on agent.agent_id=agent_attribute.agent_id and deprecation_type is null
+									inner join ctagent_attribute_type on agent_attribute.attribute_type=ctagent_attribute_type.attribute_type and purpose='name'
 								where
-									preferred_agent_name.agent_id=agent_name.agent_id and
-									upper(agent_name.agent_name) like '%#ucase(thisFullName)#%'
+									agent_attribute.attribute_value ilike <cfqueryparam value="%#thisFullName#%" cfsqltype="cf_sql_varchar">
 								group by
-									preferred_agent_name.agent_name,
-									preferred_agent_name.agent_id
+									agent.preferred_agent_name,
+									agent.agent_id
 							) x limit 5
 						</cfquery>
 					</cfif>
@@ -4018,24 +3697,24 @@
 						<cfquery name="a" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
 							select * from (
 								select
-									preferred_agent_name.agent_name,
-									preferred_agent_name.agent_id
+									agent.preferred_agent_name,
+									agent.agent_id
 								from
-									preferred_agent_name,
-									agent_name
+									agent
+									inner join agent_attribute on agent.agent_id=agent_attribute.agent_id and deprecation_type is null
+									inner join ctagent_attribute_type on agent_attribute.attribute_type=ctagent_attribute_type.attribute_type and purpose='name'
 								where
-									preferred_agent_name.agent_id=agent_name.agent_id and
-									upper(agent_name.agent_name) like '%#ucase(thisLastName)#%'
+									agent_attribute.attribute_value ilike <cfqueryparam value="%#thisLastName#%" cfsqltype="cf_sql_varchar">
 								group by
-									preferred_agent_name.agent_name,
-									preferred_agent_name.agent_id
+									agent.preferred_agent_name,
+									agent.agent_id
 							) x limit 5
 						</cfquery>
 					</cfif>
 					<cfif a.recordcount gt 0>
 						<cfset thisAuthSugg="">
 						<cfloop query="a">
-							<cfset thisAuthSuggElem="#agent_name#@#agent_id#">
+							<cfset thisAuthSuggElem="#preferred_agent_name#@#agent_id#">
 							<cfset thisAuthSugg=listappend(thisAuthSugg,thisAuthSuggElem,"|")>
 						</cfloop>
 						<cfset temp = QuerySetCell(result, "AUTHOR#ll#", thisAuthSugg, 1)>
@@ -4079,7 +3758,7 @@
 
 
 			<cfset temp = QuerySetCell(result, "STATUS", 'success', 1)>
-			<cfcatch>
+			<cfcatch>				
 				<cfset temp = QuerySetCell(result, "STATUS", "error_getting_data: #cfcatch.message# #cfcatch.detail#'", 1)>
 				<cfreturn result>
 			</cfcatch>

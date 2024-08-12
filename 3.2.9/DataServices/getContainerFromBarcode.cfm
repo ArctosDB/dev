@@ -50,7 +50,6 @@
 			last_date=container.last_date,
 			container_remarks=container.container_remarks,
 			barcode=container.barcode,
-			print_fg=container.print_fg,
 			width=container.width,
 			height=container.height,
 			length=container.length,

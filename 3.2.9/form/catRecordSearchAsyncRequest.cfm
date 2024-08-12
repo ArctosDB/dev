@@ -39,7 +39,6 @@
 			</cfloop>
 		</table>
 
-
 		<h4>Results Columns</h4>
 		<p>
 			The following columns will be included:

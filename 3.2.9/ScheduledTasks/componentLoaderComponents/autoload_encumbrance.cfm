@@ -29,8 +29,6 @@
 		</cfquery>
 		<cfcontinue />
 	</cfif>
-
-	
 	<cftry>
 		<cftransaction>
 			<cfquery name="collObj" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
@@ -41,7 +39,7 @@
 					cataloged_item
 					inner join collection on cataloged_item.collection_id = collection.collection_id
 				WHERE
-					collection.guid_prefix || ':' || cataloged_item.cat_num = <cfqueryparam value="#d.guid#" CFSQLType="CF_SQL_VARCHAR">
+					collection.guid_prefix || ':' || cataloged_item.cat_num = stripArctosGuidURL(<cfqueryparam value="#d.guid#" CFSQLType="CF_SQL_VARCHAR">)
 			</cfquery>
 			<cfif collObj.recordcount is 1 and len(collObj.collection_object_id) gt 0>
 				<cfset cid=collObj.collection_object_id>
@@ -51,20 +49,18 @@
 				</cfquery>
 				<cfcontinue />
 			</cfif>
-		<cfquery name="accessCheck" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-			select checkCollectionAccess (<cfqueryparam value="#collObj.guid_prefix#" CFSQLType="CF_SQL_VARCHAR">,<cfqueryparam value="#d.username#" CFSQLType="CF_SQL_VARCHAR">) as hasAccess
-		</cfquery>
-		<cfif debug>
-			<cfdump var=#accessCheck#>
-		</cfif>
-		<cfif not accessCheck.hasAccess>
-			<cfquery name="fail" datasource="uam_god">
-				update cf_temp_obj_encumbrance set status='username does not have access to collection' where key=#val(d.key)#
+			<cfquery name="accessCheck" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
+				select checkCollectionAccess (<cfqueryparam value="#collObj.guid_prefix#" CFSQLType="CF_SQL_VARCHAR">,<cfqueryparam value="#d.username#" CFSQLType="CF_SQL_VARCHAR">) as hasAccess
 			</cfquery>
-			<cfcontinue />
-		</cfif>
-
-
+			<cfif debug>
+				<cfdump var=#accessCheck#>
+			</cfif>
+			<cfif not accessCheck.hasAccess>
+				<cfquery name="fail" datasource="uam_god">
+					update cf_temp_obj_encumbrance set status='username does not have access to collection' where key=#val(d.key)#
+				</cfquery>
+				<cfcontinue />
+			</cfif>
 			<cfquery name="upctr" datasource="uam_god">
 				 insert into coll_object_encumbrance (
 				 	encumbrance_id,

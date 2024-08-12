@@ -458,18 +458,17 @@
 			select
 				trans_agent_id,
 				trans_agent.agent_id,
-				agent_name,
+				preferred_agent_name,
 				trans_agent_role
 			from
-				trans_agent,
-				preferred_agent_name
+				trans_agent
+				inner join agent on trans_agent.agent_id = agent.agent_id
 			where
-				trans_agent.agent_id = preferred_agent_name.agent_id and
 				trans_agent_role != 'entered by' and
 				trans_agent.transaction_id=<cfqueryparam value = "#transaction_id#" CFSQLType = "cf_sql_int">
 			order by
 				trans_agent_role,
-				agent_name
+				preferred_agent_name
 		</cfquery>
 
 		<cfquery name="getPermits" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
@@ -567,7 +566,7 @@
 								<cfloop query="transAgents">
 									<tr>
 										<td>
-											<input type="text" name="trans_agent_#trans_agent_id#" id="trans_agent_#trans_agent_id#" class="reqdClr" size="50" value="#agent_name#"
+											<input type="text" name="trans_agent_#trans_agent_id#" id="trans_agent_#trans_agent_id#" class="reqdClr" size="50" value="#preferred_agent_name#"
 							  					 onchange="pickAgentModal('trans_agent_id_#trans_agent_id#',this.id,this.value); return false;"
 							  					onKeyPress="return noenter(event);">
 							  				<input type="hidden" name="trans_agent_id_#trans_agent_id#" id="trans_agent_id_#trans_agent_id#" value="#agent_id#">

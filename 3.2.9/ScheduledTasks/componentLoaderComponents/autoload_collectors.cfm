@@ -131,7 +131,6 @@
 			</p>
 		</cfif>
 
-
 		<cfif len(errs) gt 0>
 			<cfquery name="cleanupf" datasource="uam_god">
 				update cf_temp_collector set status=<cfqueryparam value="#errs#" CFSQLType="CF_SQL_VARCHAR"> where key=#val(d.key)#

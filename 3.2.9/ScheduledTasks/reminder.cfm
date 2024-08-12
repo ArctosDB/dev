@@ -84,11 +84,11 @@
 				PERMIT_NUM,
 				extract(day from EXP_DATE-current_date) expires_in_days,
 				EXP_DATE,
-				agent_name
+				username
 			FROM
 				permit
 				inner join permit_agent on permit.permit_id=permit_agent.permit_id and permit_agent.agent_role='contact'
-				inner join agent_name on permit_agent.agent_id=agent_name.agent_id and agent_name_type='login'
+				inner join cf_users on permit_agent.agent_id=cf_users.operator_agent_id
 			WHERE
 				extract(day from EXP_DATE-current_date) IN (#cInt#)
 		</cfquery>
@@ -97,11 +97,11 @@
 
 		<cfloop query="permit">
 			<cfsavecontent variable="msg">
-				<a c;ass="external" href="#Application.serverRootURL#/Permit.cfm?Action=search&permit_id=#permit_id#">Permit##: #PERMIT_NUM#</a> expires on #dateformat(exp_date,'yyyy-mm-dd')# (#expires_in_days# days).
+				<a class="external" href="#Application.serverRootURL#/Permit.cfm?Action=search&permit_id=#permit_id#">Permit##: #PERMIT_NUM#</a> expires on #dateformat(exp_date,'yyyy-mm-dd')# (#expires_in_days# days).
 			</cfsavecontent>
 
 			<cfinvoke component="/component/functions" method="deliver_notification">
-				<cfinvokeargument name="usernames" value="#agent_name#">
+				<cfinvokeargument name="usernames" value="#username#">
 				<cfinvokeargument name="subject" value="Expiring Permits">
 				<cfinvokeargument name="message" value="#msg#">
 				<cfinvokeargument name="email_immediate" value="">
@@ -144,14 +144,13 @@
 		<cfloop query="colns">
 			<cfquery name="collection_contacts" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 				select 
-					agent_name 
+					username 
 				from 
-					agent_name 
-					inner join collection_contacts on agent_name.agent_id=collection_contacts.contact_agent_id
+					cf_users 
+					inner join collection_contacts on cf_users.operator_agent_id=collection_contacts.contact_agent_id
 				where 
 					collection_contacts.collection_id=<cfqueryparam value = "#collection_id#" CFSQLType = "cf_sql_int"> and
-					contact_role in ('data quality') and
-					agent_name_type='login'
+					contact_role in ('data quality') 
 			</cfquery>
 
 			<cfquery name="data" dbtype="query">
@@ -178,7 +177,7 @@
 				</cfloop>
 			</cfsavecontent>
 			<cfinvoke component="/component/functions" method="deliver_notification">
-				<cfinvokeargument name="usernames" value="#valuelist(collection_contacts.agent_name)#">
+				<cfinvokeargument name="usernames" value="#valuelist(collection_contacts.username)#">
 				<cfinvokeargument name="subject" value="#guid_prefix# Unused Accession">
 				<cfinvokeargument name="message" value="#msg#">
 				<cfinvokeargument name="email_immediate" value="">
@@ -203,12 +202,12 @@
 				guid_prefix,
 				trans_agent.trans_agent_role,
 				trans_agent.agent_id,
-				agent_name.agent_name
+				cf_users.username
 			FROM
 				borrow
 				inner join collection on borrow.collection_id=collection.collection_id
 				left outer join trans_agent on borrow.transaction_id=trans_agent.transaction_id
-				left outer join agent_name on trans_agent.agent_id=agent_name.agent_id and agent_name_type='login'
+				left outer join cf_users on trans_agent.agent_id=cf_users.operator_agent_id
 			where 
 				borrow_status!='closed' and
 				(
@@ -227,29 +226,16 @@
 				Borrow #guid_prefix# <a href="/borrow.cfm?action=edit&transaction_id=#transaction_id#">#borrow_number#</a> (status: #borrow_status#) is/was due on #due_date#.
 			</cfsavecontent>
 			<cfquery name="thisAgnt" dbtype="query">
-				select agent_name from borrow where transaction_id=<cfqueryparam value = "#transaction_id#" CFSQLType = "cf_sql_int">
+				select username from borrow where transaction_id=<cfqueryparam value = "#transaction_id#" CFSQLType = "cf_sql_int"> group by username
 			</cfquery>
 			<cfinvoke component="/component/functions" method="deliver_notification">
-				<cfinvokeargument name="usernames" value="#valuelist(thisAgnt.agent_name)#">
+				<cfinvokeargument name="usernames" value="#valuelist(thisAgnt.username)#">
 				<cfinvokeargument name="subject" value="#guid_prefix# Borrow Status">
 				<cfinvokeargument name="message" value="#msg#">
 				<cfinvokeargument name="email_immediate" value="">
 			</cfinvoke>
 		</cfloop>
 	</cfoutput>
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 <!---------------------- end log --------------------->
 <cfset jtim=datediff('s',jStrtTm,now())>

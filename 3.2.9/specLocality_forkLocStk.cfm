@@ -37,10 +37,9 @@
 			$("#max_error_distance").val('').removeClass('reqdClr').prop('required',false);
 			$("#max_error_units").val('').removeClass('reqdClr').prop('required',false);
 			$("#datum").val('').removeClass('reqdClr').prop('required',false);
-			$("#georeference_protocol").val('').removeClass('reqdClr').prop('required',false);
 			$("#primary_spatial_data").val('').removeClass('reqdClr').prop('required',false);
 			$("#wkt_string").val('').removeClass('reqdClr').prop('required',false);
-			changeSpatialSource();
+			$("#georeference_protocol").val('').removeClass('reqdClr').prop('required',false);
 		}
 		function closeThisThing(c,e) {
 			var q='specLocality|' + c + '|' + e;
@@ -80,19 +79,16 @@
 			if (
 				$("#dec_lat").val().length>0 ||
 				$("#dec_long").val().length>0 ||
-				$("#datum").val().length>0 ||
-				$("#georeference_protocol").val().length>0
+				$("#datum").val().length>0
 			) {
 				$("#dec_lat").addClass('reqdClr').prop('required',true);
 				$("#dec_long").addClass('reqdClr').prop('required',true);
 				$("#datum").addClass('reqdClr').prop('required',true);
-				$("#georeference_protocol").addClass('reqdClr').prop('required',true);
 				$("#fs_coordinates legend").text('Coordinates must be accompanied by datum, source, and protocol');
 			} else {
 				$("#dec_lat").removeClass().prop('required',false);
 				$("#dec_long").removeClass().prop('required',false);
 				$("#datum").removeClass().prop('required',false);
-				$("#georeference_protocol").removeClass().prop('required',false);
 				$("#fs_coordinates legend").text('Coordinates');
 			}
 		}
@@ -415,7 +411,7 @@
 				checkDepth();
 			});
 
-			$( "#dec_lat,#dec_long,#max_error_distance,#max_error_units,#datum,#georeference_protocol" ).change(function() {
+			$( "#dec_lat,#dec_long,#max_error_distance,#max_error_units,#datum" ).change(function() {
 				checkCoordinates();
 			});
 			$( "#max_error_distance,#max_error_units" ).change(function() {
@@ -751,7 +747,8 @@
 							<tr>
 								<td>
 									<label for="verificationstatus" class="helpLink" data-helplink="verification_status">Verification Status</label>
-									<select name="verificationstatus" id="verificationstatus" size="1" class="reqdClr">
+									<select name="verificationstatus" id="verificationstatus" size="1">
+										<option value=""></option>
 										<cfloop query="ctVerificationStatus">
 											<option <cfif l.VerificationStatus is ctVerificationStatus.VerificationStatus> selected="selected" </cfif>
 												value="#VerificationStatus#">#VerificationStatus#</option>
@@ -1454,7 +1451,9 @@
 		   	 		LOCALITY_REMARKS,
 		   	 		GEOREFERENCE_PROTOCOL,
 		   	 		primary_spatial_data,
-		   	 		locality_footprint
+		   	 		locality_footprint,
+					last_usr,
+					last_chg
 		   	 	) values (
 		   	 		<cfqueryparam value="#lid.lid#" CFSQLType="cf_sql_int">,
 		   	 		<cfqueryparam value="#GEOG_AUTH_REC_ID#" CFSQLType="cf_sql_int">,
@@ -1474,10 +1473,12 @@
 		   	 		<cfqueryparam value="#GEOREFERENCE_PROTOCOL#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(GEOREFERENCE_PROTOCOL))#">,
 		   	 		<cfqueryparam value="#primary_spatial_data#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(primary_spatial_data))#">,
 		   	 		<cfif len(wkt_txt) gt 0>
-		   	 			ST_GeographyFromText(<cfqueryparam value="#wkt_txt#" CFSQLType="CF_SQL_LONGVARCHAR">)
+		   	 			ST_GeographyFromText(<cfqueryparam value="#wkt_txt#" CFSQLType="CF_SQL_LONGVARCHAR">),
 		   	 		<cfelse>
-		   	 			null
+		   	 			null,
 		   	 		</cfif>
+		   	 		<cfqueryparam value="#session.username#" CFSQLType="CF_SQL_VARCHAR">,
+					<cfqueryparam value="#DateConvert('local2Utc',now())#" cfsqltype="cf_sql_timestamp">
 		   	 	)
 			</cfquery>
 			<!--- this will always result in a new collecting event --->
@@ -1569,7 +1570,7 @@
 		   	 		set
 		   	 			VERIFICATIONSTATUS='unaccepted'
 		   	 		where
-		   	 			specimen_event_id=#specimen_event_id#
+		   	 			specimen_event_id=<cfqueryparam value="#specimen_event_id#" cfsqltype="cf_sql_int">
 				</cfquery>
 				<cfset redirSEID=sid.sid>
 			<cfelseif sav_action is "addNoChange">

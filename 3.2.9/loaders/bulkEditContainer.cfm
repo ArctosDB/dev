@@ -72,6 +72,10 @@ insert into cf_component_loader (
 	'Username has access to corresponding collection' -- description of any in-loader checks
 );
 
+
+-- possibly related to https://github.com/ArctosDB/arctos/issues/7612 reducing RPM
+update cf_component_loader set rec_per_run=100,remark='250 potentially causing stalls, reduce throttle' where data_table='cf_temp_edit_container';
+
 ------------->
 <cfinclude template="/includes/_header.cfm">
 <cfset thisFormFile=replace(GetCurrentTemplatePath(),Application.webDirectory,'')>

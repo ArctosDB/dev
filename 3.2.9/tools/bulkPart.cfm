@@ -79,7 +79,7 @@ function copyEPt(){
         Use with caution; you can make very large messes here.
         This form will work on a limited number of records; use an apropriate bulkloader if you experience timeout issues.
         You can download part_ids which work in various bulkloaders from the
-        <a href="/info/part_data_download.cfm?table_name=#table_name#&sort=guid">Part Table Download</a> application.
+        <a href="/Reports/part_data_download.cfm?table_name=#table_name#&sort=guid">Part Table Download</a> application.
 
     <p><h2>Option 1: Add Part(s)</h2></p>
     <form name="newPart" method="post" action="bulkPart.cfm">

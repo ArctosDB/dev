@@ -1,118 +1,120 @@
 <cfinclude template="/includes/_header.cfm">
 <cfif action is "getSQL">
 <cfoutput>
+
+<pre>
 delete from annotations where collection_object_id IN
-		(
-			select collection_object_id FROM coll_object_encumbrance WHERE
-			encumbrance_id = #encumbrance_id#
-		)
+	(
+		select collection_object_id FROM coll_object_encumbrance WHERE
+		encumbrance_id = #encumbrance_id#
+	)
 ;
 delete from specimen_archive where collection_object_id IN
-		(
-			select collection_object_id FROM coll_object_encumbrance WHERE
-			encumbrance_id = #encumbrance_id#
-		)
+	(
+		select collection_object_id FROM coll_object_encumbrance WHERE
+		encumbrance_id = #encumbrance_id#
+	)
 ;
 
 delete from coll_obj_other_id_num where collection_object_id IN
-		(
-			select collection_object_id FROM coll_object_encumbrance WHERE
-			encumbrance_id = #encumbrance_id#
-		)
+	(
+		select collection_object_id FROM coll_object_encumbrance WHERE
+		encumbrance_id = #encumbrance_id#
+	)
 ;
 
 delete from attributes where collection_object_id IN
-		(
-			select collection_object_id FROM coll_object_encumbrance WHERE
-			encumbrance_id = #encumbrance_id#
-		)
+	(
+		select collection_object_id FROM coll_object_encumbrance WHERE
+		encumbrance_id = #encumbrance_id#
+	)
 ;
 
 delete from collector where collection_object_id IN
+	(
+		select collection_object_id FROM coll_object_encumbrance WHERE
+		encumbrance_id = #encumbrance_id#
+	)
+;
+
+delete from specimen_part_attribute where COLLECTION_OBJECT_ID IN
+	(
+		select
+			specimen_part.COLLECTION_OBJECT_ID
+		FROM
+			coll_object_encumbrance,
+			specimen_part
+		WHERE
+			coll_object_encumbrance.collection_object_id=specimen_part.derived_from_cat_item and
+			encumbrance_id = #encumbrance_id#
+	)
+;
+
+delete from specimen_part where derived_from_cat_item IN
+	(
+		select collection_object_id FROM
+		coll_object_encumbrance WHERE
+		encumbrance_id = #encumbrance_id#
+	)
+;
+
+delete from identification_attributes where identification_id IN
+	(
+		select identification_id FROM identification where collection_object_id IN
 		(
 			select collection_object_id FROM coll_object_encumbrance WHERE
 			encumbrance_id = #encumbrance_id#
 		)
-;
-
-delete from specimen_part_attribute where COLLECTION_OBJECT_ID IN
-		(
-			select
-				specimen_part.COLLECTION_OBJECT_ID
-			FROM
-				coll_object_encumbrance,
-				specimen_part
-			WHERE
-				coll_object_encumbrance.collection_object_id=specimen_part.derived_from_cat_item and
-				encumbrance_id = #encumbrance_id#
-		)
-;
-
-delete from specimen_part where derived_from_cat_item IN
-		(
-			select collection_object_id FROM
-			coll_object_encumbrance WHERE
-			encumbrance_id = #encumbrance_id#
-		)
-;
-
-delete from identification_attributes where identification_id IN
-		(
-			select identification_id FROM identification where collection_object_id IN
-			(
-				select collection_object_id FROM coll_object_encumbrance WHERE
-				encumbrance_id = #encumbrance_id#
-			)
-		)
+	)
 ;
 delete from identification_taxonomy where identification_id IN
+	(
+		select identification_id FROM identification where collection_object_id IN
 		(
-			select identification_id FROM identification where collection_object_id IN
-			(
-				select collection_object_id FROM coll_object_encumbrance WHERE
-				encumbrance_id = #encumbrance_id#
-			)
+			select collection_object_id FROM coll_object_encumbrance WHERE
+			encumbrance_id = #encumbrance_id#
 		)
+	)
 ;
 
 delete from identification_agent where identification_id IN
+	(
+		select identification_id FROM identification where collection_object_id IN
 		(
-			select identification_id FROM identification where collection_object_id IN
-			(
-				select collection_object_id FROM coll_object_encumbrance WHERE
-				encumbrance_id = #encumbrance_id#
-			)
+			select collection_object_id FROM coll_object_encumbrance WHERE
+			encumbrance_id = #encumbrance_id#
 		)
+	)
 ;
 
 
 delete from identification where collection_object_id IN
-		(
-			select collection_object_id FROM coll_object_encumbrance WHERE
-			encumbrance_id = #encumbrance_id#
-		)
+	(
+		select collection_object_id FROM coll_object_encumbrance WHERE
+		encumbrance_id = #encumbrance_id#
+	)
 ;
 
 
 delete from media_relations where media_relationship like '% cataloged_item' and related_primary_key IN
-		(
-			select collection_object_id FROM coll_object_encumbrance WHERE
-			encumbrance_id = #encumbrance_id#
-		)
+	(
+		select collection_object_id FROM coll_object_encumbrance WHERE
+		encumbrance_id = #encumbrance_id#
+	)
 ;
 
 
 delete from specimen_event where collection_object_id IN
-		(
-			select collection_object_id FROM coll_object_encumbrance WHERE
-			encumbrance_id = #encumbrance_id#
-		)
+	(
+		select collection_object_id FROM coll_object_encumbrance WHERE
+		encumbrance_id = #encumbrance_id#
+	)
 ;
 delete from cataloged_item where collection_object_id IN
-		(
-			select collection_object_id FROM coll_object_encumbrance WHERE
-			encumbrance_id = #encumbrance_id#
-		)
+	(
+		select collection_object_id FROM coll_object_encumbrance WHERE
+		encumbrance_id = #encumbrance_id#
+	)
 ;
 
 create table temp as select collection_object_id from coll_object_encumbrance where encumbrance_id = #encumbrance_id#;
@@ -123,6 +125,9 @@ delete from coll_object_encumbrance where collection_object_id IN (select collec
 
 
 drop table temp;
+
+
+</pre>
 
 </cfoutput>
 

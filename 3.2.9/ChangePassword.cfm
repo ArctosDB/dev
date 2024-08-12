@@ -71,6 +71,8 @@
 <br>If you have saved your email address in your profile, enter it here to reset your password.
 <br>If you have not saved your email address, you may create a new Arctos username.
 <br>Email delivery can be unreliable; check your spam messages, or <a target="_top" href="https://github.com/ArctosDB/arctos/issues/new?assignees=&labels=contact&template=contact-arctos.md&title=%5BCONTACT%5D">Open a GitHub Issue</a> if all else fails.
+<!---- https://github.com/ArctosDB/internal/issues/291 ---->
+<br>Opertator accounts are locked after 90 days of inactivity; please notify your supervisor or request support via GitHub.
 	<form name="pw" method="post" action="ChangePassword.cfm">
         <input type="hidden" name="action" value="findPass">
         <label for="username">Username (case-sensitive)</label>

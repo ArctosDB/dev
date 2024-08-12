@@ -59,6 +59,9 @@ insert into cf_component_loader (
 	'Username has manage_collection access to corresponding collection' -- description of any in-loader checks
 );
 
+
+update cf_component_loader set rec_per_run=1000,remark='1000 running in ~40s' where data_table='cf_temp_unload_attribute';
+
 ------------->
 <cfinclude template="/includes/_header.cfm">
 <cfset thisFormFile=replace(GetCurrentTemplatePath(),Application.webDirectory,'')>

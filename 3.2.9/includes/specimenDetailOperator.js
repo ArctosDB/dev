@@ -129,29 +129,3 @@ function showEditHist(){
 	    $(".ui-dialog-titlebar-close").trigger('click');
 	});
 }
-/*
-function madeSpecimenEventLink(specimen_event_id,related_thing,related_key){
-	addSpecEvtLnkLnks(related_thing,related_key,specimen_event_id);
-	highlightSpecimenEvent(specimen_event_id,related_thing,related_key);
-}
-
-function delinkSpecEvt(thing,key){
-	$.getJSON("/component/SpecimenResults.cfc",
-		{
-			method : "deLinkSpecEvent",
-			returnformat : "json",
-			queryformat : 'column',
-			collection_object_id      : $("#collection_object_id").val(),
-			related_key_type : thing,
-			related_key_value: key
-		},
-		function (data) {
-			if (data.RECORDCOUNT==1){
-				madeSpecimenEventLink('',thing,key);
-			} else {
-				alert('An error may have occurred: ' + JSON.stringify(data));
-			}
-		}
-	);
-}
-*/

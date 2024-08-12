@@ -20,12 +20,7 @@
 		</ul>
 	</p>
 	<p>
-		The legacy V1 endpoint is available as of this writing. It should not be used for new development, and existing apps should be migrated to v2.
-		<ul>
-			<li>
-				<a href="/component/api/v1/about.cfc?method=api_map">/component/api/v1/about.cfc?method=api_map</a>
-			</li>
-		</ul>
+		The legacy V1 endpoint has been removed.
 	</p>
 
 	<h3>Additional API Documentation</h3>

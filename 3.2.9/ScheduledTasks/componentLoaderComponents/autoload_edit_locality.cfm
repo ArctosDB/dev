@@ -183,7 +183,9 @@
 					datum=<cfqueryparam value="#c_datum#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(c_datum))#">,
 					locality_remarks=<cfqueryparam value="#d.locality_remarks#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.locality_remarks))#">,
 					georeference_protocol=<cfqueryparam value="#d.georeference_protocol#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.georeference_protocol))#">,
-					primary_spatial_data=<cfqueryparam value="#c_psd#" CFSQLType="cf_sql_varchar" null="#Not Len(Trim(c_psd))#">
+					primary_spatial_data=<cfqueryparam value="#c_psd#" CFSQLType="cf_sql_varchar" null="#Not Len(Trim(c_psd))#">,
+					last_usr=<cfqueryparam value="#d.username#" CFSQLType="CF_SQL_VARCHAR">,
+					last_chg=<cfqueryparam value="#DateConvert('local2Utc',now())#" cfsqltype="cf_sql_timestamp">
 					<cfif c_psd is "polygon">
 						,locality_footprint=(
 							select spatial_footprint from geog_auth_rec where geog_auth_rec_id=<cfqueryparam value="#gid#" CFSQLType="cf_sql_int">

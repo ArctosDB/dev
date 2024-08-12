@@ -16,7 +16,6 @@
 			last_date,
 			container_remarks,
 			barcode,
-			print_fg,
 			width,
 			height,
 			length,
@@ -47,7 +46,6 @@
 			last_date,
 			container_remarks,
 			barcode,
-			print_fg,
 			width,
 			height,
 			length,
@@ -90,11 +88,9 @@
 			<th>weight</th>
 			<th>capacity</th>
 			<th>stack</th>
-			<th>print_fg</th>
 			<th>institution_acronym</th>
 			<th>description</th>
 			<th>container_remarks</th>
-
 		</tr>
 		<cfloop query="d">
 			<tr>
@@ -112,13 +108,11 @@
 				<td>#weight# #weight_units#</td>
 				<td>#weight_capacity# #weight_capacity_units#</td>
 				<td>#stack#</td>
-				<td>#print_fg#</td>
 				<td>#institution_acronym#</td>
 				<td>#description#</td>
 				<td>#container_remarks#</td>
-
-				</tr>
-			</cfloop>
+			</tr>
+		</cfloop>
 	</table>
 </cfoutput>
 <cfinclude template="/includes/_pickFooter.cfm">

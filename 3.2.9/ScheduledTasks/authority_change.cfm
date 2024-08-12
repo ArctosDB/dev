@@ -29,27 +29,102 @@
 			table_name like 'log_%' and
 			table_name not in ('log_cf_barcodeseries')
 	</cfquery>
-	<cfquery name="u_tbl" dbtype="query">
-		select table_name from ctlogtbl group by table_name
+	<!---- 
+		https://github.com/ArctosDB/PG/issues/19 don't report changes to collection 
+	---->
+	<cfquery name="u_c_tbl" dbtype="query">
+		select table_name from ctlogtbl where column_name = 'n_collections' group by table_name
 	</cfquery>
 	<cfset tblList="">
-	<cfloop query="u_tbl">
+	<cfloop query="u_c_tbl">
 		<cfquery name="cdefs" dbtype="query">
-			select column_name,data_type from ctlogtbl where table_name=<cfqueryparam value="#u_tbl.table_name#" cfsqltype="cf_sql_varchar">
+			select table_name,column_name,data_type from ctlogtbl where table_name=<cfqueryparam value="#u_c_tbl.table_name#" cfsqltype="cf_sql_varchar">
 		</cfquery>
 		<cfset lc=1>
 		<cfquery name="ctab" datasource="uam_god">
 			select 
 				<cfloop query="cdefs">
 					<cfif data_type is 'ARRAY'>
-						array_to_string(#column_name#,', ') as #column_name#
+						array_to_string(#cdefs.column_name#,', ') as #cdefs.column_name#
 					<cfelse>
-						#column_name#
+						#cdefs.column_name#
 					</cfif>
 					<cfif lc lt cdefs.recordcount>,</cfif>
 					<cfset lc=lc+1>
 				</cfloop>
-			from #table_name# where change_date > current_timestamp - interval '24 hours' order by change_date
+			from #cdefs.table_name# where change_date > current_timestamp - interval '24 hours' order by change_date
+		</cfquery>
+
+		<cfif ctab.recordcount gt 0>
+			<cfset baseCols="">
+			<cfloop list="#ctab.columnlist#" index="c">
+				<cfif left(c,2) is 'N_'>
+					<cfset bc=mid(c,3,len(c))>
+					<cfset baseCols=listAppend(baseCols, bc)>
+				</cfif>
+			</cfloop>
+			<cfset hasChange=false>
+			<cfset baseCols=listdeleteat(baseCols,listFindNoCase(baseCols, 'collections'))>
+			<cfloop query="ctab">
+				<cfloop list="#baseCols#" index="bc">
+					<cfset n=evaluate("n_" & bc)>
+					<cfset o=evaluate("o_" & bc)>
+					<cfif compare(n,o) neq 0>
+						<cfset hasChange=true>
+					</cfif>
+				</cfloop>
+			</cfloop>
+
+			<cfif hasChange is true>
+				<cfset tblName=replace(table_name,'log_','','all')>
+				<cfset tblList=listappend(tblList,tblName)>
+				<cfsavecontent variable="ctChanges">
+					#ctChanges#
+					<p>
+						Table #tblName#
+						<a class="external" href="/info/ctchange_log.cfm?tbl=#tblName#">view in UI</a>
+					</p>
+					<table border>
+						<tr>
+						<cfloop list="#ctab.columnlist#" index="c">
+							<th>#c#</th>
+						</cfloop>
+						</tr>
+						<cfloop query="#ctab#">
+							<tr>
+								<cfloop list="#ctab.columnlist#" index="c">
+									<td>#evaluate("ctab." & c)#</td>
+								</cfloop>
+							</tr>
+						</cfloop>
+					</table>
+				</cfsavecontent>
+			</cfif>
+		</cfif>
+	</cfloop>
+
+	<!---- now repeat for no-collections stuff ---->
+	<cfquery name="u_tbl" dbtype="query">
+		select table_name from ctlogtbl where table_name not in ( <cfqueryparam value="#valuelist(u_c_tbl.table_name)#" cfsqltype="cf_sql_varchar" list="true"> ) group by table_name
+	</cfquery>
+	<cfset tblList="">
+	<cfloop query="u_tbl">
+		<cfquery name="cdefs" dbtype="query">
+			select column_name,data_type,table_name from ctlogtbl where table_name=<cfqueryparam value="#u_tbl.table_name#" cfsqltype="cf_sql_varchar">
+		</cfquery>
+		<cfset lc=1>
+		<cfquery name="ctab" datasource="uam_god">
+			select 
+				<cfloop query="cdefs">
+					<cfif data_type is 'ARRAY'>
+						array_to_string(#cdefs.column_name#,', ') as #cdefs.column_name#
+					<cfelse>
+						#cdefs.column_name#
+					</cfif>
+					<cfif lc lt cdefs.recordcount>,</cfif>
+					<cfset lc=lc+1>
+				</cfloop>
+			from #cdefs.table_name# where change_date > current_timestamp - interval '24 hours' order by change_date
 		</cfquery>
 		<!---- to_char(change_date,'YYYY-MM-DD') between '#start#' and '#stop#' ---->	
 		<cfif ctab.recordcount gt 0>
@@ -57,7 +132,10 @@
 			<cfset tblList=listappend(tblList,tblName)>
 			<cfsavecontent variable="ctChanges">
 				#ctChanges#
-				<p>Table #tblName#:</p>
+				<p>
+					Table #tblName#
+					<a class="external" href="/info/ctchange_log.cfm?tbl=#tblName#">view in UI</a>
+				</p>
 				<table border>
 					<tr>
 					<cfloop list="#ctab.columnlist#" index="c">
@@ -108,14 +186,14 @@
 
 	<cfquery name="cc" datasource="uam_god">
 		select
-			agent_name.agent_name
+			cf_users.username
 		FROM
 			collection_contacts
-			inner join agent_name on collection_contacts.contact_agent_id=agent_name.agent_id and agent_name_type='login'
+            inner join cf_users on collection_contacts.contact_agent_id=cf_users.operator_agent_id
 		where
 			collection_contacts.contact_role='data quality'
 		group by
-			agent_name.agent_name
+			cf_users.username
 	</cfquery>
 	<cfsavecontent variable="emailChanges">
 		<p>
@@ -133,7 +211,7 @@
 		<p>#allChanges#</p>
 	</cfsavecontent>
 	<cfinvoke component="/component/functions" method="deliver_notification">
-		<cfinvokeargument name="usernames" value="#valuelist(cc.agent_name)#">
+		<cfinvokeargument name="usernames" value="#valuelist(cc.username)#">
 		<cfinvokeargument name="subject" value="Authority Change Notification">
 		<cfinvokeargument name="message" value="#emailChanges#">
 		<cfinvokeargument name="email_immediate" value="">

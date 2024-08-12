@@ -1,3 +1,4 @@
+<cfinclude template="/includes/_includeCheck.cfm">
 <cfoutput>
 <cftry>
 <cfset oneOfUs = 0>

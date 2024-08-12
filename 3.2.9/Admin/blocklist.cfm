@@ -64,6 +64,7 @@
 				generated_subnet = <cfqueryparam cfsqltype="cf_sql_varchar" value="#subnet_search_filter#">
 			order by LISTDATE desc
 		</cfquery>
+
 		<cfif len(subnet_search_filter) gt 0 and rip.recordcount is 0>
 			Notfound faking it....
 			<cfquery name="rip" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">

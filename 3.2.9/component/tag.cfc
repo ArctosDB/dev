@@ -61,12 +61,12 @@
 			<cfset rl="/place.cfm?action=detail&collecting_event_id=#r.collecting_event_id#">
 		<cfelseif r.agent_id gt 0>
 			<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-				select agent_name from preferred_agent_name where agent_id=<cfqueryparam value="#r.agent_id#" cfsqltype="cf_sql_int">
+				select preferred_agent_name from agent where agent_id=<cfqueryparam value="#r.agent_id#" cfsqltype="cf_sql_int">
 			</cfquery>
 			<cfset rt="agent">
-			<cfset rs="#d.agent_name#">
+			<cfset rs="#d.preferred_agent_name#">
 			<cfset ri="#r.agent_id#">
-			<cfset rl="/info/agentActivity.cfm?agent_id=#r.agent_id#">
+			<cfset rl="/agent/#r.agent_id#">
 		<cfelseif r.locality_id gt 0>
 			<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 				select spec_locality from locality where locality_id=<cfqueryparam value="#r.locality_id#" cfsqltype="cf_sql_int">

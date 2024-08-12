@@ -3,14 +3,14 @@ create table pre_collection (
 	cid serial not null,
 	collection_cde varchar(5) not null references ctcollection_cde(collection_cde),
 	institution_acronym varchar(20) not null,
-	descr varchar(4000) not null,
 	collection varchar(50) not null,
 	loan_policy_url varchar not null,
 	guid_prefix varchar(20) not null,
 	catalog_number_format varchar(21) not null,
 	preferred_taxonomy_source varchar not null references cttaxonomy_source(source),
 	admin_user varchar not null,
-	mentor_user varchar
+	mentor_user varchar,
+	collection_agent_id int not null
 );
 
 grant all on pre_collection to manage_collection;
@@ -28,8 +28,11 @@ alter table pre_collection alter column collection_terms_id set not null;
 ALTER TABLE table_name ALTER COLUMN column_name SET NOT NULL;
 
 
-
 create unique index ix_u_pc_gp on pre_collection (guid_prefix);
+
+
+
+
 ------>
 
 <cfinclude template="/includes/_header.cfm">
@@ -117,7 +120,6 @@ create unique index ix_u_pc_gp on pre_collection (guid_prefix);
 						<input type="checkbox" required="required">
 					</td>
 				</tr>
-
 				<tr>
 					<td>
 						An Arctos Operator with manage_collection rights has been created and is fully functional. This will be used for "admin_user" in the next form.
@@ -127,7 +129,6 @@ create unique index ix_u_pc_gp on pre_collection (guid_prefix);
 						<input type="checkbox" required="required">
 					</td>
 				</tr>
-
 				<tr>
 					<td>
 						A mentor_user (if provided) is an Arctos Operator with manage_collection rights who will be assigned access to the new collection during creation.
@@ -138,6 +139,14 @@ create unique index ix_u_pc_gp on pre_collection (guid_prefix);
 					</td>
 				</tr>
 
+				<tr>
+					<td>
+						An Agent with an appropriate collectionID exists. Use the integer-component of the Agent ID for collection_agent_id.
+					</td>
+					<td>
+						<input type="checkbox" required="required">
+					</td>
+				</tr>
 
 			</table>
 			<p>
@@ -286,8 +295,8 @@ create unique index ix_u_pc_gp on pre_collection (guid_prefix);
 
 
 
-		<label for="DESCR">Description</label>
-		<textarea  required class="hugetextarea reqdClr" name="DESCR" id="DESCR" ></textarea>
+		<label for="collection_agent_id">collection_agent_id</label>
+		<textarea  required class="hugetextarea reqdClr" name="collection_agent_id" id="collection_agent_id" ></textarea>
 
 
 		<label for="admin_user">admin_user (case sensitive Arctos username)</label>
@@ -435,7 +444,7 @@ create unique index ix_u_pc_gp on pre_collection (guid_prefix);
 		select
 		<cfqueryparam value="#collection_cde#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(collection_cde))#"> as collection_cde,
 		<cfqueryparam value="#institution_acronym#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(institution_acronym))#"> as institution_acronym,
-		<cfqueryparam value="#descr#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(descr))#"> as descr,
+		<cfqueryparam value="#collection_agent_id#" CFSQLType="cf_sql_int"> as collection_agent_id,
 		<cfqueryparam value="#collection#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(collection))#"> as collection,
 		<cfqueryparam value="#loan_policy_url#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(loan_policy_url))#"> as loan_policy_url,
 		<cfqueryparam value="#guid_prefix#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(guid_prefix))#"> as guid_prefix,
@@ -549,7 +558,7 @@ create unique index ix_u_pc_gp on pre_collection (guid_prefix);
 		insert into pre_collection (
 			collection_cde,
 			institution_acronym,
-			descr,
+			collection_agent_id,
 			collection,
 			loan_policy_url,
 			guid_prefix,
@@ -564,7 +573,7 @@ create unique index ix_u_pc_gp on pre_collection (guid_prefix);
 		) values (
 			<cfqueryparam value="#collection_cde#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(collection_cde))#">,
 			<cfqueryparam value="#institution_acronym#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(institution_acronym))#">,
-			<cfqueryparam value="#descr#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(descr))#">,
+			<cfqueryparam value="#collection_agent_id#" CFSQLType="cf_sql_int" >,
 			<cfqueryparam value="#collection#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(collection))#">,
 			<cfqueryparam value="#loan_policy_url#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(loan_policy_url))#">,
 			<cfqueryparam value="#guid_prefix#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(guid_prefix))#">,
@@ -602,7 +611,7 @@ create unique index ix_u_pc_gp on pre_collection (guid_prefix);
 		select
 			'[ use values from https://arctos.database.museum/info/ctDocumentation.cfm?table=ctcollection_cde ]' as collection_cde,
 			'[ see https://handbook.arctosdb.org/how_to/How-to-Manage-a-Collection-in-Arctos.html ]' as institution_acronym,
-			'[ see https://handbook.arctosdb.org/how_to/How-to-Manage-a-Collection-in-Arctos.html ]' as descr,
+			'[ see https://handbook.arctosdb.org/how_to/How-to-Manage-a-Collection-in-Arctos.html ]' as collection_agent_id,
 			'[ see https://handbook.arctosdb.org/how_to/How-to-Manage-a-Collection-in-Arctos.html ]' as collection,
 			'[ see https://handbook.arctosdb.org/how_to/How-to-Manage-a-Collection-in-Arctos.html ]' as loan_policy_url,
 			'[ see https://handbook.arctosdb.org/best_practices/GUID.html ]' as guid_prefix,

@@ -153,6 +153,20 @@
 			var theSURL="/editEvent.cfm?action=newEventPub&new_publication_id=" + $("#new_publication_id").val() + '&collecting_event_id=' + $("#collecting_event_id").val();
 			document.location=theSURL;
 		}
+		function noupMUA(){
+			$("#verified_by_agent_name_fu").val('noupdate');
+			$("#verified_by_agent_id_fu").val('');
+		}
+		function noupMUD(){
+			$("#verified_date_fu").val('noupdate');
+		}
+		function nullMUD(){
+			$("#verified_date_fu").val('');
+		}
+		function nullMUA(){
+			$("#verified_by_agent_name_fu").val('');
+			$("#verified_by_agent_id_fu").val('');
+		}
 	</script>
 	<cfoutput>
 	      <cfquery name="locDet" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
@@ -219,10 +233,13 @@
 		<br><a href="/place.cfm?action=detail&collecting_event_id=#collecting_event_id#">Detail Page</a>
 		<br>
 		<div class="importantNotification">
+			<h3>Mass-update specimen-events in this collecting event.</h3>
 			<br>Red is scary. This form is dangerous. Make sure you know what it's doing before you get all clicky.
 			<cfquery name="vstat" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 				select
 					verificationstatus,
+					getPreferredAgentName(verified_by_agent_id) verified_by_agent,
+					verified_date,
 					guid_prefix,
 					count(*) c
 				from
@@ -235,19 +252,25 @@
 					specimen_event.collecting_event_id=<cfqueryparam value = "#locDet.collecting_event_id#" CFSQLType = "CF_SQL_INTEGER">
 				group by
 					verificationstatus,
-					guid_prefix
+					guid_prefix,
+					verified_by_agent_id,
+					verified_date
 			</cfquery>
 			<label for="dfs">"Your" specimens in this collecting event:</label>
 			<table id="dfs" border>
 				<tr>
 					<th>Collection</th>
 					<th>VerificationStatus</th>
+					<th>VerifiedBy</th>
+					<th>VerifiedDate</th>
 					<th>NumberSpecimenEvents</th>
 				</tr>
 				<cfloop query="vstat">
 					<tr>
 						<td>#guid_prefix#</td>
 						<td>#verificationstatus#</td>
+						<td>#verified_by_agent#</td>
+						<td>#verified_date#</td>
 						<td>#c#</td>
 					</tr>
 				</cfloop>
@@ -257,34 +280,47 @@
 		    	<input type="hidden" name="action" value="updateAllVerificationStatus">
 		    	<span class="helpLink" data-helplink="verification_status">[ verificationstatus documentation ]</span>
 				<label for="VerificationStatus">
-					Mass-update specimen-events in this collecting event to.....
-					(enter user and date to update, leave blank to retain current values)
+					 Update VerificationStatus
 				</label>
 				<select name="VerificationStatus" id="verificationstatus" size="1" class="reqdClr" placeholder="verificationstatus">
-					<option value=""></option>
+					<option value="noupdate">do not update</option>
+					<option value="">NULL</option>
 					<cfloop query="ctVerificationStatus">
 						<option value="#VerificationStatus#">#VerificationStatus#</option>
 					</cfloop>
 				</select>
-				<input placeholder="verified by agent" type="text" name="verified_by_agent_name" id="verified_by_agent_name_fu" value="" size="40"
+
+
+				<label for="verified">
+					Update Verified By (
+					<span class="likeLink" onclick="nullMUA()">blank</span> for NULL, 
+					<span class="likeLink" onclick="noupMUA()">noupdate</span> to ignore
+					)
+				</label>
+				<input placeholder="verified by agent" type="text" name="verified_by_agent_name" id="verified_by_agent_name_fu" value="noupdate" size="40"
 					 onchange="pickAgentModal('verified_by_agent_id_fu',this.id,this.value); return false;"
 					 onKeyPress="return noenter(event);">
 
 				<input type="hidden" name="verified_by_agent_id" id="verified_by_agent_id_fu">
 
-				<input type="datetime" placeholder="verified date" name="verified_date" id="verified_date_fu" value="">
+
+				<label for="verified">
+					Update Verified Date (
+					<span class="likeLink" onclick="nullMUD()">blank</span> for NULL, 
+					<span class="likeLink" onclick="noupMUD()">noupdate</span> to ignore)
+				</label>
+				<input type="datetime" placeholder="verified date" name="verified_date" id="verified_date_fu" value="noupdate">
 				<span class="infoLink" onclick="verifByMe('_fu','#session.MyAgentID#','#session.dbuser#')">Me, Today</span>
 
 				<label for="VerificationStatusIs">
-					.....where current verificationstatus IS (leave blank to get everything)
+					.....where current verificationstatus IS
 				</label>
 				<select name="VerificationStatusIs" id="VerificationStatusIs" size="1">
-					<option value=""></option>
+					<option value="">anything</option>
 					<cfloop query="ctVerificationStatus">
 						<option value="#VerificationStatus#">#VerificationStatus#</option>
 					</cfloop>
 				</select>
-				where
 				<br>
 				<input type="submit" class="lnkBtn" value="Mass-update specimen-events">
 			</form>
@@ -575,17 +611,25 @@
 <!---------------------------------------------------------------------------------------------------->
 <cfif action is "updateAllVerificationStatus">
 	<cfoutput>
-		<!--- -- keep things on the right side of the VPD with the IN --->
+		<!----- keep things on the right side of the VPD with the IN --->
 	    <cfquery name="upall" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			update
 				specimen_event
 			set
-				VerificationStatus=<cfqueryparam value="#VerificationStatus#" CFSQLType="cf_sql_varchar">
-				<cfif len(verified_by_agent_id) gt 0>
-					,verified_by_agent_id=<cfqueryparam value="#verified_by_agent_id#" CFSQLType="cf_sql_int">
+				<cfif VerificationStatus is "noupdate">
+					VerificationStatus=VerificationStatus
+				<cfelse>
+					VerificationStatus=<cfqueryparam value="#VerificationStatus#" CFSQLType="cf_sql_varchar" null="#Not Len(Trim(VerificationStatus))#">
 				</cfif>
-				<cfif len(verified_date) gt 0>
-					,verified_date=<cfqueryparam value = "#verified_date#" CFSQLType="cf_sql_varchar">
+				<cfif verified_by_agent_name eq 'noupdate'>
+					,verified_by_agent_id=verified_by_agent_id
+				<cfelse>
+					,verified_by_agent_id=<cfqueryparam value="#verified_by_agent_id#" CFSQLType="cf_sql_int" null="#Not Len(Trim(verified_by_agent_id))#">
+				</cfif>
+				<cfif verified_date eq 'noupdate'>
+					,verified_date=verified_date
+				<cfelse>
+					,verified_date=<cfqueryparam value = "#verified_date#" CFSQLType="cf_sql_varchar" null="#Not Len(Trim(verified_date))#">
 				</cfif>
 			where
 				COLLECTING_EVENT_ID=<cfqueryparam value="#COLLECTING_EVENT_ID#" CFSQLType="cf_sql_int"> and
@@ -727,7 +771,9 @@
 				DATUM,
 				LOCALITY_REMARKS,
 				GEOREFERENCE_PROTOCOL,
-				primary_spatial_data
+				primary_spatial_data,
+				last_usr,
+				last_chg
 			) (
 				select
 					nextval('sq_locality_id'),
@@ -746,7 +792,9 @@
 					DATUM,
 					LOCALITY_REMARKS,
 					GEOREFERENCE_PROTOCOL,
-					primary_spatial_data
+					primary_spatial_data,
+					<cfqueryparam value="#session.username#" cfsqltype="cf_sql_varchar">,
+					<cfqueryparam value="#DateConvert('local2Utc',now())#" cfsqltype="cf_sql_timestamp">
 				from
 					locality
 				where

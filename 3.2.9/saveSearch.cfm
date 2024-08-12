@@ -1,7 +1,6 @@
 <cfinclude template="/includes/_header.cfm">
 <cfset title="Save Searches">
 <cfif #action# is "nothing">
-<cf_showMenuOnly>
 "Can" the dynamic page that you are currently on to quickly return later. Results are data-based, so you may get different results the next time you visit; only your criteria are stored.
 
 <cfoutput>

@@ -602,11 +602,9 @@
 			<cfset ArrayAppend(ids, idobj)>
 		</cfloop>
 		<cfset mids.identifications=ids>
-		<cfquery name="ak" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-			select api_key from api_key inner join agent on api_key.issued_to=agent.agent_id where preferred_agent_name='arctos_api_user'
-		</cfquery>
+		<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
 		<cfinvoke component="/component/api/tools" method="create_identification" returnvariable="x">
-			<cfinvokeargument name="api_key" value="#ak.api_key#">
+			<cfinvokeargument name="api_key" value="#api_key#">
 			<cfinvokeargument name="usr" value="#session.dbuser#">
 			<cfinvokeargument name="pwd" value="#session.epw#">
 			<cfinvokeargument name="pk" value="#session.sessionKey#">

@@ -112,7 +112,7 @@
 			<cfelse>
 			---->
 				WHERE
-					locality.dec_lat is not null AND specimen_event.verificationstatus != 'unaccepted'
+					locality.dec_lat is not null AND coalesce(specimen_event.verificationstatus,'NULL') != 'unaccepted'
 					<cfif qal gt 0> and </cfif>
 					<cfloop from="1" to="#qal#" index="i">
 						#qp[i].t#

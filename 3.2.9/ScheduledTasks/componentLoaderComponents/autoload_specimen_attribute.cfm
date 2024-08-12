@@ -28,11 +28,10 @@
 				cataloged_item
 				inner join collection on cataloged_item.collection_id = collection.collection_id
 			WHERE
-				collection.guid_prefix || ':' || cataloged_item.cat_num = <cfqueryparam value="#d.guid#" CFSQLType="CF_SQL_VARCHAR">
+				collection.guid_prefix || ':' || cataloged_item.cat_num = stripArctosGuidURL(<cfqueryparam value="#d.guid#" CFSQLType="CF_SQL_VARCHAR">)
 		</cfquery>
 	<cfelseif len(d.uuid) gt 0>
-		<!--- same as default, but don't require collection  cachedwithin="#createtimespan(0,0,60,0)#"---->
-		<cfquery name="collObj" datasource="uam_god">
+		<cfquery name="collObj" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 			SELECT
 				cataloged_item.collection_object_id,
 				collection.guid_prefix
@@ -41,8 +40,8 @@
 				inner join cataloged_item on coll_obj_other_id_num.collection_object_id = cataloged_item.collection_object_id
 				inner join collection on cataloged_item.collection_id = collection.collection_id
 			WHERE
-				coll_obj_other_id_num.other_id_type = <cfqueryparam value="UUID" CFSQLType="CF_SQL_VARCHAR"> and
-				coll_obj_other_id_num.display_value = <cfqueryparam value="#trim(d.uuid)#" CFSQLType="CF_SQL_VARCHAR">
+				coll_obj_other_id_num.display_value = <cfqueryparam value="#d.uuid#" CFSQLType="CF_SQL_VARCHAR">
+				and coll_obj_other_id_num.other_id_type = <cfqueryparam value="UUID" CFSQLType="CF_SQL_VARCHAR">
 		</cfquery>
 	<cfelse>
 		<cfquery name="collObj" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
@@ -54,9 +53,16 @@
 				inner join cataloged_item on coll_obj_other_id_num.collection_object_id = cataloged_item.collection_object_id
 				inner join collection on cataloged_item.collection_id = collection.collection_id
 			WHERE
-				collection.guid_prefix = <cfqueryparam value="#trim(d.guid_prefix)#" CFSQLType="CF_SQL_VARCHAR"> and
-				coll_obj_other_id_num.other_id_type = <cfqueryparam value="#trim(d.other_id_type)#" CFSQLType="CF_SQL_VARCHAR"> and
-				coll_obj_other_id_num.display_value = <cfqueryparam value="#trim(d.other_id_number)#" CFSQLType="CF_SQL_VARCHAR">
+				coll_obj_other_id_num.display_value = <cfqueryparam value="#d.other_id_number#" CFSQLType="CF_SQL_VARCHAR">
+				<cfif len(d.guid_prefix) gt 0>
+					and collection.guid_prefix = <cfqueryparam value="#d.guid_prefix#" CFSQLType="CF_SQL_VARCHAR">
+				 </cfif>
+				<cfif len(d.other_id_type) gt 0>
+					and coll_obj_other_id_num.other_id_type = <cfqueryparam value="#d.other_id_type#" CFSQLType="CF_SQL_VARCHAR">
+				</cfif>
+				<cfif len(d.other_id_issuedby) gt 0>
+					and coll_obj_other_id_num.issued_by_agent_id = getAgentId(<cfqueryparam value="#d.other_id_issuedby#" CFSQLType="CF_SQL_VARCHAR">)
+				</cfif>
 		</cfquery>
 	</cfif>
 
@@ -89,7 +95,7 @@
 	<!---- if we got here we have a catid, now validate ---->
 	<cfquery name="x" datasource="uam_god">
 		select isValidAttribute(
-				<cfqueryparam value="#d.attribute#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.attribute))#">,
+				<cfqueryparam value="#d.attribute_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.attribute_type))#">,
 				<cfqueryparam value="#d.attribute_value#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.attribute_value))#">,
 				<cfqueryparam value="#d.attribute_units#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.attribute_units))#">,
 				<cfqueryparam value="#collObj.guid_prefix#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(collObj.guid_prefix))#">
@@ -118,9 +124,9 @@
 		</cfif>
 	</cfif>
 	<cfset dtrID="">
-	<cfif len(d.determiner) gt 0>
+	<cfif len(d.attribute_determiner) gt 0>
 		<cfquery name="x" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-			select getAgentID(<cfqueryparam value="#d.determiner#" CFSQLType="CF_SQL_VARCHAR">) v
+			select getAgentID(<cfqueryparam value="#d.attribute_determiner#" CFSQLType="CF_SQL_VARCHAR">) v
 		</cfquery>
 		<cfif len(x.v) lt 1>
 			<cfquery name="fail" datasource="uam_god">
@@ -144,17 +150,16 @@
 					attribute_remark,
 					determined_date,
 					determination_method
-					)
-				VALUES (
+				) VALUES (
 					nextval('sq_attribute_id'),
 					<cfqueryparam value="#cid#" CFSQLType="cf_sql_int">,
 					<cfqueryparam value="#dtrID#" CFSQLType="cf_sql_int" null="#Not Len(Trim(dtrID))#">,
-					<cfqueryparam value="#d.attribute#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.attribute))#">,
+					<cfqueryparam value="#d.attribute_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.attribute_type))#">,
 					<cfqueryparam value="#d.attribute_value#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.attribute_value))#">,
 					<cfqueryparam value="#d.attribute_units#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.attribute_units))#">,
-					<cfqueryparam value="#d.remarks#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.remarks))#">,
+					<cfqueryparam value="#d.attribute_remark#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.attribute_remark))#">,
 					<cfqueryparam value="#d.attribute_date#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.attribute_date))#">,
-					<cfqueryparam value="#d.attribute_meth#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.attribute_meth))#">
+					<cfqueryparam value="#d.attribute_method#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.attribute_method))#">
 				)
 			</cfquery>
 			<cfquery name="deleteMine" datasource="uam_god">

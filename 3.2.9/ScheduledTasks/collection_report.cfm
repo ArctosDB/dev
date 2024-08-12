@@ -10,14 +10,18 @@
 
 	Scheduler calls this every month, abort if wrong month
 
----->
 
-
-<cfset thisMonth=Month(now())>
 
 <cfif thisMonth is not 1 and thisMonth is not 3 and thisMonth is not 6 and thisMonth is not 9>
 	<cfabort>
 </cfif>
+
+
+
+---->
+
+
+<cfset thisMonth=Month(now())>
 
 <!---------------------- begin log --------------------->
 <cfset jid=CreateUUID()>
@@ -51,7 +55,6 @@
 			collection_id,
 			collection_cde,
 			institution_acronym,
-			descr,
 			collection,
 			web_link,
 			web_link_text,
@@ -60,19 +63,6 @@
 			guid_prefix,
 			citation,
 			catalog_number_format,
-			geographic_description,
-			west_bounding_coordinate,
-			east_bounding_coordinate,
-			north_bounding_coordinate,
-			south_bounding_coordinate,
-			general_taxonomic_coverage,
-			taxon_name_rank,
-			taxon_name_value,
-			purpose_of_collection,
-			alternate_identifier_1,
-			alternate_identifier_2,
-			specimen_preservation_method,
-			time_coverage,
 			genbank_collection,
 			internal_license.display internal_license_disp,
 			external_license.display external_license_disp,
@@ -111,8 +101,8 @@
 		              pg_catalog.pg_roles r
 		              JOIN pg_catalog.pg_auth_members m ON (m.member = r.oid)
 		              JOIN pg_roles r1 ON (m.roleid=r1.oid)
-		              join agent_name on r.rolname=agent_name.agent_name and agent_name_type='login'
-		              join agent on agent_name.agent_id=agent.agent_id
+		              join cf_users on  r.rolname=lower(cf_users.username)
+		              join agent on cf_users.operator_agent_id=agent.agent_id
 		            WHERE
 		              r1.rolname=lower(replace('#guid_prefix#',':','_'))
 		            ORDER BY 1
@@ -179,18 +169,22 @@
 
 			<cfquery name="cc" datasource="uam_god">
 				select
-					agent_name
+					username
 				FROM
 					collection_contacts
-					inner join agent_name on collection_contacts.contact_agent_id=agent_name.agent_id and agent_name_type='login'
+                	inner join cf_users on collection_contacts.contact_agent_id=cf_users.operator_agent_id
 				where
 					collection_contacts.contact_role='data quality' and
 					collection_contacts.collection_id = <cfqueryparam value="#colns.collection_id#" CFSQLType="cf_sql_int">
 				group by
-					agent_name
+					username
 			</cfquery>
+
+
+
+
 			<cfinvoke component="/component/functions" method="deliver_notification">
-				<cfinvokeargument name="usernames" value="#valuelist(cc.agent_name)#">
+				<cfinvokeargument name="usernames" value="#valuelist(cc.username)#">
 				<cfinvokeargument name="subject" value="#guid_prefix# Collection Report">
 				<cfinvokeargument name="message" value="#crept#">
 				<cfinvokeargument name="email_immediate" value="">

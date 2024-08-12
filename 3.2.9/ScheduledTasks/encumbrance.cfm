@@ -19,7 +19,7 @@
 	<cfset mnths="0,6,12,24,36,48">
 	<cfquery name="raw" datasource="uam_god">
 		select
-			agent_name.agent_name,
+			cf_users.username,
 			collection.guid_prefix,
 			encumbrance.ENCUMBRANCE_ID,
 			getPreferredAgentName(ENCUMBERING_AGENT_ID) encumberer,
@@ -35,7 +35,7 @@
 		  	inner join cataloged_item on coll_object_encumbrance.collection_object_id=cataloged_item.collection_object_id
 		  	inner join collection on cataloged_item.collection_id=collection.collection_id
 		  	inner join collection_contacts on collection.collection_id=collection_contacts.collection_id
-		  	inner join agent_name on collection_contacts.contact_agent_id=agent_name.agent_id and agent_name_type='login'
+		  	inner join cf_users on collection_contacts.contact_agent_id=cf_users.operator_agent_id
 		 where
 		 	to_char(EXPIRATION_DATE,'yyyy-mm-dd') in (
 				to_char( current_date ,'yyyy-mm-dd') ,
@@ -45,7 +45,7 @@
    		   		to_char( EXPIRATION_DATE + interval '48 month','yyyy-mm-dd')
 			)
 		 group by
-		 	agent_name.agent_name,
+		 	cf_users.username,
 		 	collection.guid_prefix,
 			encumbrance.ENCUMBRANCE_ID,
 		 	encumbrance.ENCUMBERING_AGENT_ID,
@@ -60,7 +60,7 @@
 	</cfquery>
 	<cfloop query="ecls">
 		<cfquery name="ccts" dbtype="query">
-			select agent_name from raw where guid_prefix=<cfqueryparam value = "#guid_prefix#" CFSQLType = "cf_sql_varchar">
+			select username from raw where guid_prefix=<cfqueryparam value = "#guid_prefix#" CFSQLType = "cf_sql_varchar">
 		</cfquery>
 		<cfquery name="enc" dbtype="query">
 			select
@@ -107,7 +107,7 @@
 		</cfsavecontent>
 
 		<cfinvoke component="/component/functions" method="deliver_notification">
-			<cfinvokeargument name="usernames" value="#valuelist(ccts.agent_name)#">
+			<cfinvokeargument name="usernames" value="#valuelist(ccts.username)#">
 			<cfinvokeargument name="subject" value="Encumbrance Notification">
 			<cfinvokeargument name="message" value="#msg#">
 			<cfinvokeargument name="email_immediate" value="">

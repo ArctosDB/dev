@@ -1,3 +1,5 @@
+<cfinclude template="/includes/_includeCheck.cfm">
+
 <cfoutput>
 	<!----
 		standard permit search SQL assembly

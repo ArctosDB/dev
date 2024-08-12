@@ -81,219 +81,30 @@ grant insert,update,delete,select on ds_temp_agent_split to coldfusion_user;
 	<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		select * from ds_temp_agent_split where preferred_name is not null 
 	</cfquery>
-	<cfset obj = CreateObject("component","component.agent")>
+
+
 	<cfloop query="d">
+		 <br>#preferred_name#
 
-		  <br>#preferred_name#
-
-
-		<cfset splitAgentName = obj.splitAgentName(name="#preferred_name#")>
-
-		<!----
-		<cfset checkAgent = obj.checkAgent(preferred_name="#preferred_name#", agent_type='person')>
-		,
-				suggestions='#checkAgent#'
----->
-
+		<cfinvoke component="/component/api/agent" method="splitAgentName" returnvariable="splitAgentName">
+	    	<cfinvokeargument name="name" value="#preferred_name#">
+		</cfinvoke>
 
 		<cfquery name="d" datasource="uam_god">
 			update ds_temp_agent_split set
-				other_name_1='#splitAgentName.formatted_name#',
+				other_name_1=<cfqueryparam value="#splitAgentName.formatted_name#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(splitAgentName.formatted_name))#">,
 				other_name_type_1='formatted name',
-				other_name_2='#splitAgentName.last#',
+				other_name_2=<cfqueryparam value="#splitAgentName.last#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(splitAgentName.last))#">,
 				other_name_type_2='last name',
-				other_name_3='#splitAgentName.middle#',
+				other_name_3=<cfqueryparam value="#splitAgentName.middle#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(splitAgentName.middle))#">,
 				other_name_type_3='middle name',
-				other_name_4='#splitAgentName.first#',
+				other_name_4=<cfqueryparam value="#splitAgentName.first#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(splitAgentName.first))#">,
 				other_name_type_4='first name'
 			where key=#key#
 		</cfquery>
 
 	</cfloop>
-			<!-----
-
-
-			other_name_1  varchar2(255),
-	other_name_type_1   varchar2(255),
-	other_name_2  varchar2(255),
-	other_name_type_2   varchar2(255),
-	other_name_3  varchar2(255),
-	other_name_type_3   varchar2(255),
-	other_name_4  varchar2(255),
-	other_name_type_4   varchar2(255),
-
-
-
-			<cfset temp = queryaddrow(d,1)>
-	<cfset temp = QuerySetCell(d, "name", name, 1)>
-	<cfset temp = QuerySetCell(d, "nametype", nametype, 1)>
-	<cfset temp = QuerySetCell(d, "first", trim(first), 1)>
-	<cfset temp = QuerySetCell(d, "middle", trim(middle), 1)>
-	<cfset temp = QuerySetCell(d, "last", trim(last), 1)>
-	<cfset temp = QuerySetCell(d, "formatted_name", trim(formatted_name), 1)>
-
-
-
-		<cfquery name="d" datasource="uam_god">
-			update ds_temp_agent_split set
-				agent_type='person',
-				preferred_name='#thisName#',
-				first_name='#firstn#',
-				middle_name='#mdln#',
-				last_name='#lastn#',
-				birth_date='',
-				death_date='',
-				prefix='#pfx#',
-				suffix='#sfx#',
-				other_name_1='',
-				other_name_type_1='',
-				other_name_2='',
-				other_name_type_2='',
-				other_name_3='',
-				other_name_type_3='',
-				agent_remark='',
-				suggestions='#sugn#',
-				status='#s#'
-			where key=#key#
-		</cfquery>
-
-
-
-alter table ds_temp_agent_split add status varchar2(4000);
-
-	<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		select * from ds_temp_agent_split where preferred_name is not null
-	</cfquery>
-	<cfquery name="ctsuffix" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		select suffix from ctsuffix
-	</cfquery>
-	<cfquery name="ctprefix" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		select prefix from ctprefix
-	</cfquery>
-	<cfset sfxLst=valuelist(ctsuffix.suffix)>
-	<cfset pfxLst=valuelist(ctprefix.prefix)>
-	<cfloop query="d">
-		<cfset s=''>
-		<cfset pfx=''>
-		<cfset sfx=''>
-		<cfset firstn=''>
-		<cfset lastn=''>
-		<cfset mdln=''>
-		<cfset sugn=''>
-		<cftry>
-			<cfset thisName=trim(preferred_name)>
-			<cfif len(thisName) is 0>
-				<cfset s=listappend(s,"preferred_name may not be blank",";")>
-			</cfif>
-			<cfif thisName is not preferred_name>
-				<cfset s=listappend(s,"leading or trailing spaces trimmed",";")>
-			</cfif>
-			<cfif thisName contains "  ">
-				<cfset thisName=replace(thisName,"  "," ","all")>
-				<cfset s=listappend(s,"trimmed double spaces",";")>
-			</cfif>
-			<cfquery name="isThere" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-				select agent_id from agent_name where agent_name='#thisName#'
-			</cfquery>
-			<cfif isThere.recordcount is 1>
-				<cfset s=listappend(s,"found #isThere.recordcount# match",";")>
-			<cfelseif isThere.recordcount gt 1>
-				<cfset s=listappend(s,"found #isThere.recordcount# matches-merge or make unique",";")>
-			</cfif>
-			<cfloop index="i" list="#thisName#" delimiters=" ,;">
-				<cfif listfindnocase(pfxLst,i)>
-					<cfset pfx=i>
-				</cfif>
-				<cfif listfindnocase(sfxLst,i)>
-					<cfset sfx=i>
-				</cfif>
-			</cfloop>
-			<cfset tempName=thisName>
-			<cfif len(pfx) gt 0>
-				<cfset tempName=replace(tempName,pfx,'')>
-			</cfif>
-			<cfif len(sfx) gt 0>
-				<cfset tempName=replace(tempName,sfx,'')>
-			</cfif>
-			<cfset tempName=trim(tempName)>
-			<cfif right(tempName,1) is ",">
-				<cfset tempName=left(tempName,len(tempName)-1)>
-			</cfif>
-			<cfif listlen(tempName," ") is 1>
-				<cfset s=listappend(s,"will not deal with no-space agents",";")>
-			<cfelseif listlen(tempName," ") is 2>
-				<cfset firstn=listFirst(tempName," ")>
-				<cfset lastn=listLast(tempName," ")>
-			<cfelse>
-				<cfset firstn=listFirst(tempName," ")>
-				<cfset lastn=listLast(tempName," ")>
-				<cfset mdln=tempName>
-				<cfset mdln=replace(mdln,firstn,'')>
-				<cfset mdln=replace(mdln,lastn,'')>
-				<cfset mdln=trim(mdln)>
-			</cfif>
-			<cfset ProbNotPersonClue="class,biol,alaska,california,field,station,research,summer,student,students,uaf,national,estate">
-			<cfset pnap=false>
-			<cfloop list="#ProbNotPersonClue#" index="i">
-				<cfif listfindnocase(thisName,i," ,;-")>
-					<cfset pnap=true>
-				</cfif>
-			</cfloop>
-			<cfif refind("[A-Z][A-Z]",thisName)>
-				<cfset pnap=true>
-			</cfif>
-			<cfif refind("[0-9]",thisName)>
-				<cfset pnap=true>
-			</cfif>
-			<cfif pnap>
-				<cfset s=listappend(s,"probably not a person",";")>
-			</cfif>
-			<cfif s does not contain "found">
-				<cfquery name="ln" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					select agent_name from preferred_agent_name,person where
-					person.person_id=preferred_agent_name.agent_id and
-					person.last_name='#lastn#'
-					group by agent_name
-				</cfquery>
-				<cfif ln.recordcount gt 0>
-					<cfset sugn=valuelist(ln.agent_name,"; ")>
-				</cfif>
-				<cfif len(sugn) gt 3500>
-					<cfset sugn=left(sugn,3500) & '...'>
-				</cfif>
-			</cfif>
-		<cfcatch>
-			<cfset s="something very strange happened - check for nonprinting or special characters">
-		</cfcatch>
-		</cftry>
-		<!--- this has to run as UAM because the CF datathingy is completely retarded and fails on agent name "grant" ---->
-		<cfquery name="d" datasource="uam_god">
-			update ds_temp_agent_split set
-				agent_type='person',
-				preferred_name='#thisName#',
-				first_name='#firstn#',
-				middle_name='#mdln#',
-				last_name='#lastn#',
-				birth_date='',
-				death_date='',
-				prefix='#pfx#',
-				suffix='#sfx#',
-				other_name_1='',
-				other_name_type_1='',
-				other_name_2='',
-				other_name_type_2='',
-				other_name_3='',
-				other_name_type_3='',
-				agent_remark='',
-				suggestions='#sugn#',
-				status='#s#'
-			where key=#key#
-		</cfquery>
-	</cfloop>
-
-
-
-	---->
+			
 	all done <a href="agentNameSplitter.cfm?action=showTable">move on</a>
 </cfoutput>
 </cfif>
@@ -367,34 +178,6 @@ alter table ds_temp_agent_split add status varchar2(4000);
 	   	output = "#csv#"
 	   	addNewLine = "no">
 
-
-	   	<!----
-	<cfset theCols=data.columnList>
-	<cfset theCols=listdeleteat(theCols,listFindNoCase(theCols,"key"))>
-
-
-
-	<cfset variables.encoding="UTF-8">
-	<cfset variables.fileName="#Application.webDirectory#/download/splitAgentNames.csv">
-	<cfscript>
-		variables.joFileWriter = createObject('Component', '/component.FileWriter').init(variables.fileName, variables.encoding, 32768);
-		variables.joFileWriter.writeLine(theCols);
-	</cfscript>
-
-	<cfloop query="data">
-		<cfset d=''>
-		<cfloop list="#theCols#" index="i">
-			<cfset t='"' & evaluate("data." & i) & '"'>
-			<cfset d=listappend(d,t,",")>
-		</cfloop>
-		<cfscript>
-			variables.joFileWriter.writeLine(d);
-		</cfscript>
-	</cfloop>
-	<cfscript>
-		variables.joFileWriter.close();
-	</cfscript>
-	---->
 	<cflocation url="/download.cfm?file=splitAgentNames.csv" addtoken="false">
 	<a href="/download/splitAgentNames.csv">Click here if your file does not automatically download.</a>
 </cfif>

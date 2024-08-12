@@ -28,7 +28,7 @@
 
 	create table cf_temp_bulk_edit_parts (
 		key serial not null,
-		part_id int not null,
+		part_id varchar not null,
 		part_name varchar,
 		condition varchar,
 		disposition varchar,
@@ -42,7 +42,9 @@
 	grant select, insert, update, delete on cf_temp_bulk_edit_parts to manage_records;
 	grant select, usage on cf_temp_bulk_edit_parts_key_seq to public;
 
-	
+	alter table cf_temp_bulk_edit_parts alter column part_id  type varchar;
+
+
 
 
 delete from cf_component_loader where loader_template='autoload_edit_parts';

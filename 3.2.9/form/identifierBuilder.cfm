@@ -1,3 +1,8 @@
+
+see https://github.com/ArctosDB/arctos/issues/7822 this can probably go away
+<cfabort>
+
+
 <cfinclude template="/includes/_includeHeader.cfm">
 <style>
 	.ridDef {
@@ -94,18 +99,19 @@
 	<cfparam name="val_fld" default="">
 	<cfquery name="d" datasource="uam_god">
 		select
-			key,
-			identifier_type,
-			identifier_base_uri,
-			identifier_issuer,
-			getPreferredAgentName(identifier_issuer) as issuer,
-			target_type,
-			description,
-			identifier_example,
-			fragment_datatype
+			cf_identifier_helper.key,
+			cf_identifier_helper.identifier_type,
+			cf_identifier_helper.identifier_base_uri,
+			cf_identifier_helper.identifier_issuer,
+			getPreferredAgentName(cf_identifier_helper.identifier_issuer) as issuer,
+			cf_identifier_helper.target_type,
+			cf_identifier_helper.description,
+			cf_identifier_helper.identifier_example,
+			cf_identifier_helper.fragment_datatype
 		from 
 			cf_identifier_helper
-			left outer join agent_name on cf_identifier_helper.identifier_issuer=agent_name.agent_id
+			left outer  join agent_attribute on cf_identifier_helper.identifier_issuer=agent_attribute.agent_id and deprecation_type is null
+			left outer join ctagent_attribute_type on agent_attribute.attribute_type=ctagent_attribute_type.attribute_type and purpose='name'
 		where
 			1=1
 			<cfif len(idtype) gt 0>
@@ -113,19 +119,20 @@
 			</cfif>
 
 			<cfif len(issuedby) gt 0>
-				and agent_name.agent_name ilike <cfqueryparam value="%#issuedby#%" CFSQLType="cf_sql_varchar">
+				and agent_attribute.attribute_value ilike <cfqueryparam value="%#issuedby#%" CFSQLType="cf_sql_varchar">
 			</cfif>
 		group by
-			key,
-			identifier_type,
-			identifier_base_uri,
-			identifier_issuer,
-			target_type,
-			description,
-			identifier_example,
-			fragment_datatype
+			cf_identifier_helper.key,
+			cf_identifier_helper.identifier_type,
+			cf_identifier_helper.identifier_base_uri,
+			cf_identifier_helper.identifier_issuer,
+			cf_identifier_helper.identifier_issuer,
+			cf_identifier_helper.target_type,
+			cf_identifier_helper.description,
+			cf_identifier_helper.identifier_example,
+			cf_identifier_helper.fragment_datatype
 		order by
-			identifier_type
+			cf_identifier_helper.identifier_type
 	</cfquery>
 	<form name="f" method="post" action="identifierBuilder.cfm">
 		<input type="hidden" name="clickedfrom" value="#clickedfrom#">

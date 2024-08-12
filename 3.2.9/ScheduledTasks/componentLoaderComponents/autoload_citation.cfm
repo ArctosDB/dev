@@ -45,26 +45,30 @@
 
 		<cfset pid="">
 		<cfif len(d.publication_id) gt 0>
-
 			<cfset lpid=replace(d.publication_id,Application.serverRootURL & '/publication/' , '')>
 			<cfif debug>
 				<br>d.publication_id==#d.publication_id#
 				<br>lpid==#lpid#
 			</cfif>
-			<cfquery name="p" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select publication_id from publication where publication_id=<cfqueryparam value="#lpid#" CFSQLType="cf_sql_int">
-			</cfquery>
-		<cfelseif len(d.doi) gt 0>
-			<!---- 
-				https://github.com/ArctosDB/arctos/issues/5726
-				this is evil and buggy but we have no choice at the moment
-			---->
+			<!---- https://github.com/ArctosDB/arctos/issues/7989 ---->
+			<cfif isNumeric(lpid)>
+				<cfquery name="p" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
+					select publication_id from publication where publication_id=<cfqueryparam value="#lpid#" CFSQLType="cf_sql_int">
+				</cfquery>
+			<cfelse>
+				<cfif debug>
+					<br>nopub isNumeric, die
+				</cfif>
+				<cfquery name="fail" datasource="uam_god">
+					update cf_temp_citation set status='publication notfound check format' where key=#val(d.key)#
+				</cfquery>
+				<cfcontinue />
+			</cfif>
 
-		
+		<cfelseif len(d.doi) gt 0>		
 			<cfquery name="p" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 				select publication_id from publication where upper(doi)=<cfqueryparam value="#ucase(d.doi)#" CFSQLType="CF_SQL_VARCHAR">
 			</cfquery>
-
 		<cfelse>
 			<cfquery name="p" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 				select publication_id from publication where upper(full_citation)=<cfqueryparam value="#ucase(d.full_citation)#" CFSQLType="CF_SQL_VARCHAR">

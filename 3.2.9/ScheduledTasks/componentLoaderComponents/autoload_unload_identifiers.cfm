@@ -21,7 +21,7 @@
 		FROM
 			flat
 		WHERE
-			guid = <cfqueryparam value="#d.guid#" CFSQLType="CF_SQL_VARCHAR">
+			guid = stripArctosGuidURL(<cfqueryparam value="#d.guid#" CFSQLType="CF_SQL_VARCHAR">)
 	</cfquery>
 
 	<cfif collObj.recordcount is 1 and len(collObj.collection_object_id) gt 0>

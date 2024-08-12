@@ -1,8 +1,9 @@
 <!----
+	drop table ds_temp_ct_check;
 	create table ds_temp_ct_check (
 		key serial not null,
 		table_name varchar,
-		collection_cde varchar,
+		guid_prefix varchar,
 		value varchar,
 		status varchar
 	);
@@ -22,10 +23,10 @@
 	Upload CSV with the following columns:
 	<ul>
 		<li>
-			table_name: a table name, available from <a href="/info/ctDocumentation.cfm">Code Table Documentation.</a>. Must start with "ct"; "ctaddress_type" from <a href="/info/ctDocumentation.cfm?table=ctaddress_type">ctaddress_type</a>, for example. Required.
+			table_name: a table name, available from <a href="/info/ctDocumentation.cfm">Code Table Documentation.</a>. Must start with "ct"; "ctsex_cde" from <a href="/info/ctDocumentation.cfm?table=ctsex_cde">ctsex_cde</a>, for example. Required.
 		</li>
 		<li>
-			collection_cde: for tables with a collection column, the relevant value. Conditionally required: Will result in nonsense results or errors when used inappropriately (not included when it exists in the table or included when the table does not contain.)
+			guid_prefix: for tables with a collection filter, the relevant value. Conditionally required: Will result in nonsense results or errors when used inappropriately (not included when it exists in the table or included when the table does not contain.)
 		</li>
 		<li>
 			value: the proposed value. Required.
@@ -76,7 +77,7 @@
 				</cfquery>
 
 				<cfset pcols=valuelist(getTableCols.column_name)>
-				<cfset funkyCols="ctspnid,collection_cde,description,tissue_fg,base_url,cttaxon_term_id,data_license_id,is_classification,parameter_type,relative_position,sort_order,srid,uri">
+				<cfset funkyCols="ctspnid,description,tissue_fg,base_url,cttaxon_term_id,data_license_id,is_classification,parameter_type,relative_position,sort_order,srid,uri">
 				<cfloop list="#funkyCols#" index="fc">
 					<cfif listfind(pcols,fc)>
 						<cfset pcols=listdeleteat(pcols,listfind(pcols,fc))>
@@ -85,8 +86,8 @@
 
 				<cfquery name="ck" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
 					select count(*) c from #table_name# where #pcols#=<cfqueryparam value="#d.value#" CFSQLType="cf_sql_varchar">
-					<cfif len(d.collection_cde) gt 0>
-						and collection_cde=<cfqueryparam value="#d.collection_cde#" CFSQLType="cf_sql_varchar">
+					<cfif len(d.guid_prefix) gt 0>
+						and <cfqueryparam value="#d.guid_prefix#" CFSQLType="cf_sql_varchar"> = any(collections) 
 					</cfif>
 				</cfquery>
 				<cfif ck.c is 1>

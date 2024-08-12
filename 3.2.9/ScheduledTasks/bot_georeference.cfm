@@ -8,6 +8,9 @@
 <cfset args.logged_action = "start">
 <cfset args.logged_time = "">
 <cfinvoke component="component.internal" method="logThis" args="#args#">
+
+
+<cfset debug="true">
 <!---------------------- /begin log --------------------->
 <cfoutput>
 	<!---- 
@@ -32,15 +35,426 @@
 		SELECT guid_prefix FROM cte
 		inner join collection on upper(cte.rolname) = upper(replace(collection.guid_prefix,':','_'))
 	</cfquery>
-	<cfif listlen(valuelist(bot_collection_access.guid_prefix)) gt 0>
-		found
-		<cfdump var="#bot_collection_access#">
-		<cfinvoke component="/component/functions" method="deliver_notification">
-			<cfinvokeargument name="usernames" value="dlm">
-			<cfinvokeargument name="subject" value="georeference_bot has been activated">
-			<cfinvokeargument name="message" value="a collection has turned on access, do stuff now plz">
-			<cfinvokeargument name="email_immediate" value="dustymc@gmail.com">
-		</cfinvoke>
+
+	<cfset collections_to_georef=valuelist(bot_collection_access.guid_prefix)>
+
+
+	<cfif listlen(collections_to_georef) gt 0>
+
+		<cfif debug>
+			found
+			<cfdump var="#bot_collection_access#">
+		</cfif>
+
+		<!---- get some localities that active collections use which are not georeferenced ---->
+		<!---- this is happiest with 1 record, provides no opportunity to trip over own toes ---->
+		<cfquery name="locs_to_georef" datasource="uam_god">
+			select
+				guid,
+				guid_prefix,
+				specimen_event.specimen_event_id,
+				collecting_event.collecting_event_id,
+				locality.locality_id
+			from
+				flat
+				inner join specimen_event on flat.collection_object_id = specimen_event.collection_object_id
+				inner join collecting_event on specimen_event.collecting_event_id=collecting_event.collecting_event_id
+				inner join locality on collecting_event.locality_id=locality.locality_id
+			where
+				locality.locality_name is null and
+				collecting_event.collecting_event_name is null and
+				locality.dec_lat is null and
+				locality.s_dec_lat is not null and
+				flat.guid_prefix in ( <cfqueryparam cfsqltype="varchar" value="#collections_to_georef#" list="true"> )
+			limit 1
+		</cfquery>
+		<cfif debug>
+			<cfdump var="#locs_to_georef#">
+		</cfif>
+
+
+		<cfloop query="locs_to_georef">
+			<!---- now see if the locality is shared, if so split it ---->
+			<cfquery name="get_locality_users" datasource="uam_god">
+				select
+					flat.guid_prefix,
+					collecting_event.collecting_event_id,
+					specimen_event.specimen_event_id
+				from
+					flat
+					inner join specimen_event on flat.collection_object_id = specimen_event.collection_object_id
+					inner join collecting_event on specimen_event.collecting_event_id=collecting_event.collecting_event_id
+					inner join locality on collecting_event.locality_id=locality.locality_id
+				where
+					locality.locality_id=<cfqueryparam value="#locs_to_georef.locality_id#" cfsqltype="int">
+			</cfquery>
+			<cfif debug>
+				<cfdump var="#get_locality_users#">
+			</cfif>
+
+			<cfquery name="u_get_locality_users" dbtype="query">
+				select guid_prefix from get_locality_users group by guid_prefix
+			</cfquery>
+
+
+			<cfif debug>
+				<cfdump var="#u_get_locality_users#">
+			</cfif>
+
+			<cfset used_by=valuelist(u_get_locality_users.guid_prefix)>
+			<cfloop list="#collections_to_georef#" index="i">
+				<cfif listfind(used_by,i)>
+					<cfset used_by=listdeleteat(used_by,listfind(used_by,i))>
+				</cfif>
+			</cfloop>
+
+			<cfif debug>
+				<cfdump var="#used_by#">
+			</cfif>
+
+			<cfif len(used_by) gt 0>
+				<!--- shared locality, split it ---->
+				<cftransaction>
+					<!---- make a new locality ---->
+					<cfquery name="new_loc_id" datasource="uam_god">
+						select nextval('sq_locality_id') as nlid
+					</cfquery>
+
+					<cfif debug>
+						<p>making locality <a href="/editLocality.cfm?locality_id=#new_loc_id.nlid#" class="external">#new_loc_id.nlid#</a></p>
+					</cfif>
+					<cfquery name="new_loc" datasource="uam_god">
+						insert into locality (
+				    		locality_id,
+				    		geog_auth_rec_id,
+				    		spec_locality,
+				    		dec_lat,
+				    		dec_long,
+				    		minimum_elevation,
+				    		maximum_elevation,
+				    		orig_elev_units,
+				    		min_depth,
+				    		max_depth,
+				    		depth_units,
+				    		max_error_distance,
+				    		max_error_units,
+				    		datum,
+				    		locality_remarks,
+				    		georeference_protocol,
+				    		locality_footprint,
+				    		primary_spatial_data,
+				    		last_usr,
+							last_chg
+				    	) (select
+				    		<cfqueryparam value="#new_loc_id.nlid#" cfsqltype="int">,
+				    		geog_auth_rec_id,
+				    		spec_locality,
+				    		s_dec_lat,
+				    		s_dec_long,
+				    		minimum_elevation,
+				    		maximum_elevation,
+				    		orig_elev_units,
+				    		min_depth,
+				    		max_depth,
+				    		depth_units,
+				    		case when s_error_meters is null then null else s_error_meters end,
+							case when s_error_meters is null then null else 'm' end,
+							'World Geodetic System 1984',
+				    		locality_remarks,
+				    		'GeoLocate',
+				    		null,
+				    		'point-radius',
+				    		<cfqueryparam value='georeference_bot' CFSQLType="cf_sql_varchar">,
+				    		<cfqueryparam value="#DateConvert('local2Utc',now())#" cfsqltype="cf_sql_timestamp">
+				    	from locality where locality_id=<cfqueryparam value="#locs_to_georef.locality_id#" cfsqltype="int">
+				    	)
+				    </cfquery>
+				    <cfquery name="auto_georef_locality_gs" datasource="uam_god">
+						insert into locality_attributes (
+							locality_id,
+							determined_by_agent_id,
+							attribute_type,
+							attribute_value,
+							determined_date
+						) values (
+							<cfqueryparam value="#new_loc_id.nlid#" cfsqltype="int">,
+							<cfqueryparam value="21346173" cfsqltype="int">,
+							<cfqueryparam value="georeference source" cfsqltype="cf_sql_varchar">,
+							<cfqueryparam value="Automatically georeferenced by Arctos georeference bot using cached GeoLocate data and/or local spatial data." cfsqltype="cf_sql_varchar">,
+							to_char(current_timestamp,'YYYY-MM-DD')
+						)
+					</cfquery>
+
+				     <cfquery name="p_locattrs" datasource="uam_god">
+						select count(*) c from locality_attributes where locality_id=<cfqueryparam value="#locs_to_georef.locality_id#" cfsqltype="int"> and 
+						attribute_type != 'georeference source' 
+					</cfquery>
+					<cfif p_locattrs.c gt 0>
+
+						<cfif debug>
+							<p>making locality attributessssss</p>
+						</cfif>
+						<cfquery name="new_grse" datasource="uam_god">
+							insert into locality_attributes (
+					    		locality_id,
+					    		determined_by_agent_id,
+					    		attribute_type,
+					    		attribute_value,
+					    		determined_date,
+					    		attribute_units,
+					    		attribute_remark,
+					    		determination_method
+					    	) ( select
+					    		<cfqueryparam value="#new_loc_id.nlid#" cfsqltype="int">,
+					    		determined_by_agent_id,
+					    		attribute_type,
+					    		attribute_value,
+					    		determined_date,
+					    		attribute_units,
+					    		attribute_remark,
+					    		determination_method
+					    		from locality_attributes where 
+					    		locality_id=<cfqueryparam value="#locs_to_georef.locality_id#" cfsqltype="int"> and 
+								attribute_type != 'georeference source' 
+							)
+						</cfquery>
+					</cfif>
+
+					<!----find all shared events---->
+					<cfquery name="used_by_other_collections" dbtype="query">
+						select collecting_event_id from get_locality_users 
+						where 
+							guid_prefix not in (<cfqueryparam cfsqltype="varchar" value="#collections_to_georef#" list="true">)
+							group by collecting_event_id
+					</cfquery>
+
+					<cfif debug>
+						<cfdump var="#used_by_other_collections#">
+					</cfif>
+
+					<cfquery name="used_by_these_collections" dbtype="query">
+						select collecting_event_id from get_locality_users 
+						where 
+							guid_prefix in (<cfqueryparam cfsqltype="varchar" value="#collections_to_georef#" list="true">)
+							group by collecting_event_id
+					</cfquery>
+
+					<cfif debug>
+						<cfdump var="#used_by_these_collections#">
+					</cfif>
+
+					<!--- 
+						events which used ONLY by these collections can be updated
+						events which are not used by these collections can be ignored
+						events which are used by these collections AND other collections must be split
+					---->
+					<cfquery name="simple_update_event" dbtype="query">
+						select collecting_event_id from get_locality_users
+						where 
+						collecting_event_id in (<cfqueryparam cfsqltype="varchar" value="#valuelist(used_by_these_collections.collecting_event_id)#" list="true">) and
+						collecting_event_id not in (<cfqueryparam cfsqltype="varchar" value="#valuelist(used_by_other_collections.collecting_event_id)#" list="true">)
+						group by collecting_event_id
+					</cfquery>
+
+
+					<cfif debug>
+						<p>simple_update_event</p>
+						<cfdump var="#simple_update_event#">
+					</cfif>
+
+					<cfquery name="shared_to_split_event" dbtype="query">
+						select collecting_event_id from get_locality_users
+						where 
+						collecting_event_id in (<cfqueryparam cfsqltype="int" value="#valuelist(used_by_these_collections.collecting_event_id)#" list="true">) and
+						collecting_event_id in (<cfqueryparam cfsqltype="int" value="#valuelist(used_by_other_collections.collecting_event_id)#" list="true">)
+						group by collecting_event_id
+					</cfquery>
+
+					<cfif debug>
+						<p>shared_to_split_event</p>
+						<cfdump var="#shared_to_split_event#">
+					</cfif>
+
+					<cfif shared_to_split_event.recordcount gt 0>
+						<cfloop query="shared_to_split_event">
+
+							<!--- make a new event, bring over any attributes, update specimen-events to use it ---->
+							<cfquery name="new_evt_id" datasource="uam_god">
+								select nextval('sq_collecting_event_id') as nlid
+							</cfquery>
+
+							<cfif debug>
+								<p>making collecting_event <a href="/editEvent.cfm?collecting_event_id=#new_evt_id.nlid#" class="external">#new_evt_id.nlid#</a></p>
+							</cfif>
+							<cfquery name="new_loc" datasource="uam_god">
+								insert into collecting_event (
+						    		collecting_event_id,
+						    		locality_id,
+						    		verbatim_date,
+						    		verbatim_locality,
+						    		coll_event_remarks,
+						    		began_date,
+						    		ended_date,
+						    		verbatim_coordinates,
+						    		lat_deg,
+						    		dec_lat_min,
+						    		lat_min,
+						    		lat_sec,
+						    		lat_dir,
+						    		long_deg,
+						    		dec_long_min,
+						    		long_min,
+						    		long_sec,
+						    		long_dir,
+						    		dec_lat,
+						    		dec_long,
+						    		datum,
+						    		utm_zone,
+						    		utm_ew,
+						    		utm_ns,
+						    		orig_lat_long_units,
+						    		caclulated_dlat,
+						    		calculated_dlong,
+						    		dec_lat_deg,
+						    		dec_lat_dir,
+						    		dec_long_deg,
+						    		dec_long_dir
+						    	) (select
+				    				<cfqueryparam value="#new_evt_id.nlid#" cfsqltype="int">,
+				    				<cfqueryparam value="#new_loc_id.nlid#" cfsqltype="int">,
+				    				verbatim_date,
+						    		verbatim_locality,
+						    		coll_event_remarks,
+						    		began_date,
+						    		ended_date,
+						    		verbatim_coordinates,
+						    		lat_deg,
+						    		dec_lat_min,
+						    		lat_min,
+						    		lat_sec,
+						    		lat_dir,
+						    		long_deg,
+						    		dec_long_min,
+						    		long_min,
+						    		long_sec,
+						    		long_dir,
+						    		dec_lat,
+						    		dec_long,
+						    		datum,
+						    		utm_zone,
+						    		utm_ew,
+						    		utm_ns,
+						    		orig_lat_long_units,
+						    		caclulated_dlat,
+						    		calculated_dlong,
+						    		dec_lat_deg,
+						    		dec_lat_dir,
+						    		dec_long_deg,
+						    		dec_long_dir
+						    	from collecting_event where collecting_event_id=<cfqueryparam cfsqltype="int" value="#shared_to_split_event.collecting_event_id#">
+						    	)
+							</cfquery>
+							<cfquery name="p_evtattrs" datasource="uam_god">
+								select count(*) c from collecting_event_attributes where collecting_event_id=<cfqueryparam cfsqltype="int" value="#shared_to_split_event.collecting_event_id#">
+							</cfquery>
+							<cfif p_evtattrs.c gt 0>
+
+								<cfif debug>
+									<p>making collecting_event_attributes</p>
+								</cfif>
+								<cfquery name="new_ceatr" datasource="uam_god">
+									insert into collecting_event_attributes (
+										collecting_event_id,
+										determined_by_agent_id,
+										event_attribute_type,
+										event_attribute_value,
+										event_attribute_units,
+										event_attribute_remark,
+										event_determination_method,
+										event_determined_date
+									) (select
+										<cfqueryparam value="#new_evt_id.nlid#" cfsqltype="int">,
+										determined_by_agent_id,
+										event_attribute_type,
+										event_attribute_value,
+										event_attribute_units,
+										event_attribute_remark,
+										event_determination_method,
+										event_determined_date
+									from collecting_event_attributes where collecting_event_id=<cfqueryparam cfsqltype="int" value="#shared_to_split_event.collecting_event_id#">
+									)
+								</cfquery>
+							</cfif>
+							<!---- now update specimen-events ---->
+
+							<cfquery name="setud" dbtype="query">
+								select specimen_event_id from locs_to_georef where 
+									locality_id=<cfqueryparam value="#locs_to_georef.locality_id#" cfsqltype="int"> and
+									guid_prefix in (<cfqueryparam cfsqltype="varchar" value="#collections_to_georef#" list="true">)
+								group by specimen_event_id
+							</cfquery>
+
+							<cfif debug>
+								<cfdump var="#setud#">
+							</cfif>
+
+
+							<cfquery name="upses" datasource="uam_god" result="up_sets">
+								update specimen_event set collecting_event_id=<cfqueryparam value="#new_evt_id.nlid#" cfsqltype="int"> where 
+									specimen_event_id in (<cfqueryparam value="#valuelist(setud.specimen_event_id)#" cfsqltype="int" list="true">)
+							</cfquery>
+							<cfif debug>
+								<p>updated these</p>
+								<cfdump var="#up_sets#">
+							</cfif>
+						</cfloop>
+					</cfif>
+					<!---- now update all just-us events to use the locality we just made ---->
+					<cfif simple_update_event.recordcount gt 0>
+						<cfquery name="up_us_event" datasource="uam_god">
+							update collecting_event set locality_id=<cfqueryparam value="#new_loc_id.nlid#" cfsqltype="int"> where 
+								collecting_event_id in (<cfqueryparam cfsqltype="int" value="#valuelist(simple_update_event.collecting_event_id)#" list="true">)
+						</cfquery>
+					</cfif>
+				</cftransaction>
+			<cfelse>
+				<cfif debug>
+					 <p>not shared georeffing <a href="/editLocality.cfm?locality_id=#locs_to_georef.locality_id#" class="external">#locs_to_georef.locality_id#</a></p>
+				</cfif>				
+				<!--- update and add a trail --->
+				<cftransaction>
+					<cfquery name="auto_georef_locality" datasource="uam_god">
+						update locality set
+							dec_lat=s_dec_lat,
+							dec_long=s_dec_long,
+							max_error_distance=case when s_error_meters is null then null else s_error_meters end,
+							max_error_units=case when s_error_meters is null then null else 'm' end,
+							georeference_protocol='GeoLocate',
+							primary_spatial_data='point-radius',
+							datum='World Geodetic System 1984',
+							last_usr=<cfqueryparam value='georeference_bot' CFSQLType="cf_sql_varchar">,
+							last_chg=<cfqueryparam value="#DateConvert('local2Utc',now())#" cfsqltype="cf_sql_timestamp">
+						where
+							locality_id=<cfqueryparam value="#locs_to_georef.locality_id#" cfsqltype="int">
+					</cfquery>
+					<cfquery name="auto_georef_locality_gs" datasource="uam_god">
+						insert into locality_attributes (
+							locality_id,
+							determined_by_agent_id,
+							attribute_type,
+							attribute_value,
+							determined_date
+						) values (
+							<cfqueryparam value="#locs_to_georef.locality_id#" cfsqltype="int">,
+							<cfqueryparam value="21346173" cfsqltype="int">,
+							<cfqueryparam value="georeference source" cfsqltype="cf_sql_varchar">,
+							<cfqueryparam value="Automatically georeferenced by Arctos georeference bot using cached GeoLocate data and/or local spatial data." cfsqltype="cf_sql_varchar">,
+							to_char(current_timestamp,'YYYY-MM-DD')
+						)
+					</cfquery>
+				</cftransaction>
+			</cfif>
+		</cfloop>
 	</cfif>
 </cfoutput>
 

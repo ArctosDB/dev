@@ -1,3 +1,22 @@
+
+<!----
+
+
+create table logs.cf_log_user_sql_access (
+	key serial not null,
+	access_date timestamp default current_timestamp,
+	username varchar not null,
+	mode varchar not null,
+	record_count int,
+	table_name varchar,
+	sql_statement varchar,
+	sql_execution_time numeric
+);
+
+-- original name messed with log reporting
+alter table log_user_sql_acces rename to cf_log_user_sql_access;
+
+---->
 <cfinclude template = "/includes/_header.cfm">
 <cfset title="user SQL">
     <cfparam name="sqltxt" default="SELECT 'test'">
@@ -55,48 +74,36 @@
                         <cfabort>
                     </cfif>
 	                
-                    <cfif format is "csv_old">
-						<cfset  util = CreateObject("component","component.utilities")>
-						<cfset csv = util.QueryToCSV2(Query=user_sql,Fields=user_sql.columnlist)>
-						<cfset fileName = "ArctosUserSql_#left(session.sessionKey,10)#.csv">
+                    <cfif format is "csv">
 
-						<cffile action = "write"
-						    file = "#Application.webDirectory#/download/#fileName#"
-					    	output = "#csv#"
-					    	addNewLine = "no">
-						<cflocation url="/download.cfm?file=#fileName#" addtoken="false">
-
-						<!----
-
-                        <cfset ac = user_sql.columnlist>
-                        <cfset fileDir = "#Application.webDirectory#/download/">
-				        <cfset header=#trim(ac)#>
-				        <cffile action="write" file="#fileDir##fileName#" addnewline="yes" output="#header#">
-				        <cfloop query="user_sql">
-					        <cfset oneLine = "">
-					        <cfloop list="#ac#" index="z">
-						        <cfset thisData = #evaluate(z)#>
-								<cfif len(#oneLine#) is 0>
-									<cfset oneLine = '"#thisData#"'>
-								<cfelse>
-									<cfset oneLine = '#oneLine#,"#thisData#"'>
-								</cfif>
-					        </cfloop>
-					        <cfset oneLine = trim(oneLine)>
-					        <cffile action="append" file="#fileDir##fileName#" addnewline="yes" output="#oneLine#">
-				        </cfloop>
-				        <a href="/download.cfm?file=#fileName#">Click to download</a>
-				        ---->
-				    <cfelseif format is "csv">
-				    	<cfset tblName="temp_cache.user_sql_tbl_#session.username#">
-
-
+                    	<cfset vusrnm=lcase(rereplace(session.username,'[^A-Za-z0-9]','','all'))>
+						<cfset dstmp= DateTimeFormat(now(),"yyyymmddhhmmssLL")>
+						<cfset rnd= NumberFormat(RandRange(0,999),"000")>
+						<cfset tblName="sql_#vusrnm#_#dstmp#_#rnd#">
+				
 				    	<cfquery name="cleanup" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		                	drop table if exists #tblName#
 		            	</cfquery>
 
-				    	<cfquery name="user_sql" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+				    	<cfquery name="user_sql" result="create_tmp_tbl" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		                	create table #tblName# as #preservesinglequotes(sqltxt)#
+		            	</cfquery>
+		            	<cfquery name="log_writesql_access" datasource="uam_god">
+		            		insert into logs.cf_log_user_sql_access (
+		            			username,
+		            			mode,
+		            			record_count,
+		            			table_name,
+		            			sql_statement,
+		            			sql_execution_time
+		            		) values (
+		            			<cfqueryparam value="#session.username#" CFSQLType="cf_sql_varchar">,
+		            			<cfqueryparam value="csv" CFSQLType="cf_sql_varchar">,
+		            			<cfqueryparam value="#create_tmp_tbl.RECORDCOUNT#" CFSQLType="cf_sql_integer">,
+		            			<cfqueryparam value="#tblName#" CFSQLType="cf_sql_varchar">,
+		            			<cfqueryparam value="#create_tmp_tbl.SQL#" CFSQLType="cf_sql_varchar">,
+		            			<cfqueryparam value="#create_tmp_tbl.executionTime#" CFSQLType="cf_sql_numeric">
+		            		)
 		            	</cfquery>
 
 						<cfquery name="cf_global_settings" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
@@ -135,12 +142,48 @@
 						<cflocation url="/download.cfm?file=#csvFileName#" addtoken="false">
 						<a href="/download/#csvFileName#">Click here if your file does not automatically download.</a>
                     <cfelse>
-						<cfquery name="user_sql" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+						<cfquery name="user_sql" result="create_tmp_tbl" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		                	#preservesinglequotes(sqltxt)#
 		            	</cfquery>
+
+		            	<cfquery name="log_writesql_access" datasource="uam_god">
+		            		insert into logs.cf_log_user_sql_access (
+		            			username,
+		            			mode,
+		            			record_count,
+		            			table_name,
+		            			sql_statement,
+		            			sql_execution_time
+		            		) values (
+		            			<cfqueryparam value="#session.username#" CFSQLType="cf_sql_varchar">,
+		            			<cfqueryparam value="dump" CFSQLType="cf_sql_varchar">,
+		            			<cfqueryparam value="#create_tmp_tbl.RECORDCOUNT#" CFSQLType="cf_sql_integer">,
+		            			<cfqueryparam value="" CFSQLType="cf_sql_varchar" null="true">,
+		            			<cfqueryparam value="#create_tmp_tbl.SQL#" CFSQLType="cf_sql_varchar">,
+		            			<cfqueryparam value="#create_tmp_tbl.executionTime#" CFSQLType="cf_sql_numeric">
+		            		)
+		            	</cfquery>
+
                         <cfdump var=#user_sql#>
                     </cfif>
 		        <cfcatch>
+		        	<cfquery name="log_writesql_access" datasource="uam_god">
+	            		insert into logs.cf_log_user_sql_access (
+	            			username,
+	            			mode,
+	            			record_count,
+	            			table_name,
+	            			sql_statement,
+	            			sql_execution_time
+	            		) values (
+	            			<cfqueryparam value="#session.username#" CFSQLType="cf_sql_varchar">,
+	            			<cfqueryparam value="error" CFSQLType="cf_sql_varchar">,
+	            			<cfqueryparam value="0" CFSQLType="cf_sql_integer">,
+	            			<cfqueryparam value="" CFSQLType="cf_sql_varchar" null="true">,
+	            			<cfqueryparam value="#sqltxt#" CFSQLType="cf_sql_varchar">,
+	            			<cfqueryparam value="" CFSQLType="cf_sql_numeric" null="true">
+	            		)
+	            	</cfquery>
 	                <div class="error">
 	                    #cfcatch.message#
 	                    <br>

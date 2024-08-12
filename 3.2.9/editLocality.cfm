@@ -143,19 +143,16 @@
 			if (
 				$("#dec_lat").val().length>0 ||
 				$("#dec_long").val().length>0 ||
-				$("#datum").val().length>0 ||
-				$("#georeference_protocol").val().length>0
+				$("#datum").val().length>0 
 			) {
 				$("#dec_lat").addClass('reqdClr').prop('required',true);
 				$("#dec_long").addClass('reqdClr').prop('required',true);
 				$("#datum").addClass('reqdClr').prop('required',true);
-				$("#georeference_protocol").addClass('reqdClr').prop('required',true);
 				$("#fs_coordinates legend").text('Coordinates must be accompanied by datum, source, and protocol. NOTE: All locality data are stores in datum World Geodetic System 1984 (EPSG:4326).');
 			} else {
 				$("#dec_lat").removeClass().prop('required',false);
 				$("#dec_long").removeClass().prop('required',false);
 				$("#datum").removeClass().prop('required',false);
-				$("#georeference_protocol").removeClass().prop('required',false);
 				$("#fs_coordinates legend").text('Coordinates');
 			}
 		} else if (typ=='polygon') {
@@ -163,23 +160,17 @@
 			$("#dec_long").removeClass().prop('required',false);
 			if (
 				$("#wkt_string").val().length>0 ||
-				$("#datum").val().length>0 ||
-				$("#georeference_protocol").val().length>0
+				$("#datum").val().length>0 
 			) {
-				
 				$("#datum").addClass('reqdClr').prop('required',true);
-				$("#georeference_protocol").addClass('reqdClr').prop('required',true);
 			} else {
-
 				$("#datum").removeClass().prop('required',false);
-				$("#georeference_protocol").removeClass().prop('required',false);
 			}
 
 		} else {
 			$("#dec_lat").removeClass().prop('required',false);
 			$("#dec_long").removeClass().prop('required',false);
 			$("#datum").removeClass().prop('required',false);
-			$("#georeference_protocol").removeClass().prop('required',false);
 			$("#fs_coordinates legend").text('Coordinates');
 		}
 	}
@@ -327,7 +318,7 @@
 				checkDepth();
 			});
 
-			$( "#dec_lat,#dec_long,#max_error_distance,#max_error_units,#datum,#georeference_protocol" ).change(function() {
+			$( "#dec_lat,#dec_long,#max_error_distance,#max_error_units,#datum" ).change(function() {
 				checkCoordinates();
 			});
 			$( "#max_error_distance,#max_error_units" ).change(function() {
@@ -686,7 +677,7 @@
 							</div>
 						<cfelseif len(locDet.cache_best_geography) is 0>
 							<div class="grck_noavgeo">
-								 There is no spatially appropriate geography for this locality. Please create one (or file an Issue).
+								 No spatially appropriate geography for this locality found.
 							</div>
 						</cfif>
 						<ul class="locachelist">
@@ -713,7 +704,6 @@
 				 				<cfif len(locDet.cache_refresh_date) is 0>A refresh of the spatial fit cache has been requested.<cfelse>Last spatial fit cache refresh was #locdet.cache_refresh_date#</cfif>
 				 			</li>
 				 		</ul>
-
 						<label for="spec_locality">
 							<span class="helpLink" id="_spec_locality">
 								Specific Locality
@@ -1302,6 +1292,8 @@
 					min_depth = <cfqueryparam value = "#min_depth#" CFSQLType="CF_SQL_NUMERIC" null="#Not Len(Trim(min_depth))#">,
 					max_depth = <cfqueryparam value = "#max_depth#" CFSQLType="CF_SQL_NUMERIC" null="#Not Len(Trim(max_depth))#">,
 					primary_spatial_data = <cfqueryparam value = "#primary_spatial_data#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(primary_spatial_data))#">,
+					last_usr=<cfqueryparam value = "#session.username#" CFSQLType="CF_SQL_VARCHAR">,
+					last_chg=<cfqueryparam value = "#DateConvert('local2Utc',now())#" CFSQLType="cf_sql_timestamp">,
 					<cfif len(primary_spatial_data) gt 0>
 						DATUM = <cfqueryparam value = "#DATUM#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(DATUM))#">,
 						georeference_protocol = <cfqueryparam value = "#georeference_protocol#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(georeference_protocol))#">,
@@ -1336,7 +1328,7 @@
 						max_error_distance=null,
 						DEC_LAT=null,
 						DEC_LONG=null
-					</cfif>				
+					</cfif>
 				where locality_id = <cfqueryparam value = "#locality_id#" CFSQLType="CF_SQL_NUMERIC">
 			</cfquery>
 			<cfloop list="#form.FIELDNAMES#" index="i">
@@ -1573,12 +1565,14 @@
 		<cfquery name="newLocality" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			INSERT INTO locality (
 				LOCALITY_ID,
-				GEOG_AUTH_REC_ID
-				,MAXIMUM_ELEVATION
-				,MINIMUM_ELEVATION
-				,ORIG_ELEV_UNITS
-				,SPEC_LOCALITY
-				,LOCALITY_REMARKS
+				GEOG_AUTH_REC_ID,
+				MAXIMUM_ELEVATION,
+				MINIMUM_ELEVATION,
+				ORIG_ELEV_UNITS,
+				SPEC_LOCALITY,
+				LOCALITY_REMARKS,
+				last_usr,
+				last_chg
 			)	VALUES (
 				<cfqueryparam value="#nextLoc.nextLoc#" cfsqltype="cf_sql_int">,
 				<cfqueryparam value="#GEOG_AUTH_REC_ID#" cfsqltype="cf_sql_int">,
@@ -1586,7 +1580,9 @@
 				<cfqueryparam value = "#MINIMUM_ELEVATION#" CFSQLType="cf_sql_int" null="#Not Len(Trim(MINIMUM_ELEVATION))#">,
 				<cfqueryparam value = "#orig_elev_units#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(orig_elev_units))#">,
 				<cfqueryparam value = "#SPEC_LOCALITY#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(SPEC_LOCALITY))#">,
-				<cfqueryparam value = "#LOCALITY_REMARKS#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(LOCALITY_REMARKS))#">
+				<cfqueryparam value = "#LOCALITY_REMARKS#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(LOCALITY_REMARKS))#">,
+				<cfqueryparam value = "#session.username#" CFSQLType="CF_SQL_VARCHAR" >,
+				<cfqueryparam value="#DateConvert('local2Utc',now())#" cfsqltype="cf_sql_timestamp">
 			)
 		</cfquery>
 		<cflocation addtoken="no" url="editLocality.cfm?locality_id=#nextLoc.nextLoc#">

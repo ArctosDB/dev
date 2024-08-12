@@ -184,7 +184,7 @@
 		<cfif isdefined("encumberingAgent") and len(encumberingAgent) gt 0>
 			<cfset s=s & ",agent_name">
 			<cfset q=q & " AND agent_name.agent_id=encumbrance.encumbering_agent_id ">
-			<cfset sql = "#sql# AND upper(agent_name.agent_name) like '%#ucase(encumberingAgent)#%'">
+			<cfset sql = "#sql# AND agent_name.agent_name ilike '%#encumberingAgent#%'">
 		</cfif>
 		<cfif isdefined("made_date_after") and len(#made_date_after#) gt 0>
 			<cfset sql = "#sql# AND made_date >= '#made_date_after#'">
@@ -327,9 +327,11 @@
 		<p>
 			<a href="/Encumbrances.cfm?Action=listEncumbrances&encumbrance_id=#encumbrance_id#">Manage selected Encumbrance</a>
 		</p>
+		<!--------
 		<p>
 			<a href="/search.cfm?#session.mapURL#">Return to Catalog Record Results</a>
 		</p>
+		-0-------------->
 	</cfoutput>
 </cfif>
 <!-------------------------------------------------------------------------------------------->
@@ -343,11 +345,10 @@ Edit Encumbrance:
 	SELECT
 		 *
 	FROM
-		encumbrance,
-		preferred_agent_name
+		encumbrance
+		inner join agent on encumbering_agent_id = agent_id
 	WHERE
-	encumbering_agent_id = agent_id AND
-	encumbrance_id = #encumbrance_id#
+	encumbrance_id = <cfqueryparam value="#encumbrance_id#" cfsqltype="cf_sql_int">
 </cfquery>
 </cfoutput>
 <cfoutput query="encDetails">
@@ -362,7 +363,7 @@ Edit Encumbrance:
 			</td>
 			<td>
 				<input type="hidden" name="encumberingAgentId" id="encumberingAgentId" value="#encumbering_agent_id#">
-				<input type="text" name="encumberingAgent" id="encumberingAgent" class="reqdClr minput" value="#agent_name#"
+				<input type="text" name="encumberingAgent" id="encumberingAgent" class="reqdClr minput" value="#preferred_agent_name#"
 					onchange="pickAgentModal('encumberingAgentId',this.id,this.value); return false;"
 					onKeyPress="return noenter(event);" placeholder="encumbering agent">
 		 	</td>
@@ -649,4 +650,3 @@ UPDATE encumbrance SET
 </cfif>
 <!------------------------------------------------------------------------------------------------------->
 <cfinclude template = "includes/_footer.cfm">
-<cf_customizeIFrame>

@@ -17,7 +17,7 @@
 		</p>
 
 		<cfquery name="ctOtherIdType" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-			SELECT distinct other_id_type,sort_order FROM ctColl_Other_id_type order by sort_order, other_id_type
+			SELECT distinct other_id_type FROM ctColl_Other_id_type order by other_id_type
 		</cfquery>
 		<form name="x" method="post" action="magicEntity.cfm">
 			<input type="hidden" name="action" value="findem">
@@ -343,7 +343,7 @@
 					<cfqueryparam value = "#source.nextCID#" CFSQLType="cf_sql_int">,
 					<cfqueryparam value = "#mcn.nextCatNum#" CFSQLType="cf_sql_varchar">,
 					<cfqueryparam value = "#accn.transaction_id#" CFSQLType="cf_sql_int">,
-					'observation',
+					'HumanObservation',
 					<cfqueryparam value = "#mcn.collection_id#" CFSQLType="cf_sql_int">,
 					<cfqueryparam value = "#session.myAgentID#" CFSQLType="cf_sql_int">,
 					current_timestamp
@@ -404,7 +404,7 @@
 				insert into coll_obj_other_id_num (
 					collection_object_id,
 					other_id_type,
-					other_id_prefix,
+					display_value,
 					issued_by_agent_id
 				) values 
 				<cfloop list="#nidlist#" index="cid">

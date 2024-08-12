@@ -36,7 +36,7 @@
 			Global DB Settings
 		</h2>
 		<h3>You can break everything here. Please don't.</h3>
-		<form method="post" action="global_settings.cfm" name="f" id="f">
+		<form method="post" action="global_settings.cfm" name="f" id="f" autocomplete="off">
 			<input type="hidden" name="action" value="saveBanner">
 
 			<div style="display:table">

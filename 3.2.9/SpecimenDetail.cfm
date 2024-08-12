@@ -10,7 +10,6 @@
 	<cfabort>
 </cfif>
 <!---- end include check ---->
-
 <cfif not isdefined("session.sdmapclass") or len(session.sdmapclass) is 0>
 	<cfset session.sdmapclass='tinymap'>
 </cfif>
@@ -20,7 +19,6 @@
 <cfif session.flatTableName is not "flat" and session.flatTableName is not "filtered_flat">
 	<cfthrow message="invalid session.flatTableName" detail="#session#">
 </cfif>
-
 <!---- keep this above the JS so it's not going crazy when lookup fails ---->
 <cfif isdefined("collection_object_id")>
 	<cfquery name="c" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
@@ -152,7 +150,6 @@
 		ctcollection_terms.display as terms_display,
 		ctcollection_terms.uri as terms_uri,
 		collection.loan_policy_url,
-		collection.guid_prefix,
 		cf_collection.header_color,
 		cf_collection.header_link_color,
 		cf_collection.header_image_link,
@@ -342,16 +339,14 @@
 				<input type="button" onclick="openOverlay('/info/annotate.cfm?q=#q#','Comment or Report Bad Data');" class="annobtn" value="Comment or Report Bad Data">
 			</div>
 			<cfif isdefined("session.roles") and listfindnocase(session.roles,"coldfusion_user")>
-				<cfif detail.stale_flag is 1>
-					<cfset bval="Request Cache Refresh (Status: FLAT update requested)">
-				<cfelseif detail.stale_flag is 0>
-					<cfset bval="Request Cache Refresh (Status: FILTERED_FLAT update requested)">
-				<cfelseif detail.stale_flag is 2>
+				<cfif detail.stale_flag is 0>
 					<cfset bval="Request Cache Refresh (Status: current)">
-				<cfelseif detail.stale_flag is -1>
-					<cfset bval="Request Cache Refresh (Status: FLAT update fail)">
-				<cfelseif detail.stale_flag is -2>
-					<cfset bval="Request Cache Refresh (Status: FILTERED_FLAT update fail)">
+				<cfelseif detail.stale_flag is 100>
+					<cfset bval="Request Cache Refresh (Status: FILTERED_FLAT update requested)">
+				<cfelseif detail.stale_flag lt 0>
+					<cfset bval="Request Cache Refresh (Status: update fail)">
+				<cfelseif detail.stale_flag gt 0 and detail.stale_flag lt 11>
+					<cfset bval="Request Cache Refresh (Status: FLAT update requested)">
 				<cfelse>
 					<cfset bval="Request Cache Refresh (Status: unknown)">
 				</cfif>
@@ -448,11 +443,11 @@
 			v_attributes.determined_date,
 			v_attributes.determiner attributeDeterminer,
 			v_attributes.determined_by_agent_id,
-			ctattribute_code_tables.value_code_table,
-			ctattribute_code_tables.units_code_table
+			ctattribute_type.value_code_table,
+			ctattribute_type.unit_code_table
 		from
 			v_attributes
-			left outer join ctattribute_code_tables on v_attributes.attribute_type=ctattribute_code_tables.attribute_type
+			left outer join ctattribute_type on v_attributes.attribute_type=ctattribute_type.attribute_type
 		where
 			<cfif not listfind(session.roles,"coldfusion_user")>
 				is_encumbered=0 and
@@ -475,7 +470,6 @@
 			identification.publication_id,
 			taxon_name.scientific_name taxsciname,
 			identification_taxonomy.taxon_name_id,
-			common_name.common_name,
 			getTaxaDataByCollection(identification_taxonomy.taxon_name_id,<cfqueryparam value="#detail.guid_prefix#" cfsqltype="cf_sql_varchar">):: text as taxdets,
 			concept_label,
 			identification.taxon_concept_id,
@@ -501,7 +495,6 @@
 			left outer join publication on identification.publication_id=publication.publication_id
 			left outer join identification_taxonomy on identification.identification_id=identification_taxonomy.identification_id
 			left outer join taxon_name on identification_taxonomy.taxon_name_id=taxon_name.taxon_name_id
-			left outer join common_name on identification_taxonomy.taxon_name_id=common_name.taxon_name_id
 			left outer join taxon_concept on identification.taxon_concept_id=taxon_concept.taxon_concept_id
 			left outer join taxon_name idconcpt on taxon_concept.taxon_name_id=idconcpt.taxon_name_id
 		WHERE
@@ -547,7 +540,7 @@
 			attributeDeterminer,
 			determined_by_agent_id,
 			value_code_table,
-			units_code_table
+			unit_code_table
 		from
 			raw_attribute
 		where
@@ -614,11 +607,6 @@
 						taxsciname,
 						taxdets,
 						taxon_name_id
-				</cfquery>
-				<cfquery name="thisCommonName" dbtype="query">
-					select distinct common_name from raw_identification where common_name is not null and
-					 identification_id=<cfqueryparam value="#identification_id#" CFSQLType="cf_sql_int">
-					order by common_name
 				</cfquery>
 				<cfquery name="thisIdentifiers" dbtype="query">
 					select
@@ -720,12 +708,6 @@
 								</div>
 							</cfif>
 						</cfloop>
-						
-						<cfif thisCommonName.recordcount gt 0>
-							<div class="taxaMeta">
-								#valuelist(thisCommonName.common_name,'; ')#
-							</div>
-						</cfif>
 						<cfif len(short_citation) gt 0>
 							sensu <a href="/publication/#publication_id#" target="_mainFrame">#short_citation#</a><br>
 						</cfif>
@@ -833,7 +815,7 @@
 				<div class="collectorGroup">
 					<span class="ctDefLink" onclick="getCtDoc('ctcollector_role','#collector_role#')">#collector_role#</span>
 					<cfquery name="thisCR" dbtype="query">
-						select * from colrs where collector_role='#collector_role#' order by coll_order
+						select * from colrs where collector_role=<cfqueryparam value="#collector_role#" cfsqltype="cf_sql_varchar"> order by coll_order
 					</cfquery>
 					<cfloop query="thisCR">
 						<div class="oneCollector">
@@ -1011,6 +993,7 @@
 					<option <cfif session.idsview is "full_shortform"> selected="selected" </cfif>value="full_shortform">full view (shortform)</option>
 					<option <cfif session.idsview is "full_separated"> selected="selected" </cfif>value="full_separated">full/split view</option>
 					<option <cfif session.idsview is "full_separated_shortform"> selected="selected" </cfif>value="full_separated_shortform">full/split view (shortform)</option>
+					<option <cfif session.idsview is "related_details"> selected="selected" </cfif>value="related_details">related details view</option>
 				</select>
 			</label>
 			<div class="detailBlock">
@@ -1284,7 +1267,7 @@
 			attributeDeterminer,
 			determined_by_agent_id,
 			value_code_table,
-			units_code_table
+			unit_code_table
 		from
 			raw_attribute
 		where
@@ -1324,8 +1307,8 @@
 								<cfelse>
 									#EncodeForHTML(attribute_value)#
 								</cfif>
-								<cfif len(units_code_table) gt 0>
-									<span class="ctDefLink" onclick="getCtDoc('#units_code_table#','#attribute_units#')">#attribute_units#</span>
+								<cfif len(unit_code_table) gt 0>
+									<span class="ctDefLink" onclick="getCtDoc('#unit_code_table#','#attribute_units#')">#attribute_units#</span>
 								<cfelse>
 									#attribute_units#
 								</cfif>
@@ -1449,7 +1432,7 @@
 		       when specimen_event.verificationstatus = 'verified and locked' then 1
 		       when specimen_event.verificationstatus = 'checked by collector' then 2
 		       when specimen_event.verificationstatus = 'accepted' then 3
-		       when specimen_event.verificationstatus = 'unverified' then 4
+		       when specimen_event.verificationstatus is null then 4
 		       when specimen_event.verificationstatus = 'unaccepted' then 5
 		       else 6
 		    end order_by_vs,
@@ -1461,8 +1444,8 @@
 			locality_attributes.attribute_remark locat_attribute_remark,
 			locality_attributes.determination_method locat_determination_method,
 			locality_attributes.determined_date locat_determined_date,
-			ctlocality_att_att.value_code_table locat_value_code_table,
-			ctlocality_att_att.unit_code_table locat_unit_code_table,
+			ctlocality_attribute_type.value_code_table locat_value_code_table,
+			ctlocality_attribute_type.unit_code_table locat_unit_code_table,
 			(case locality_attributes.attribute_type
 				when 'Era/Erathem' then 1
 				when 'System/Period' then 2
@@ -1475,7 +1458,7 @@
 			inner join collecting_event on specimen_event.collecting_event_id=collecting_event.collecting_event_id
 			inner join  locality on collecting_event.locality_id=locality.locality_id
 			left outer join locality_attributes on locality.locality_id=locality_attributes.locality_id
-			left outer join ctlocality_att_att on locality_attributes.attribute_type=ctlocality_att_att.attribute_type
+			left outer join ctlocality_attribute_type on locality_attributes.attribute_type=ctlocality_attribute_type.attribute_type
 			left outer join collecting_event_attributes on collecting_event.collecting_event_id=collecting_event_attributes.collecting_event_id
 			left outer join ctcoll_event_att_att on collecting_event_attributes.event_attribute_type=ctcoll_event_att_att.event_attribute_type
 			inner join geog_auth_rec on locality.geog_auth_rec_id=geog_auth_rec.geog_auth_rec_id
@@ -1613,7 +1596,7 @@
 					<cfset thisClass="verified_accepted">
 				<cfelseif VERIFICATIONSTATUS is "unaccepted">
 					<cfset thisClass="verified_unaccepted">
-				<cfelseif VERIFICATIONSTATUS is "unverified">
+				<cfelseif VERIFICATIONSTATUS is "">
 					<cfset thisClass="verified_unverified">
 				<cfelse>
 					<cfset thisClass="verified_default">
@@ -1644,7 +1627,7 @@
 										&##9989;
 									<cfelseif VERIFICATIONSTATUS is "unaccepted">
 										&##10060;
-									<cfelseif  VERIFICATIONSTATUS is "unverified">
+									<cfelseif  VERIFICATIONSTATUS is "">
 										&##9888;
 									</cfif>
 									<!---- for scripts to access --->
@@ -1828,6 +1811,10 @@
 									<div class="gp_dp_label">As Entered Coordinates:</div>
 									<div class="gp_dp_data">
 										#verbatim_coordinates#
+										<cfif len(datum) gt 0>
+											<!---- https://github.com/ArctosDB/arctos/issues/7455 ---->
+											Datum <span class="ctDefLink" onclick="getCtDoc('ctdatum','#datum#')">#datum#</span>
+										</cfif>
 									</div>
 								</div>
 							</cfif>
@@ -1839,14 +1826,7 @@
 									</div>
 								</div>
 							</cfif>
-							<cfif len(datum) gt 0>
-								<div class="gp_dp">
-									<div class="gp_dp_label">Datum:</div>
-									<div class="gp_dp_data">
-										<span class="ctDefLink" onclick="getCtDoc('ctdatum','#datum#')">#datum#</span>
-									</div>
-								</div>
-							</cfif>
+							
 							<cfif len(MAX_ERROR_UNITS) gt 0>
 								<div class="gp_dp">
 									<div class="gp_dp_label">Error:</div>

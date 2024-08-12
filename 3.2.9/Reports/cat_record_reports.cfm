@@ -153,8 +153,6 @@
 				<cflocation url="/download.cfm?file=turd.csv" addtoken="false">
 			</cfif>
 
-
-
 			<hr>
 				#raw.full_count# matches
 				<cfif raw.full_count is 0 and pg_size gt 1>
@@ -177,18 +175,12 @@
 					<input type="submit" name="dcsvsbtn" class="lnkBtn" value="CSV">
 					<input type="hidden" name="guid_prefix" value="#guid_prefix#">
 					<input type="hidden" name="report_name" value="#report_name#">
-					<input type="hidden" name="txt_srch" value="#txt_srch#">
+					<input type="hidden" name="txt_srch" value="#encodeForHTML(txt_srch)#">
 					<input type="hidden" name="pg_size" value="#pg_size#">
 					<input type="hidden" name="pg_number" value="#pg_number#">
 					<input type="hidden" name="getCSV" value="true">
-
-
 				</form>
 			</cfif>
-
-
-
-
 			<form name="drpt" method="post" action="cat_record_reports.cfm">
 				<cfif listfindnocase(session.roles,'manage_collection')>
 					<input type="submit" name="dsbtn" class="delBtn" value="Delete Checked">

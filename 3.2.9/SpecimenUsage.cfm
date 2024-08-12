@@ -547,6 +547,7 @@
 			publication.datacite_doi,
 			count(distinct(citation.collection_object_id)) numCits,
 			getPreferredAgentName(pauth.AGENT_ID) authn,
+			pauth.AGENT_ID,
 			pauth.author_role,
 			project_inc_pub.project_id,
 			project_inc_pub.project_name ">
@@ -845,6 +846,7 @@
 					publication.datacite_doi,
 					publication.publication_remarks,
 					getPreferredAgentName(pauth.AGENT_ID),
+					pauth.AGENT_ID,
 					pauth.author_role,
 					project_inc_pub.project_id,
 					project_inc_pub.project_name
@@ -888,7 +890,7 @@ limit #maxNumberOfRows#
 					FROM
 						projects
 					WHERE
-						project_id = #project_id# and
+						project_id = <cfqueryparam value="#project_id#" cfsqltype="cf_sql_int"> and
 						project_agent_role not in ('entered by','edited by')
 					GROUP BY
 						agent_name,
@@ -1123,6 +1125,7 @@ limit #maxNumberOfRows#
 				<cfquery name="pauths" dbtype="query">
 					select
 						authn,
+						agent_id,
 						author_role
 					from
 						publication
@@ -1131,6 +1134,7 @@ limit #maxNumberOfRows#
 						publication_id=<cfqueryparam value="#publication_id#" CFSQLType="cf_sql_int">
 					group by
 						authn,
+						agent_id,
 						author_role
 					 order by
 						authn,
@@ -1145,7 +1149,7 @@ limit #maxNumberOfRows#
 							</tr>
 							<cfloop query="pauths">
 								<tr>
-									<td><a class="newWinLocal" href="/agent.cfm?agent_name=#authn#">#authn#</a></td>
+									<td><a class="newWinLocal" href="/agent/#agent_id#">#authn#</a></td>
 									<td>#author_role#</td>
 								</tr>
 							</cfloop>

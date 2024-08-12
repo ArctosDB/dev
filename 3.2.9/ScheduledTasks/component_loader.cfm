@@ -38,8 +38,13 @@
 	---->
 
 
-	
-	<cfquery name="d" datasource="uam_god">
+	<!----
+		https://github.com/ArctosDB/arctos/issues/7612
+		SOME combination of random rapid clicking somehow causes the component loader task to go poof
+		Try simple first: Just check for changes every 20 minutes
+	---->
+
+	<cfquery name="d" datasource="uam_god" cachedwithin="#createtimespan(0,0,20,0)#">
 		select
 			loader_template,
 			rec_per_run,
@@ -75,4 +80,3 @@
 <cfset args.logged_time = jtim>
 <cfinvoke component="component.internal" method="logThis" args="#args#">
 <!---------------------- /end log --------------------->
-

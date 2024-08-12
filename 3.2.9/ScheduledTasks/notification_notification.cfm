@@ -26,19 +26,17 @@
 ---->
 <cfquery name="get_notification_contacts" datasource="uam_god">
 	select
-		address.address
+		get_address(operator_agent_id,'notification email') as address
 	from
-		address
-		inner join agent_name on address.agent_id=agent_name.agent_id and agent_name_type='login'
-		inner join user_notification on agent_name.agent_name=user_notification.username and user_notification.status is null
+		user_notification
+		inner join cf_users on user_notification.username=cf_users.username
 		inner join pg_catalog.pg_roles as pg_roles on lower(user_notification.username)=pg_roles.rolname and 
 			pg_roles.rolvaliduntil > current_timestamp and 
 			pg_roles.rolcanlogin=true
 	where
-		address.address_type='notification email' and
-		address.end_date is null
+	 user_notification.status is null
 	group by
-		address.address
+		address
 </cfquery>
 <cfif isdefined(application.version) and application.version is "prod">
 	<cfset bcc=valuelist(get_notification_contacts.address)>

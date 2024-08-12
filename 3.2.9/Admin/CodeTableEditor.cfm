@@ -1,6 +1,5 @@
 <cfinclude template="/includes/_header.cfm">
 <script src="/includes/sorttable.js"></script>
-
 <p>
 	<a href="/info/ctDocumentation.cfm">Back to table list</a>
 </p>
@@ -15,53 +14,6 @@
 <cfset title = "Edit Code Tables">
 <cfif action is "nothing">
 	<cflocation url="/info/ctDocumentation.cfm" addtoken="false">
-	<!----------
-
-	<a href="CodeTableEditor.cfm?action=editcode_table_meta">edit code_table_meta</a> (display of <a href="/info/ctDocumentation.cfm">/info/ctDocumentation.cfm</a>)
-	<cfquery name="getCTName" datasource="uam_god">
-		select distinct(table_name) as table_name from information_schema.tables where table_name like 'ct%' order by table_name
-	</cfquery>
-	<cfquery name="getPrettyCTName" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-		select * from code_table_meta order by label,table_name
-	</cfquery>
-	<cfoutput>
-
-		<table border class="sortable" id="cttbl">
-			<tr>
-				<th>Purpose</th>
-				<th>Edit</th>
-				<th>Description</th>
-			</tr>
-			<cfloop query="getCTName">
-				<cfquery name="hp" dbtype="query">
-					select * from getPrettyCTName where table_name=<cfqueryparam value = "#table_name#" CFSQLType="CF_SQL_VARCHAR" null="false">
-				</cfquery>
-				<tr>
-					<td>
-						<cfif hp.recordcount is 1>
-							#hp.label#
-						<cfelse>
-							<div class="importantNotification">
-								NO META! Please <a href="CodeTableEditor.cfm?action=editcode_table_meta">edit</a> to add!
-							</div>
-						</cfif>
-					</td>
-					<td>
-						<a href="CodeTableEditor.cfm?action=edit&tbl=#table_name#"><input type="button" class="lnkBtn" value="#table_name#"></a>
-					</td>
-					<td>#hp.description#</td>
-				</tr>
-			</cfloop>
-		</table>
-
-	<!----
-
-		<cfloop query="getCTName">
-			<a href="CodeTableEditor.cfm?action=edit&tbl=#getCTName.table_name#">#getCTName.table_name#</a><br>
-		</cfloop>
-		---->
-	</cfoutput>
-	---------->
 </cfif>
 <cfif action is "editcode_table_meta">
 	<cfoutput>
@@ -151,14 +103,12 @@
 		</p>
 	</cfoutput>
 </cfif>
-
 <cfif action is "reallydeletecode_table_meta">
 	<cfquery name="delete" datasource="uam_god">
 		delete from code_table_meta where table_name=<cfqueryparam value = "#table_name#" CFSQLType="CF_SQL_VARCHAR" null="false">
 	</cfquery>
 	<cflocation url="CodeTableEditor.cfm?action=editcode_table_meta">
 </cfif>
-
 <cfif action is "update_table_meta">
 	<cfoutput>
 		<cfquery name="delete" datasource="uam_god">
@@ -170,43 +120,30 @@
 		<cflocation url="CodeTableEditor.cfm?action=editcode_table_meta">
 	</cfoutput>
 </cfif>
-
 <!-------------------------------------------------- handler-handler; redirect to appropriate subform -------------------------------------------->
 <cfif action is "edit">
 	<cfif tbl is "ctspecimen_part_name"><!---------------------------------------------------->
 		<cflocation url="CodeTableEditor.cfm?action=editSpecimenPart" addtoken="false" >
 	<cfelseif tbl is "cttaxonomy_source"><!---------------------------------------------------->
 		<cflocation url="CodeTableEditor.cfm?action=editcttaxonomy_source" addtoken="false" >
-	
 	<cfelseif tbl is "ctlife_stage"><!---------------------------------------------------->
 		<cflocation url="CodeTableEditor.cfm?action=editnewFormAttributes&tbl=#tbl#" addtoken="false" >
-
-
 	<cfelseif tbl is "ctspec_part_att_att"><!---------------------------------------------------->
 		<cflocation url="CodeTableEditor.cfm?action=editPartAttAtt" addtoken="false" >
 	<cfelseif tbl is "ctcoll_event_att_att"><!---------------------------------------------------->
 		<cflocation url="CodeTableEditor.cfm?action=editEventAttAtt" addtoken="false" >
-
-	<cfelseif tbl is "ctlocality_att_att"><!---------------------------------------------------->
-		<cflocation url="CodeTableEditor.cfm?action=editLocAttAtt" addtoken="false" >
-
+	<cfelseif tbl is "ctlocality_attribute_type"><!---------------------------------------------------->
+		<cflocation url="CodeTableEditor.cfm?action=editLocalityAttribute&tbl=#tbl#" addtoken="false" >
 	<cfelseif tbl is "ctmedia_license"><!---------------------------------------------------->
 		<cflocation url="CodeTableEditor.cfm?action=editMediaLicense" addtoken="false" >
-
 	<cfelseif tbl is "ctcollection_terms"><!---------------------------------------------------->
 		<cflocation url="CodeTableEditor.cfm?action=editCollnTerms" addtoken="false" >
-
-
 	<cfelseif tbl is "ctdata_license"><!---------------------------------------------------->
 		<cflocation url="CodeTableEditor.cfm?action=editDataLicense&tbl=#tbl#" addtoken="false" >
-
-
 	<cfelseif tbl is "ctagent_attribute_type"><!---------------------------------------------------->
 		<cflocation url="CodeTableEditor.cfm?action=editctagent_attribute_type&tbl=#tbl#" addtoken="false" >
-
-
-	<cfelseif tbl is "ctattribute_code_tables"><!---------------------------------------------------->
-		<cflocation url="CodeTableEditor.cfm?action=editAttCodeTables&tbl=#tbl#" addtoken="false" >
+	<cfelseif tbl is "ctwater_body"><!---------------------------------------------------->
+		<cflocation url="CodeTableEditor.cfm?action=editWaterBody&tbl=#tbl#" addtoken="false" >
 	<cfelseif tbl is "cttaxon_term"><!---------------------------------------------------->
 		<cflocation url="CodeTableEditor.cfm?action=editTaxTrm&tbl=#tbl#" addtoken="false">
 	<cfelseif tbl is "ctcoll_other_id_type"><!--------------------------------------------------------------->
@@ -219,12 +156,18 @@
 		<cflocation url="CodeTableEditor.cfm?action=editctdatum&tbl=ctdatum" addtoken="false" >
 	<cfelseif tbl is "ctutm_zone">
 		<cflocation url="CodeTableEditor.cfm?action=editctutm_zone&tbl=ctutm_zone" addtoken="false" >
-	
+
 	<cfelseif tbl is "ctidentification_attribute_code_tables">
 		<cflocation url="CodeTableEditor.cfm?action=editIdAttAtt&tbl=ctidentification_attribute_code_tables" addtoken="false" >
-
 	<cfelseif tbl is "ctattribute_type">
 		<cflocation url="CodeTableEditor.cfm?action=editctattribute_type&tbl=ctattribute_type" addtoken="false" >
+
+	<cfelseif tbl is "ctcollection_attribute_type">
+		<cflocation url="CodeTableEditor.cfm?action=editctcollection_attribute_type&tbl=ctcollection_attribute_type" addtoken="false" >
+	<cfelseif tbl is "ctmortality_cause">
+		<cflocation url="CodeTableEditor.cfm?action=editNewFormNoCollectionAttribute&tbl=ctmortality_cause" addtoken="false" >
+	<cfelseif tbl is "ctlanguage">
+		<cflocation url="CodeTableEditor.cfm?action=editNewFormNoCollectionAttribute&tbl=ctlanguage" addtoken="false">
 	<cfelse><!---------------------------- normal CTs --------------->
 		<cfquery name="asldfjaisakdshas" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
 			select * from #tbl# where 1=2
@@ -237,18 +180,11 @@
 	</cfif>
 </cfif>
 <!-------------------------------------------------- END handler-handler; redirect to appropriate subform -------------------------------------------->
-
-
 <!----------------- this gets used in lots of forms, include it once---------------------------->
 <cfquery name="ctcollcde" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
 	select distinct collection_cde from ctcollection_cde
 </cfquery>
-
-
-
 <!------------------------------------- agent attributes are weird and get their own thang --------------->
-
-
 <cfif action is "editctagent_attribute_type">
 	<style>
 		#partstbl tr:nth-child(even) {
@@ -268,15 +204,16 @@
 			text-align: right;
 		}
 	</style>
-
-
 	<cfset title="#tbl# editor">
 	<cfquery name="q" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		select
 			attribute_type as data_field,
 			description,
 			array_to_string(issue_url,'#chr(10)#') as issue_url,
-			array_to_string(documentation_url,'#chr(10)#') as documentation_url
+			array_to_string(documentation_url,'#chr(10)#') as documentation_url,
+			public,
+			purpose,
+			vocabulary
 		from #tbl#
 		ORDER BY
 			attribute_type
@@ -287,16 +224,19 @@
 			Edit #tbl# 
 			<a href="/info/ctchange_log.cfm?tbl=#tbl#"><input type="button" class="lnkBtn" value="changelog"></a>
 		</h2>
-		
 		<table id="partstbl" border="1" class="sortable">
 			<thead>
 				<tr>
 					<th>attribute_type</th>
 					<th>Description</th>
+					<th>Public</th>
+					<th>Purpose</th>
+					<th>Vocabulary</th>
 					<th>Issue URL</th>
 					<th>Documentation URL</th>
 				</tr>
 			</thead>
+            <cfset purposelist="address,event,history,name,identifier,relationship,other">
 			<tbody>
 				<tr id="prow_new" class="newRec">
 					<td>
@@ -308,7 +248,24 @@
 						</form>
 					</td>
 					<td>
-						<textarea name="description" rows="10" cols="40" form="pfrm_new" class="reqdClr" required></textarea>
+						<textarea form="pfrm_new" name="description" rows="10" cols="40" form="pfrm_new" class="reqdClr" required></textarea>
+					</td>
+					<td>
+						<select name="public" form="pfrm_new">
+							<option value="true" >true</option>
+							<option value="false" >false</option>
+						</select>
+					</td>
+					<td>
+						<select name="purpose" form="pfrm_new">
+							<cfloop list="#purposelist#" index="i">
+								<option value=#i#>#i#</option>
+							</cfloop>
+						</select>
+					</td>
+					<td>
+						<label>vocabulary</label>
+						<textarea name="vocabulary" rows="10" cols="40" form="pfrm_new" ></textarea>
 					</td>
 					<td>
 						<textarea name="issue_url" rows="10" cols="40" form="pfrm_new"></textarea>
@@ -342,7 +299,24 @@
 						</td>
 						<td>
 							<label>Description</label>
-							<textarea name="description" rows="10" cols="40" form="pfrm#rid#" class="reqdClr" required>#EncodeForHTML(canonicalize(description,true,true))#</textarea>
+							<textarea  form="pfrm#rid#" name="description" rows="10" cols="40" form="pfrm#rid#" class="reqdClr" required>#EncodeForHTML(canonicalize(description,true,true))#</textarea>
+						</td>
+						<td>
+							<select name="public" form="pfrm#rid#">
+								<option value="true" <cfif public> selected="selected" </cfif> >true</option>
+								<option value="false" <cfif not public> selected="selected" </cfif> >false</option>
+							</select>
+						</td>
+						<td>
+							<select name="purpose" form="pfrm#rid#">
+								<cfloop list="#purposelist#" index="i">
+									<option  <cfif i is purpose> selected="selected" </cfif> value=#i#>#i#</option>
+								</cfloop>
+							</select>
+						</td>
+						<td>
+							<label>vocabulary</label>
+							<textarea name="vocabulary" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(vocabulary,true,true))#</textarea>
 						</td>
 						<td>
 							<label>Issue URL</label>
@@ -366,9 +340,6 @@
 		<cflocation url="CodeTableEditor.cfm?action=editctagent_attribute_type&tbl=#tbl#" addtoken="false">
 	</cfoutput>
 </cfif>
-
-
-
 <cfif action is "updatectagent_attribute_type">
 	<cfoutput>
 		<cfif reFind('<[^>]*>', description)>
@@ -377,7 +348,6 @@
 			</div>
 			<cfabort>
 		</cfif>
-	
 		<cfset sil="">
 		<cfloop list="#issue_url#" index="i" delimiters="#chr(10)#,">
 			<cfset sil=listappend(sil,trim(i))>
@@ -390,26 +360,21 @@
 		</cfloop>
 		<cfset sdil=listRemoveDuplicates(sdil)>
 		<cfset sdil=listSort(sdil,'text')>
-
-		
-
 		<cfquery name="updateARow" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			update ctagent_attribute_type set 
 				attribute_type=<cfqueryparam value="#new_data_value#" cfsqltype="cf_sql_varchar">,
 				description=<cfqueryparam value="#description#" cfsqltype="cf_sql_varchar">,
 				issue_url=string_to_array(<cfqueryparam value="#sil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sil))#">,','),
-				documentation_url=string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,',')
+				documentation_url=string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,','),
+				public=<cfqueryparam value="#public#" cfsqltype="cf_sql_boolean">,
+				purpose=<cfqueryparam value="#purpose#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(purpose))#">,
+				vocabulary=<cfqueryparam value="#vocabulary#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(vocabulary))#">
 			where attribute_type=<cfqueryparam value="#original_data_value#" cfsqltype="cf_sql_varchar">
 		</cfquery>
 		<cfset rid=rereplace(new_data_value,"[^A-Za-z0-9]","_","all")>
 		<cflocation url="CodeTableEditor.cfm?action=editctagent_attribute_type&tbl=#tbl###prow_#rid#" addtoken="false">
 	</cfoutput>
 </cfif>
-
-
-
-
-
 <!-------------------------------------------------->
 <cfif action is "insertctagent_attribute_type">
 	<cfoutput>
@@ -438,12 +403,18 @@
 				attribute_type,
 				description,
 				issue_url,
-				documentation_url
+				documentation_url,
+				public,
+				purpose,
+				vocabulary
 			) values (
 				<cfqueryparam value="#new_value#" cfsqltype="cf_sql_varchar">,
 				<cfqueryparam value="#description#" cfsqltype="cf_sql_varchar">,
 				string_to_array(<cfqueryparam value="#sil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sil))#">,','),
-				string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,',')
+				string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,','),
+				<cfqueryparam value="#public#" cfsqltype="cf_sql_boolean">,
+				<cfqueryparam value="#purpose#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(purpose))#">,
+				<cfqueryparam value="#vocabulary#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(vocabulary))#">
 			)
 		</cfquery>
 		<cfset rid=rereplace(new_value,"[^A-Za-z0-9]","_","all")>
@@ -451,20 +422,7 @@
 	</cfoutput>
 </cfif>
 <!-------------------------------------------------->
-
-
-
-
-
-
-
-
-
-
 <!------------------------------------- EMD:: agent attributes are weird and get their own thang --------------->
-
-
-
 <!------------------------------------------- newform attributes code block ------------------>
 <!-------------------------------------------------->
 <cfif action is "editnewFormAttributes">
@@ -472,11 +430,6 @@
 		critical assumption: data field is table name minus the ct
 	---------->
 	<cfset fld=right(tbl,len(tbl)-2)>
-
-
-
-
-
 	<style>
 		#partstbl tr:nth-child(even) {
 		   background-color: #ccc;
@@ -495,8 +448,6 @@
 			text-align: right;
 		}
 	</style>
-
-
 	<cfset title="#tbl# editor">
 	<cfquery name="q" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		select
@@ -574,9 +525,7 @@
 					</td>
 				</tr>
 				<cfloop query="q">
-
 					<cfset rid=rereplace(data_field,"[^A-Za-z0-9]","_","all")>
-
 					<tr id="prow_#rid#">
 						<td>
 							<form id="pfrm#rid#" method="post" action="CodeTableEditor.cfm">
@@ -635,9 +584,6 @@
 		<cflocation url="CodeTableEditor.cfm?action=editnewFormAttributes&tbl=#tbl#" addtoken="false">
 	</cfoutput>
 </cfif>
-
-
-
 <cfif action is "updateNewFormAttributes">
 	<cfoutput>
 		<cfif reFind('<[^>]*>', description)>
@@ -689,11 +635,6 @@
 		<cflocation url="CodeTableEditor.cfm?action=editnewFormAttributes&tbl=#tbl###prow_#rid#" addtoken="false">
 	</cfoutput>
 </cfif>
-
-
-
-
-
 <!-------------------------------------------------->
 <cfif action is "insertnewFormAttributes">
 	<cfoutput>
@@ -752,6 +693,441 @@
 </cfif>
 <!-------------------------------------------------->
 <!------------------------------------------- END newform attributes code block ------------------>
+<cfif action is "editNewFormNoCollectionAttribute">
+	<!--- this is basically newform attrs but with less stuff ---->
+	<cfif tbl is "ctmortality_cause">
+		<cfset fld='mortality_cause'>
+	<cfelseif tbl is 'ctlanguage'>
+		<cfset fld='language'>
+	<cfelse>
+		wut<cfabort>
+	</cfif>
+	<style>
+		#partstbl tr:nth-child(even) {
+		   background-color: #ccc;
+		}
+		.guidList{max-height: 10em; overflow: auto;}
+
+		.prtctsavbtns{
+		  display: flex;
+		  justify-content: space-between;
+		  flex-wrap: wrap;
+		}
+		.prtctsavbtnsleft{
+			text-align:left;
+		}
+		.prtctsavbtnsright{
+			text-align: right;
+		}
+	</style>
+	<cfset title="#tbl# editor">
+	<cfquery name="q" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+		select
+			#fld# as field,
+			description,
+			search_terms,
+			array_to_string(issue_url,'#chr(10)#') as issue_url,
+			array_to_string(documentation_url,'#chr(10)#') as documentation_url
+		from #tbl#
+		ORDER BY
+			field
+	</cfquery>
+	<cfoutput>
+		<h2>
+			Edit #tbl# 
+			<a href="/info/ctchange_log.cfm?tbl=#tbl#"><input type="button" class="lnkBtn" value="changelog"></a>
+		</h2>
+		<ul>
+			<li>#fld#: Data/authority</li>
+			<li>Description: Definition or description. No HTML, no nonprinting characters.</li>
+			<li>Search Terms: List of search helpers. Separate with commas or linebreaks.</li>
+			<li>Issue URL: List of relevant GitHub Issues, one per row.</li>
+			<li>Documentation URL: List of relevant/helpful websites or references, one per row.</li>
+		</ul>
+		<table id="partstbl" border="1" class="sortable">
+			<thead>
+				<tr>
+					<th>#fld#</th>
+					<th>Description</th>
+					<th>Search Terms</th>
+					<th>Issue URL</th>
+					<th>Documentation URL</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr id="prow_new" class="newRec">
+					<td>
+						<form id="pfrm_new" method="post" action="CodeTableEditor.cfm">
+							<input type="hidden" name="action" value="insertNewFormNoCollectionAttribute">
+							<input type="hidden" name="tbl" value="#tbl#">
+							<input type="hidden" name="fld" value="#fld#">
+							<input type="text" name="new_value" size="25" class="reqdClr" required>
+							<br><input type="submit" class="insBtn" value="Create">
+						</form>
+					</td>
+					<td>
+						<textarea name="description" rows="10" cols="40" form="pfrm_new" class="reqdClr" required></textarea>
+					</td>
+					<td>
+						<textarea name="search_terms" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+					<td>
+						<textarea name="issue_url" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+					<td>
+						<textarea name="documentation_url" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+				</tr>
+				<cfloop query="q">
+					<cfset rid=rereplace(field,"[^A-Za-z0-9]","_","all")>
+					<tr id="prow_#rid#">
+						<td>
+							<form id="pfrm#rid#" method="post" action="CodeTableEditor.cfm">
+								<input type="hidden" name="action" value="updateNewFormNoCollectionAttribute">
+								<input type="hidden" name="tbl" value="#tbl#">
+								<input type="hidden" name="fld" value="#fld#">
+								<input type="hidden" name="original_data_value" size="25" value="#EncodeForHTML(canonicalize(field,true,true))#">
+								<div>
+									<input type="text" name="new_data_value" size="25" value="#EncodeForHTML(canonicalize(field,true,true))#" class="reqdClr" required>
+								</div>
+								<div class="prtctsavbtns">
+									<div class="prtctsavbtnsleft">
+										<input type="submit" class="savBtn" value="Save">
+									</div>
+									<div class="prtctsavbtnsright">
+										<input type="button" class="delBtn" value="Delete" onclick="pfrm#rid#.action.value='deleteNewFormNoCollectionAttribute';pfrm#rid#.submit();">
+									</div>
+								</div>
+							</form>
+						</td>
+						<td>
+							<label>Description</label>
+							<textarea name="description" rows="10" cols="40" form="pfrm#rid#" class="reqdClr" required>#EncodeForHTML(canonicalize(description,true,true))#</textarea>
+						</td>
+						<td>
+							<cfset strms="">
+							<cfloop list="#search_terms#" index="i">
+								<cfset strms=listappend(strms,trim(i),chr(10))>
+							</cfloop>
+							<cfset strms=listSort(strms,'text','asc',chr(10))>
+							<label>Search Terms</label>
+							<textarea name="search_terms" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(strms,true,true))#</textarea>
+						</td>
+						<td>
+							<label>Issue URL</label>
+							<textarea name="issue_url" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(issue_url,true,true))#</textarea>
+						</td>
+						<td>
+							<label>Documentation URL</label>
+							<textarea name="documentation_url" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(documentation_url,true,true))#</textarea>
+						</td>
+					</tr>
+				</cfloop>
+			</tbody>
+		</table>
+	</cfoutput>
+</cfif>
+<cfif action is "deleteNewFormNoCollectionAttribute">
+	<cfoutput>
+		<cfquery name="deleteSpecimenPart" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			delete from #tbl# where #fld#=<cfqueryparam value="#original_data_value#" cfsqltype="cf_sql_varchar">
+		</cfquery>
+		<cflocation url="CodeTableEditor.cfm?action=editNewFormNoCollectionAttribute&tbl=#tbl#" addtoken="false">
+	</cfoutput>
+</cfif>
+<cfif action is "updateNewFormNoCollectionAttribute">
+	<cfoutput>
+		<cfif reFind('<[^>]*>', description)>
+			<div class="importantNotification">
+				Description may not contain HTML.
+			</div>
+			<cfabort>
+		</cfif>
+		
+		<cfset sil="">
+		<cfloop list="#issue_url#" index="i" delimiters="#chr(10)#,">
+			<cfset sil=listappend(sil,trim(i))>
+		</cfloop>
+		<cfset sil=listRemoveDuplicates(sil)>
+		<cfset sil=listSort(sil,'text')>
+		<cfset sdil="">
+		<cfloop list="#documentation_url#" index="i"  delimiters="#chr(10)#,">
+			<cfset sdil=listappend(sdil,trim(i))>
+		</cfloop>
+		<cfset sdil=listRemoveDuplicates(sdil)>
+		<cfset sdil=listSort(sdil,'text')>
+
+		<cfset sst="">
+		<cfloop list="#search_terms#" index="i"  delimiters="#chr(10)#,">
+			<cfset sst=listappend(sst,trim(i))>
+		</cfloop>
+		<cfset sst=listRemoveDuplicates(sst)>
+		<cfset sst=listChangeDelims(sst, ", ")>
+		<cfset sst=listSort(sst,'text','asc',', ')>
+		<cfquery name="updateARow" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			update #tbl# set 
+				#fld#=<cfqueryparam value="#new_data_value#" cfsqltype="cf_sql_varchar">,
+				description=<cfqueryparam value="#description#" cfsqltype="cf_sql_varchar">,
+				search_terms=<cfqueryparam value="#sst#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sst))#">,
+				issue_url=string_to_array(<cfqueryparam value="#sil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sil))#">,','),
+				documentation_url=string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,',')
+			where #fld#=<cfqueryparam value="#original_data_value#" cfsqltype="cf_sql_varchar">
+		</cfquery>
+		<cfset rid=rereplace(new_data_value,"[^A-Za-z0-9]","_","all")>
+		<cflocation url="CodeTableEditor.cfm?action=editNewFormNoCollectionAttribute&tbl=#tbl###prow_#rid#" addtoken="false">
+	</cfoutput>
+</cfif>
+<!-------------------------------------------------->
+<cfif action is "insertNewFormNoCollectionAttribute">
+	<cfoutput>
+		<cfif reFind('<[^>]*>', description)>
+			<div class="importantNotification">
+				Description may not contain HTML.
+			</div>
+			<cfabort>
+		</cfif>
+		
+		<cfset sil="">
+		<cfloop list="#issue_url#" index="i" delimiters="#chr(10)#,">
+			<cfset sil=listappend(sil,trim(i))>
+		</cfloop>
+		<cfset sil=listRemoveDuplicates(sil)>
+		<cfset sil=listSort(sil,'text')>
+		<cfset sdil="">
+		<cfloop list="#documentation_url#" index="i"  delimiters="#chr(10)#,">
+			<cfset sdil=listappend(sdil,trim(i))>
+		</cfloop>
+		<cfset sdil=listRemoveDuplicates(sdil)>
+		<cfset sdil=listSort(sdil,'text')>
+
+
+		<cfset sst="">
+		<cfloop list="#search_terms#" index="i"  delimiters="#chr(10)#,">
+			<cfset sst=listappend(sst,trim(i))>
+		</cfloop>
+		<cfset sst=listRemoveDuplicates(sst)>
+		<cfset sst=listSort(sst,'text')>
+		<cfquery name="insertSpecimenPart" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			insert into #tbl# (
+				#fld#,
+				description,
+				search_terms,
+				issue_url,
+				documentation_url
+			) values (
+				<cfqueryparam value="#new_value#" cfsqltype="cf_sql_varchar">,
+				<cfqueryparam value="#description#" cfsqltype="cf_sql_varchar">,
+				<cfqueryparam value="#sst#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sst))#">,
+				string_to_array(<cfqueryparam value="#sil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sil))#">,','),
+				string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,',')
+			)
+		</cfquery>
+		<cfset rid=rereplace(new_value,"[^A-Za-z0-9]","_","all")>
+		<cflocation url="CodeTableEditor.cfm?action=editNewFormNoCollectionAttribute&tbl=#tbl###prow_#rid#" addtoken="false">
+	</cfoutput>
+</cfif>
+<!-------------------------------------------------->
+
+
+
+
+
+<!------------------------------------------- END now nocollection attributes code block ------------------>
+<cfif action is "editctcollection_attribute_type">
+	<style>
+		#partstbl tr:nth-child(even) {
+		   background-color: #ccc;
+		}
+		.guidList{max-height: 10em; overflow: auto;}
+
+		.prtctsavbtns{
+		  display: flex;
+		  justify-content: space-between;
+		  flex-wrap: wrap;
+		}
+		.prtctsavbtnsleft{
+			text-align:left;
+		}
+		.prtctsavbtnsright{
+			text-align: right;
+		}
+	</style>
+	<cfset title="ctcollection_attribute_type editor">
+	<cfquery name="q" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+		select
+			attribute_type,
+			description,
+			array_to_string(issue_url,'#chr(10)#') as issue_url,
+			array_to_string(documentation_url,'#chr(10)#') as documentation_url
+		from ctcollection_attribute_type
+		ORDER BY
+			attribute_type
+	</cfquery>
+
+	<cfoutput>
+		<h2>
+			Edit ctcollection_attribute_type 
+			<a href="/info/ctchange_log.cfm?tbl=#tbl#"><input type="button" class="lnkBtn" value="changelog"></a>
+		</h2>
+		<ul>
+			<li>attribute_type: Data/authority</li>
+			<li>Description: Definition or description. No HTML, no nonprinting characters.</li>
+			<li>Issue URL: List of relevant GitHub Issues, one per row.</li>
+			<li>Documentation URL: List of relevant/helpful websites or references, one per row.</li>
+		</ul>
+		<table id="partstbl" border="1" class="sortable">
+			<thead>
+				<tr>
+					<th>attribute_type</th>
+					<th>Description</th>
+					<th>Issue URL</th>
+					<th>Documentation URL</th>
+			</tr>
+			</thead>
+			<tbody>
+				<tr id="prow_new" class="newRec">
+					<td>
+						<form id="pfrm_new" method="post" action="CodeTableEditor.cfm">
+							<input type="hidden" name="action" value="insertctcollection_attribute_type">
+							<input type="hidden" name="tbl" value="#tbl#">
+							<input type="text" name="new_value" size="25" class="reqdClr" required>
+							<br><input type="submit" class="insBtn" value="Create">
+						</form>
+					</td>
+					<td>
+						<textarea name="description" rows="10" cols="40" form="pfrm_new" class="reqdClr" required></textarea>
+					</td>
+					<td>
+						<textarea name="issue_url" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+					<td>
+						<textarea name="documentation_url" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+				</tr>
+				<cfloop query="q">
+					<cfset rid=rereplace(attribute_type,"[^A-Za-z0-9]","_","all")>
+					<tr id="prow_#rid#">
+						<td>
+							<form id="pfrm#rid#" method="post" action="CodeTableEditor.cfm">
+								<input type="hidden" name="action" value="updatectcollection_attribute_type">
+								<input type="hidden" name="attribute_type" value="#attribute_type#">
+								<input type="hidden" name="tbl" value="#tbl#">
+								<input type="hidden" name="original_data_value" size="25" value="#EncodeForHTML(canonicalize(attribute_type,true,true))#">
+								<div>
+									<input type="text" name="new_data_value" size="25" value="#EncodeForHTML(canonicalize(attribute_type,true,true))#" class="reqdClr" required>
+								</div>
+								<div class="prtctsavbtns">
+									<div class="prtctsavbtnsleft">
+										<input type="submit" class="savBtn" value="Save">
+									</div>
+									<div class="prtctsavbtnsright">
+										<input type="button" class="delBtn" value="Delete" onclick="pfrm#rid#.action.value='deletectcollection_attribute_type';pfrm#rid#.submit();">
+									</div>
+								</div>
+							</form>
+						</td>
+						<td>
+							<label>Description</label>
+							<textarea name="description" rows="10" cols="40" form="pfrm#rid#" class="reqdClr" required>#EncodeForHTML(canonicalize(description,true,true))#</textarea>
+						</td>
+						
+						<td>
+							<label>Issue URL</label>
+							<textarea name="issue_url" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(issue_url,true,true))#</textarea>
+						</td>
+						<td>
+							<label>Documentation URL</label>
+							<textarea name="documentation_url" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(documentation_url,true,true))#</textarea>
+						</td>
+					</tr>
+				</cfloop>
+			</tbody>
+		</table>
+	</cfoutput>
+</cfif>
+<cfif action is "deletectcollection_attribute_type">
+	<cfoutput>
+		<cfquery name="deleteSpecimenPart" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			delete from ctcollection_attribute_type where attribute_type=<cfqueryparam value="#original_data_value#" cfsqltype="cf_sql_varchar">
+		</cfquery>
+		<cflocation url="CodeTableEditor.cfm?action=editctcollection_attribute_type&tbl=#tbl#" addtoken="false">
+	</cfoutput>
+</cfif>
+<cfif action is "updatectcollection_attribute_type">
+	<cfoutput>
+		<cfif reFind('<[^>]*>', description)>
+			<div class="importantNotification">
+				Description may not contain HTML.
+			</div>
+			<cfabort>
+		</cfif>
+		<cfset sil="">
+		<cfloop list="#issue_url#" index="i" delimiters="#chr(10)#,">
+			<cfset sil=listappend(sil,trim(i))>
+		</cfloop>
+		<cfset sil=listRemoveDuplicates(sil)>
+		<cfset sil=listSort(sil,'text')>
+		<cfset sdil="">
+		<cfloop list="#documentation_url#" index="i"  delimiters="#chr(10)#,">
+			<cfset sdil=listappend(sdil,trim(i))>
+		</cfloop>
+		<cfset sdil=listRemoveDuplicates(sdil)>
+		<cfset sdil=listSort(sdil,'text')>
+
+		
+
+		<cfquery name="updateARow" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			update ctcollection_attribute_type set 
+				attribute_type=<cfqueryparam value="#new_data_value#" cfsqltype="cf_sql_varchar">,
+				description=<cfqueryparam value="#description#" cfsqltype="cf_sql_varchar">,
+				issue_url=string_to_array(<cfqueryparam value="#sil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sil))#">,','),
+				documentation_url=string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,',')
+			where attribute_type=<cfqueryparam value="#original_data_value#" cfsqltype="cf_sql_varchar">
+		</cfquery>
+		<cfset rid=rereplace(new_data_value,"[^A-Za-z0-9]","_","all")>
+		<cflocation url="CodeTableEditor.cfm?action=editctcollection_attribute_type&tbl=#tbl###prow_#rid#" addtoken="false">
+	</cfoutput>
+</cfif>
+<!-------------------------------------------------->
+<cfif action is "insertctcollection_attribute_type">
+	<cfoutput>
+		<cfif reFind('<[^>]*>', description)>
+			<div class="importantNotification">
+				Description may not contain HTML.
+			</div>
+			<cfabort>
+		</cfif>
+		<cfset sil="">
+		<cfloop list="#issue_url#" index="i" delimiters="#chr(10)#,">
+			<cfset sil=listappend(sil,trim(i))>
+		</cfloop>
+		<cfset sil=listRemoveDuplicates(sil)>
+		<cfset sil=listSort(sil,'text')>
+		<cfset sdil="">
+		<cfloop list="#documentation_url#" index="i"  delimiters="#chr(10)#,">
+			<cfset sdil=listappend(sdil,trim(i))>
+		</cfloop>
+		<cfset sdil=listRemoveDuplicates(sdil)>
+		<cfset sdil=listSort(sdil,'text')>
+		<cfquery name="insertSpecimenPart" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			insert into ctcollection_attribute_type (
+				attribute_type,
+				description,
+				issue_url,
+				documentation_url
+			) values (
+				<cfqueryparam value="#new_value#" cfsqltype="cf_sql_varchar">,
+				<cfqueryparam value="#description#" cfsqltype="cf_sql_varchar">,
+				string_to_array(<cfqueryparam value="#sil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sil))#">,','),
+				string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,',')
+			)
+		</cfquery>
+		<cfset rid=rereplace(new_value,"[^A-Za-z0-9]","_","all")>
+		<cflocation url="CodeTableEditor.cfm?action=editctcollection_attribute_type&tbl=#tbl###prow_#rid#" addtoken="false">
+	</cfoutput>
+</cfif>
+<!-------------------------------------------------->
+<!------------------------------------------- END ctcollection_attribute_type code block ------------------>
 
 
 
@@ -759,13 +1135,603 @@
 
 
 
+<!------------------------------------------- END now nocollection attributes code block ------------------>
+<cfif action is "editctattribute_type">
+	<!--- this is basically newform attrs but with more stuff ---->
+	<style>
+		#partstbl tr:nth-child(even) {
+		   background-color: #ccc;
+		}
+		.guidList{max-height: 10em; overflow: auto;}
+
+		.prtctsavbtns{
+		  display: flex;
+		  justify-content: space-between;
+		  flex-wrap: wrap;
+		}
+		.prtctsavbtnsleft{
+			text-align:left;
+		}
+		.prtctsavbtnsright{
+			text-align: right;
+		}
+	</style>
+	<cfset title="ctattribute_type editor">
+	<cfquery name="q" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+		select
+			attribute_type,
+			description,
+			array_to_string(collections,',') as collections,
+			array_to_string(recommend_for_collection_type,',') as recommend_for_collection_type,
+			search_terms,
+			array_to_string(issue_url,'#chr(10)#') as issue_url,
+			array_to_string(documentation_url,'#chr(10)#') as documentation_url,
+			value_code_table,
+  			unit_code_table 
+		from ctattribute_type
+		ORDER BY
+			attribute_type
+	</cfquery>
+	<cfquery name="my_collections" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+		select guid_prefix from collection order by guid_prefix
+	</cfquery>
+	<cfquery name="ctcollection_cde" datasource="cf_codetables">
+		select collection_cde from ctcollection_cde order by collection_cde
+	</cfquery>
+	<cfquery name="allCTs" datasource="uam_god">
+		select distinct(table_name) as tablename from information_schema.tables where table_name like 'ct%' order by tablename
+	</cfquery>
+
+	<cfoutput>
+		<h2>
+			Edit ctattribute_type 
+			<a href="/info/ctchange_log.cfm?tbl=#tbl#"><input type="button" class="lnkBtn" value="changelog"></a>
+			 <a href="/Admin/codeTableCollection.cfm?table=#tbl#"><input type="button" class="lnkBtn" value="collection settings"></a>
+		</h2>
+		<ul>
+			<li>attribute_type: Data/authority</li>
+			<li>Description: Definition or description. No HTML, no nonprinting characters.</li>
+			<li>BestFor: Recommend use in collection types. Only UI, does not provide or restrict access. DO NOT use for "unpure" parts.</li>
+			<li>Search Terms: List of search helpers. Separate with commas or linebreaks.</li>
+			<li>Issue URL: List of relevant GitHub Issues, one per row.</li>
+			<li>Documentation URL: List of relevant/helpful websites or references, one per row.</li>
+			<li>value_code_table: categorical datatype, unit_code_table must be null</li>
+			<li>unit_code_table: number+units datatype, value_code_table must be null</li>
+		</ul>
+		<table id="partstbl" border="1" class="sortable">
+			<thead>
+				<tr>
+					<th>attribute_type</th>
+					<th>Description</th>
+					<th>BestFor</th>
+					<th>Search Terms</th>
+					<th>Issue URL</th>
+					<th>Documentation URL</th>
+					<th>value_code_table</th>
+					<th>unit_code_table</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr id="prow_new" class="newRec">
+					<td>
+						<form id="pfrm_new" method="post" action="CodeTableEditor.cfm">
+							<input type="hidden" name="action" value="insertctattribute_type">
+							<input type="hidden" name="tbl" value="#tbl#">
+							<input type="text" name="new_value" size="25" class="reqdClr" required>
+							<br><input type="submit" class="insBtn" value="Create">
+						</form>
+					</td>
+					<td>
+						<textarea name="description" rows="10" cols="40" form="pfrm_new" class="reqdClr" required></textarea>
+					</td>
+					<td>
+						<select multiple size="10" name="recommend_for_collection_type" form="pfrm_new">
+							<cfloop query="ctcollection_cde">
+								<option value="#collection_cde#">#collection_cde#</option>
+							</cfloop>
+						</select>
+					</td>
+					<td>
+						<textarea name="search_terms" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+					<td>
+						<textarea name="issue_url" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+					<td>
+						<textarea name="documentation_url" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+					<td>
+						<select name="value_code_table" size="1" form="pfrm_new">
+							<option value="">none</option>
+							<cfloop query="allCTs">
+								<option	value="#allCTs.tablename#">#allCTs.tablename#</option>
+							</cfloop>
+						</select>
+					</td>
+					<td>
+						<select name="unit_code_table" size="1" form="pfrm_new">
+							<option value="">none</option>
+							<cfloop query="allCTs">
+								<option	value="#allCTs.tablename#">#allCTs.tablename#</option>
+							</cfloop>
+						</select>
+					</td>
+				</tr>
+				<cfloop query="q">
+					<cfset rid=rereplace(attribute_type,"[^A-Za-z0-9]","_","all")>
+					<tr id="prow_#rid#">
+						<td>
+							<form id="pfrm#rid#" method="post" action="CodeTableEditor.cfm">
+								<input type="hidden" name="action" value="updatectattribute_type">
+								<input type="hidden" name="attribute_type" value="#attribute_type#">
+								<input type="hidden" name="tbl" value="#tbl#">
+								<input type="hidden" name="original_data_value" size="25" value="#EncodeForHTML(canonicalize(attribute_type,true,true))#">
+								<div>
+									<input type="text" name="new_data_value" size="25" value="#EncodeForHTML(canonicalize(attribute_type,true,true))#" class="reqdClr" required>
+								</div>
+								<div class="prtctsavbtns">
+									<div class="prtctsavbtnsleft">
+										<input type="submit" class="savBtn" value="Save">
+									</div>
+									<div class="prtctsavbtnsright">
+										<input type="button" class="delBtn" value="Delete" onclick="pfrm#rid#.action.value='deletectattribute_type';pfrm#rid#.submit();">
+									</div>
+								</div>
+							</form>
+						</td>
+						<td>
+							<label>Description</label>
+							<textarea name="description" rows="10" cols="40" form="pfrm#rid#" class="reqdClr" required>#EncodeForHTML(canonicalize(description,true,true))#</textarea>
+						</td>
+						<td>
+							<select multiple size="10" name="recommend_for_collection_type" form="pfrm#rid#">
+								<cfloop query="ctcollection_cde">
+									<option value="#collection_cde#" <cfif listFind(recommend_for_collection_type, collection_cde)> selected="selected" </cfif>>#collection_cde#</option>
+								</cfloop>
+							</select>
+						</td>
+						<td>
+							<cfset strms=replace(search_terms,', ','#chr(10)#',"all")>
+							<label>Search Terms</label>
+							<textarea name="search_terms" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(strms,true,true))#</textarea>
+						</td>
+						<td>
+							<label>Issue URL</label>
+							<textarea name="issue_url" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(issue_url,true,true))#</textarea>
+						</td>
+						<td>
+							<label>Documentation URL</label>
+							<textarea name="documentation_url" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(documentation_url,true,true))#</textarea>
+						</td>
+						<td>
+							<label>value_code_table</label>
+							<select name="value_code_table" size="1" form="pfrm#rid#">
+								<option value="">none</option>
+								<cfloop query="allCTs">
+									<option <cfif allCTs.tablename is value_code_table>selected="selected"</cfif> value="#allCTs.tablename#">#allCTs.tablename#</option>
+								</cfloop>
+							</select>
+						</td>
+						<td>
+							<select name="unit_code_table" size="1" form="pfrm#rid#">
+								<option value="">none</option>
+								<cfloop query="allCTs">
+									<option <cfif allCTs.tablename is unit_code_table > selected="selected" </cfif> value="#allCTs.tablename#">#allCTs.tablename#</option>
+								</cfloop>
+							</select>
+						</td>
+					</tr>
+				</cfloop>
+			</tbody>
+		</table>
+	</cfoutput>
+</cfif>
+<cfif action is "deletectattribute_type">
+	<cfoutput>
+		<cfquery name="deleteSpecimenPart" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			delete from ctattribute_type where attribute_type=<cfqueryparam value="#original_data_value#" cfsqltype="cf_sql_varchar">
+		</cfquery>
+		<cflocation url="CodeTableEditor.cfm?action=editctattribute_type&tbl=#tbl#" addtoken="false">
+	</cfoutput>
+</cfif>
+<cfif action is "updatectattribute_type">
+	<cfoutput>
+		<cfif reFind('<[^>]*>', description)>
+			<div class="importantNotification">
+				Description may not contain HTML.
+			</div>
+			<cfabort>
+		</cfif>
+		<cfset srt="">
+		<cfif isdefined("recommend_for_collection_type") and len(recommend_for_collection_type) gt 0>
+			<cfloop list="#recommend_for_collection_type#" index="i">
+				<cfset srt=listappend(srt,trim(i))>
+			</cfloop>
+			<cfset srt=listRemoveDuplicates(srt)>
+		</cfif>
+		<cfset srt=listSort(srt,'text')>
+		<cfset sil="">
+		<cfloop list="#issue_url#" index="i" delimiters="#chr(10)#,">
+			<cfset sil=listappend(sil,trim(i))>
+		</cfloop>
+		<cfset sil=listRemoveDuplicates(sil)>
+		<cfset sil=listSort(sil,'text')>
+		<cfset sdil="">
+		<cfloop list="#documentation_url#" index="i"  delimiters="#chr(10)#,">
+			<cfset sdil=listappend(sdil,trim(i))>
+		</cfloop>
+		<cfset sdil=listRemoveDuplicates(sdil)>
+		<cfset sdil=listSort(sdil,'text')>
+
+		<cfset sst="">
+		<cfloop list="#search_terms#" index="i"  delimiters="#chr(10)#,">
+			<cfset sst=listappend(sst,trim(i))>
+		</cfloop>
+		<cfset sst=listRemoveDuplicates(sst)>
+		<cfset sst=listChangeDelims(sst, ", ")>
+		<cfset sst=listSort(sst,'text')>
+
+		<cfquery name="updateARow" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			update ctattribute_type set 
+				attribute_type=<cfqueryparam value="#new_data_value#" cfsqltype="cf_sql_varchar">,
+				description=<cfqueryparam value="#description#" cfsqltype="cf_sql_varchar">,
+				search_terms=<cfqueryparam value="#sst#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sst))#">,
+				recommend_for_collection_type=string_to_array(<cfqueryparam value="#srt#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(srt))#">,','),
+				issue_url=string_to_array(<cfqueryparam value="#sil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sil))#">,','),
+				documentation_url=string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,','),
+				value_code_table=<cfqueryparam value="#value_code_table#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(value_code_table))#">,
+				unit_code_table=<cfqueryparam value="#unit_code_table#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(unit_code_table))#">
+			where attribute_type=<cfqueryparam value="#original_data_value#" cfsqltype="cf_sql_varchar">
+		</cfquery>
+		<cfset rid=rereplace(new_data_value,"[^A-Za-z0-9]","_","all")>
+		<cflocation url="CodeTableEditor.cfm?action=editctattribute_type&tbl=#tbl###prow_#rid#" addtoken="false">
+	</cfoutput>
+</cfif>
+<!-------------------------------------------------->
+<cfif action is "insertctattribute_type">
+	<cfoutput>
+		<cfif reFind('<[^>]*>', description)>
+			<div class="importantNotification">
+				Description may not contain HTML.
+			</div>
+			<cfabort>
+		</cfif>
+		<cfset srt="">
+		<cfif isdefined("recommend_for_collection_type") and len(recommend_for_collection_type) gt 0>
+			<cfloop list="#recommend_for_collection_type#" index="i">
+				<cfset srt=listappend(srt,trim(i))>
+			</cfloop>
+			<cfset srt=listRemoveDuplicates(srt)>
+		</cfif>
+		<cfset srt=listSort(srt,'text')>
+		<cfset sil="">
+		<cfloop list="#issue_url#" index="i" delimiters="#chr(10)#,">
+			<cfset sil=listappend(sil,trim(i))>
+		</cfloop>
+		<cfset sil=listRemoveDuplicates(sil)>
+		<cfset sil=listSort(sil,'text')>
+		<cfset sdil="">
+		<cfloop list="#documentation_url#" index="i"  delimiters="#chr(10)#,">
+			<cfset sdil=listappend(sdil,trim(i))>
+		</cfloop>
+		<cfset sdil=listRemoveDuplicates(sdil)>
+		<cfset sdil=listSort(sdil,'text')>
+		<cfset sst="">
+		<cfloop list="#search_terms#" index="i"  delimiters="#chr(10)#,">
+			<cfset sst=listappend(sst,trim(i))>
+		</cfloop>
+		<cfset sst=listRemoveDuplicates(sst)>
+		<cfset sst=listSort(sst,'text')>
+		<cfquery name="insertSpecimenPart" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			insert into ctattribute_type (
+				attribute_type,
+				description,
+				search_terms,
+				recommend_for_collection_type,
+				issue_url,
+				documentation_url,
+				value_code_table,
+				unit_code_table
+			) values (
+				<cfqueryparam value="#new_value#" cfsqltype="cf_sql_varchar">,
+				<cfqueryparam value="#description#" cfsqltype="cf_sql_varchar">,
+				<cfqueryparam value="#sst#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sst))#">,
+				string_to_array(<cfqueryparam value="#srt#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(srt))#">,','),
+				string_to_array(<cfqueryparam value="#sil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sil))#">,','),
+				string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,','),
+				<cfqueryparam value="#value_code_table#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(value_code_table))#">,
+				<cfqueryparam value="#unit_code_table#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(unit_code_table))#">
+			)
+		</cfquery>
+		<cfset rid=rereplace(new_value,"[^A-Za-z0-9]","_","all")>
+		<cflocation url="CodeTableEditor.cfm?action=editctattribute_type&tbl=#tbl###prow_#rid#" addtoken="false">
+	</cfoutput>
+</cfif>
+<!-------------------------------------------------->
+<!------------------------------------------- END ctattribute_type code block ------------------>
+
+
+
+<!----------------- begin locality attribute, like records but without collection specifics ----->
 
 
 
 
+<cfif action is "editLocalityAttribute">
+	<style>
+		#partstbl tr:nth-child(even) {
+		   background-color: #ccc;
+		}
+		.guidList{max-height: 10em; overflow: auto;}
 
+		.prtctsavbtns{
+		  display: flex;
+		  justify-content: space-between;
+		  flex-wrap: wrap;
+		}
+		.prtctsavbtnsleft{
+			text-align:left;
+		}
+		.prtctsavbtnsright{
+			text-align: right;
+		}
+	</style>
+	<cfset title="ctattribute_type editor">
+	<cfquery name="q" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+		select
+			attribute_type,
+			description,
+			search_terms,
+			array_to_string(issue_url,'#chr(10)#') as issue_url,
+			array_to_string(documentation_url,'#chr(10)#') as documentation_url,
+			value_code_table,
+  			unit_code_table 
+		from ctlocality_attribute_type
+		ORDER BY
+			attribute_type
+	</cfquery>
+	<cfquery name="allCTs" datasource="uam_god">
+		select distinct(table_name) as tablename from information_schema.tables where table_name like 'ct%' order by tablename
+	</cfquery>
 
+	<cfoutput>
+		<h2>
+			Edit ctlocality_attribute_type 
+			<a href="/info/ctchange_log.cfm?tbl=#tbl#"><input type="button" class="lnkBtn" value="changelog"></a>
+		</h2>
+		<ul>
+			<li>attribute_type: Data/authority</li>
+			<li>Description: Definition or description. No HTML, no nonprinting characters.</li>
+			<li>Search Terms: List of search helpers. Separate with commas or linebreaks.</li>
+			<li>Issue URL: List of relevant GitHub Issues, one per row.</li>
+			<li>Documentation URL: List of relevant/helpful websites or references, one per row.</li>
+			<li>value_code_table: categorical datatype, unit_code_table must be null</li>
+			<li>unit_code_table: number+units datatype, value_code_table must be null</li>
+		</ul>
+		<table id="partstbl" border="1" class="sortable">
+			<thead>
+				<tr>
+					<th>control</th>
+					<th>attribute_type</th>
+					<th>Description</th>
+					<th>Search Terms</th>
+					<th>Issue URL</th>
+					<th>Documentation URL</th>
+					<th>value_code_table</th>
+					<th>unit_code_table</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr id="prow_new" class="newRec">
+					<td>
+						<form id="pfrm_new" method="post" action="CodeTableEditor.cfm">
+							<input type="hidden" name="action" value="insertLocalityAttribute">
+							<input type="hidden" name="tbl" value="#tbl#">
+							<input type="submit" class="insBtn" value="Create">
+						</form>
+					</td>
+					<td>
+						<input form="pfrm_new" type="text" name="new_value" size="25" class="reqdClr" required>
 
+					</td>
+					<td>
+						<textarea name="description" rows="10" cols="40" form="pfrm_new" class="reqdClr" required></textarea>
+					</td>
+					<td>
+						<textarea name="search_terms" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+					<td>
+						<textarea name="issue_url" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+					<td>
+						<textarea name="documentation_url" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+					<td>
+						<select name="value_code_table" size="1" form="pfrm_new">
+							<option value="">none</option>
+							<cfloop query="allCTs">
+								<option	value="#allCTs.tablename#">#allCTs.tablename#</option>
+							</cfloop>
+						</select>
+					</td>
+					<td>
+						<select name="unit_code_table" size="1" form="pfrm_new">
+							<option value="">none</option>
+							<cfloop query="allCTs">
+								<option	value="#allCTs.tablename#">#allCTs.tablename#</option>
+							</cfloop>
+						</select>
+					</td>
+				</tr>
+				<cfloop query="q">
+
+					<cfset rid=rereplace(attribute_type,"[^A-Za-z0-9]","_","all")>
+
+					<tr id="prow_#rid#">
+						<td>
+							<form id="pfrm#rid#" method="post" action="CodeTableEditor.cfm">
+								<input type="hidden" name="action" value="updateLocalityAttribute">
+								<input type="hidden" name="attribute_type" value="#attribute_type#">
+								<input type="hidden" name="tbl" value="#tbl#">
+								<input type="hidden" name="original_data_value" size="25" value="#EncodeForHTML(canonicalize(attribute_type,true,true))#">
+								<div class="prtctsavbtns">
+									<div class="prtctsavbtnsleft">
+										<input type="submit" class="savBtn" value="Save">
+									</div>
+									<div class="prtctsavbtnsright">
+										<input type="button" class="delBtn" value="Delete" onclick="pfrm#rid#.action.value='deleteLocalityAttribute';pfrm#rid#.submit();">
+									</div>
+								</div>
+							</form>
+						</td>
+						<td>
+							<input form="pfrm#rid#" type="text" name="new_data_value" size="25" value="#EncodeForHTML(canonicalize(attribute_type,true,true))#" class="reqdClr" required>
+						</td>
+						<td>
+							<label>Description</label>
+							<textarea name="description" rows="10" cols="40" form="pfrm#rid#" class="reqdClr" required>#EncodeForHTML(canonicalize(description,true,true))#</textarea>
+						</td>
+						<td>
+							<cfset strms=replace(search_terms,', ','#chr(10)#',"all")>
+							<label>Search Terms</label>
+							<textarea name="search_terms" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(strms,true,true))#</textarea>
+						</td>
+						<td>
+							<label>Issue URL</label>
+							<textarea name="issue_url" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(issue_url,true,true))#</textarea>
+						</td>
+						<td>
+							<label>Documentation URL</label>
+							<textarea name="documentation_url" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(documentation_url,true,true))#</textarea>
+						</td>
+						<td>
+							<label>value_code_table</label>
+							<select name="value_code_table" size="1" form="pfrm#rid#">
+								<option value="">none</option>
+								<cfloop query="allCTs">
+									<option <cfif allCTs.tablename is value_code_table>selected="selected"</cfif> value="#allCTs.tablename#">#allCTs.tablename#</option>
+								</cfloop>
+							</select>
+						</td>
+						<td>
+							<select name="unit_code_table" size="1" form="pfrm#rid#">
+								<option value="">none</option>
+								<cfloop query="allCTs">
+									<option <cfif allCTs.tablename is unit_code_table > selected="selected" </cfif> value="#allCTs.tablename#">#allCTs.tablename#</option>
+								</cfloop>
+							</select>
+						</td>
+
+					</tr>
+				</cfloop>
+			</tbody>
+		</table>
+	</cfoutput>
+</cfif>
+<cfif action is "deleteLocalityAttribute">
+	<cfoutput>
+		<cfquery name="deleteSpecimenPart" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			delete from ctlocality_attribute_type where attribute_type=<cfqueryparam value="#original_data_value#" cfsqltype="cf_sql_varchar">
+		</cfquery>
+		<cflocation url="CodeTableEditor.cfm?action=editLocalityAttribute&tbl=#tbl#" addtoken="false">
+	</cfoutput>
+</cfif>
+<cfif action is "updateLocalityAttribute">
+	<cfoutput>
+		<cfif reFind('<[^>]*>', description)>
+			<div class="importantNotification">
+				Description may not contain HTML.
+			</div>
+			<cfabort>
+		</cfif>
+		<cfset sil="">
+		<cfloop list="#issue_url#" index="i" delimiters="#chr(10)#,">
+			<cfset sil=listappend(sil,trim(i))>
+		</cfloop>
+		<cfset sil=listRemoveDuplicates(sil)>
+		<cfset sil=listSort(sil,'text')>
+		<cfset sdil="">
+		<cfloop list="#documentation_url#" index="i"  delimiters="#chr(10)#,">
+			<cfset sdil=listappend(sdil,trim(i))>
+		</cfloop>
+		<cfset sdil=listRemoveDuplicates(sdil)>
+		<cfset sdil=listSort(sdil,'text')>
+
+		<cfset sst="">
+		<cfloop list="#search_terms#" index="i"  delimiters="#chr(10)#,">
+			<cfset sst=listappend(sst,trim(i))>
+		</cfloop>
+		<cfset sst=listRemoveDuplicates(sst)>
+		<cfset sst=listChangeDelims(sst, ", ")>
+		<cfset sst=listSort(sst,'text')>
+
+		<cfquery name="updateARow" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			update ctlocality_attribute_type set 
+				attribute_type=<cfqueryparam value="#new_data_value#" cfsqltype="cf_sql_varchar">,
+				description=<cfqueryparam value="#description#" cfsqltype="cf_sql_varchar">,
+				search_terms=<cfqueryparam value="#sst#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sst))#">,
+				issue_url=string_to_array(<cfqueryparam value="#sil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sil))#">,','),
+				documentation_url=string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,','),
+				value_code_table=<cfqueryparam value="#value_code_table#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(value_code_table))#">,
+				unit_code_table=<cfqueryparam value="#unit_code_table#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(unit_code_table))#">
+			where attribute_type=<cfqueryparam value="#original_data_value#" cfsqltype="cf_sql_varchar">
+		</cfquery>
+		<cfset rid=rereplace(new_data_value,"[^A-Za-z0-9]","_","all")>
+		<cflocation url="CodeTableEditor.cfm?action=editLocalityAttribute&tbl=#tbl###prow_#rid#" addtoken="false">
+	</cfoutput>
+</cfif>
+<!-------------------------------------------------->
+<cfif action is "insertLocalityAttribute">
+	<cfoutput>
+		<cfif reFind('<[^>]*>', description)>
+			<div class="importantNotification">
+				Description may not contain HTML.
+			</div>
+			<cfabort>
+		</cfif>
+		<cfset sil="">
+		<cfloop list="#issue_url#" index="i" delimiters="#chr(10)#,">
+			<cfset sil=listappend(sil,trim(i))>
+		</cfloop>
+		<cfset sil=listRemoveDuplicates(sil)>
+		<cfset sil=listSort(sil,'text')>
+		<cfset sdil="">
+		<cfloop list="#documentation_url#" index="i"  delimiters="#chr(10)#,">
+			<cfset sdil=listappend(sdil,trim(i))>
+		</cfloop>
+		<cfset sdil=listRemoveDuplicates(sdil)>
+		<cfset sdil=listSort(sdil,'text')>
+		<cfset sst="">
+		<cfloop list="#search_terms#" index="i"  delimiters="#chr(10)#,">
+			<cfset sst=listappend(sst,trim(i))>
+		</cfloop>
+		<cfset sst=listRemoveDuplicates(sst)>
+		<cfset sst=listSort(sst,'text')>
+		<cfquery name="insertSpecimenPart" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			insert into ctlocality_attribute_type (
+				attribute_type,
+				description,
+				search_terms,
+				issue_url,
+				documentation_url,
+				value_code_table,
+				unit_code_table
+			) values (
+				<cfqueryparam value="#new_value#" cfsqltype="cf_sql_varchar">,
+				<cfqueryparam value="#description#" cfsqltype="cf_sql_varchar">,
+				<cfqueryparam value="#sst#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sst))#">,
+				string_to_array(<cfqueryparam value="#sil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sil))#">,','),
+				string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,','),
+				<cfqueryparam value="#value_code_table#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(value_code_table))#">,
+				<cfqueryparam value="#unit_code_table#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(unit_code_table))#">
+			)
+		</cfquery>
+		<cfset rid=rereplace(new_value,"[^A-Za-z0-9]","_","all")>
+		<cflocation url="CodeTableEditor.cfm?action=editLocalityAttribute&tbl=#tbl###prow_#rid#" addtoken="false">
+	</cfoutput>
+</cfif>
+<!-------------------------------------------------->
+<!------------------------------------------- END locality attribute code block ------------------>
 
 <!------------------------------------------------------------------------------------------------------>
 <cfif action is "editWithCollectionCode">
@@ -945,136 +1911,6 @@
 
 
 <!---------------------------------------------------------------------------->
-<cfif action is "editAttCodeTables">
-	<cfoutput>
-		<cfquery name="ctAttribute_type" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			select distinct(attribute_type) from ctAttribute_type order by attribute_type
-		</cfquery>
-		<cfquery name="thisRec" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			Select * from ctattribute_code_tables order by attribute_type
-		</cfquery>
-		<cfquery name="allCTs" datasource="uam_god">
-			select distinct(table_name) as tablename from information_schema.tables where table_name like 'ct%' order by tablename
-		</cfquery>
-		<br>Create Attribute Control
-		<table class="newRec" border>
-			<tr>
-				<th>Attribute</th>
-				<th>Value Code Table</th>
-				<th>Units Code Table</th>
-				<th>&nbsp;</th>
-			</tr>
-			<form method="post" action="CodeTableEditor.cfm">
-				<input type="hidden" name="action" value="newValue">
-				<input type="hidden" name="tbl" value="#tbl#">
-				<tr>
-					<td>
-						<select name="attribute_type" size="1">
-							<option value=""></option>
-							<cfloop query="ctAttribute_type">
-							<option
-								value="#ctAttribute_type.attribute_type#">#ctAttribute_type.attribute_type#</option>
-							</cfloop>
-						</select>
-					</td>
-					<td>
-						<cfset thisValueTable = #thisRec.value_code_table#>
-						<select name="value_code_table" size="1">
-							<option value="">none</option>
-							<cfloop query="allCTs">
-							<option
-							value="#allCTs.tablename#">#allCTs.tablename#</option>
-							</cfloop>
-						</select>
-					</td>
-					<td>
-						<cfset thisUnitsTable = #thisRec.units_code_table#>
-						<select name="units_code_table" size="1">
-							<option value="">none</option>
-							<cfloop query="allCTs">
-							<option
-							value="#allCTs.tablename#">#allCTs.tablename#</option>
-							</cfloop>
-						</select>
-					</td>
-					<td>
-						<input type="submit"
-							value="Create"
-							class="insBtn">
-					</td>
-				</tr>
-			</form>
-		</table>
-		<br>Edit Attribute Controls
-		<table border>
-			<tr>
-				<th>Attribute</th>
-				<th>Value Code Table</th>
-				<th>Units Code Table</th>
-				<th>&nbsp;</th>
-			</tr>
-			<cfset i=1>
-			<cfloop query="thisRec">
-				<form name="att#i#" method="post" action="CodeTableEditor.cfm">
-					<input type="hidden" name="action" value="">
-					<input type="hidden" name="tbl" value="#tbl#">
-					<input type="hidden" name="oldAttribute_type" value="#Attribute_type#">
-					<input type="hidden" name="oldvalue_code_table" value="#value_code_table#">
-					<input type="hidden" name="oldunits_code_table" value="#units_code_table#">
-					<cfset did=rereplace(thisRec.attribute_type,"[^A-Za-z]","_","all")>
-
-					<tr id="#did#">
-						<td>
-							<cfset thisAttType = #thisRec.attribute_type#>
-								<select name="attribute_type" size="1">
-									<option value=""></option>
-									<cfloop query="ctAttribute_type">
-									<option
-												<cfif #thisAttType# is "#ctAttribute_type.attribute_type#"> selected </cfif>value="#ctAttribute_type.attribute_type#">#ctAttribute_type.attribute_type#</option>
-									</cfloop>
-								</select>
-						</td>
-						<td>
-							<cfset thisValueTable = #thisRec.value_code_table#>
-							<select name="value_code_table" size="1">
-								<option value="">none</option>
-								<cfloop query="allCTs">
-								<option
-								<cfif #thisValueTable# is "#allCTs.tablename#"> selected </cfif>value="#allCTs.tablename#">#allCTs.tablename#</option>
-								</cfloop>
-							</select>
-						</td>
-						<td>
-							<cfset thisUnitsTable = #thisRec.units_code_table#>
-							<select name="units_code_table" size="1">
-								<option value="">none</option>
-								<cfloop query="allCTs">
-								<option
-								<cfif #thisUnitsTable# is "#allCTs.tablename#"> selected </cfif>value="#allCTs.tablename#">#allCTs.tablename#</option>
-								</cfloop>
-							</select>
-						</td>
-						<td>
-							<input type="button"
-								value="Save"
-								class="savBtn"
-							 	onclick="att#i#.action.value='saveEdit';submit();">
-							<input type="button"
-								value="Delete"
-								class="delBtn"
-							  	onclick="att#i#.action.value='deleteValue';submit();">
-						</td>
-					</tr>
-				</form>
-			<cfset i=#i#+1>
-		</cfloop>
-	</table>
-</cfoutput>
-</cfif>
-
-
-
-<!---------------------------------------------------------------------------->
 <cfif action is "editTaxTrm">
 <cfoutput>
 Terms must be lower-case
@@ -1223,7 +2059,7 @@ Terms must be lower-case
 	----------------->
 	<cfoutput>
 		<cfquery name="q" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			select * from ctcoll_other_id_type order by sort_order,other_id_type
+			select * from ctcoll_other_id_type order by other_id_type
 		</cfquery>
 		
 		<form name="newData" method="post" action="CodeTableEditor.cfm">
@@ -1233,8 +2069,6 @@ Terms must be lower-case
 				<tr>
 					<th>ID Type</th>
 					<th>Description</th>
-					<th>Base URL</th>
-					<th>Sort</th>
 					<th></th>
 				</tr>
 				<tr>
@@ -1243,12 +2077,6 @@ Terms must be lower-case
 					</td>
 					<td>
 						<textarea name="description" rows="4" cols="40"  class="reqdClr" required="required"></textarea>
-					</td>
-					<td>
-						<input type="text" name="base_url" size="50">
-					</td>
-					<td>
-						<input type="number" name="sort_order">
 					</td>
 					<td>
 						<input type="submit" value="Insert" class="insBtn">
@@ -1261,7 +2089,6 @@ Terms must be lower-case
 			<tr>
 				<th>Type</th>
 				<th>Description</th>
-				<th>Base URL</th>
 				<th>Sort</th>
 			</tr>
 			<cfloop query="q">
@@ -1278,12 +2105,6 @@ Terms must be lower-case
 						</td>
 						<td>
 							<textarea name="description" id="description#i#" rows="4" cols="40" required="required" class="reqdClr">#trim(description)#</textarea>
-						</td>
-						<td>
-							<input type="text" name="base_url" size="60" value="#base_url#">
-						</td>
-						<td>
-							<input type="number" name="sort_order" value="#sort_order#">
 						</td>
 						<td>
 							<input type="submit"
@@ -1311,7 +2132,7 @@ Terms must be lower-case
 	<cfoutput>
 
 		<cfquery name="getCols" datasource="uam_god">
-			select column_name from information_schema.columns where table_name='#tbl#'
+			select column_name from information_schema.columns where table_name=<cfqueryparam value="#lcase(tbl)#" CFSQLType="cf_sql_varchar">
 		</cfquery>
 		<cfset collcde=listfindnocase(valuelist(getCols.column_name),"collection_cde")>
 		<cfset hasDescn=listfindnocase(valuelist(getCols.column_name),"description")>
@@ -1436,38 +2257,13 @@ Terms must be lower-case
 		</table>
 		</cfoutput>
 	</cfif>
-
 <!---------------------------------------------------------------------------->
-
-
-
-
-
 <cfif action is "deleteValue">
-
-	<cfif tbl is "ctpublication_attribute">
-		<cfquery name="sav" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			delete from ctpublication_attribute
-			where
-				publication_attribute='#origData#'
-		</cfquery>
-	<cfelseif tbl is "ctcoll_other_id_type">
+	<cfif tbl is "ctcoll_other_id_type">
 		<cfquery name="sav" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			delete from ctcoll_other_id_type
 			where
 				OTHER_ID_TYPE='#origData#'
-		</cfquery>
-	<cfelseif tbl is "ctattribute_code_tables">
-		<cfquery name="del" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			DELETE FROM ctattribute_code_tables
-			WHERE
-				Attribute_type = '#oldAttribute_type#'
-				<cfif len(#oldvalue_code_table#) gt 0>
-					AND	value_code_table = '#oldvalue_code_table#'
-				</cfif>
-				<cfif len(#oldunits_code_table#) gt 0>
-					AND	units_code_table = '#oldunits_code_table#'
-				</cfif>
 		</cfquery>
 	<cfelse>
 		<cfquery name="del" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
@@ -1487,28 +2283,11 @@ Terms must be lower-case
 		<cfquery name="sav" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			update ctcoll_other_id_type set
 				OTHER_ID_TYPE=<cfqueryparam value = "#other_id_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(other_id_type))#">,
-				DESCRIPTION=<cfqueryparam value = "#description#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(description))#">,
-				base_URL=<cfqueryparam value = "#base_url#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(base_url))#">,
-				<cfif len(sort_order) gt 0>
-					sort_order=#sort_order#
-				<cfelse>
-					sort_order=null
-				</cfif>
+				DESCRIPTION=<cfqueryparam value = "#description#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(description))#">
 			where
 				OTHER_ID_TYPE='#origData#'
 		</cfquery>
 		<cfset did=rereplace(other_id_type,"[^A-Za-z]","_","all")>
-
-	<cfelseif tbl is "ctattribute_code_tables">
-		<cfquery name="sav" result="x" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			UPDATE ctattribute_code_tables SET
-				Attribute_type = <cfqueryparam value = "#Attribute_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(Attribute_type))#">,
-				value_code_table = <cfqueryparam value = "#value_code_table#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(value_code_table))#">,
-				units_code_table = <cfqueryparam value = "#units_code_table#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(units_code_table))#">
-			WHERE
-				Attribute_type = <cfqueryparam value = "#oldAttribute_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(oldAttribute_type))#">
-		</cfquery>
-		<cfset did=rereplace(Attribute_type,"[^A-Za-z]","_","all")>
 	<cfelse>
 		<cfquery name="up" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			UPDATE #tbl# SET #fld# = '#thisField#'
@@ -1526,8 +2305,6 @@ Terms must be lower-case
 		<cfset did=rereplace(thisField,"[^A-Za-z]","_","all")>
 	</cfif>
 	<cflocation url="CodeTableEditor.cfm?action=edit&tbl=#tbl####did#" addtoken="false">
-
-
 	</cfif>
 	<cfif action is "newValue">
 	<cfset did="">
@@ -1555,43 +2332,13 @@ Terms must be lower-case
 		<cfquery name="sav" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			insert into ctcoll_other_id_type (
 				OTHER_ID_TYPE,
-				DESCRIPTION,
-				base_URL,
-				sort_order
+				DESCRIPTION
 			) values (
-				'#newData#',
-				'#description#',
-				<cfqueryparam value = "#base_url#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(base_url))#">,
-				<cfif len(sort_order) gt 0>
-					#sort_order#
-				<cfelse>
-					null
-				</cfif>
+				<cfqueryparam value = "#newData#" CFSQLType="CF_SQL_VARCHAR">,
+				<cfqueryparam value = "#description#" CFSQLType="CF_SQL_VARCHAR">
 			)
 		</cfquery>
 		<cfset did=rereplace(newData,"[^A-Za-z]","_","all")>
-	<cfelseif tbl is "ctattribute_code_tables">
-		<cfquery name="new" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			INSERT INTO ctattribute_code_tables (
-				Attribute_type
-				<cfif len(#value_code_table#) gt 0>
-					,value_code_table
-				</cfif>
-				<cfif len(#units_code_table#) gt 0>
-					,units_code_table
-				</cfif>
-				)
-			VALUES (
-				'#Attribute_type#'
-				<cfif len(#value_code_table#) gt 0>
-					,'#value_code_table#'
-				</cfif>
-				<cfif len(#units_code_table#) gt 0>
-					,'#units_code_table#'
-				</cfif>
-			)
-		</cfquery>
-		<cfset did=rereplace(Attribute_type,"[^A-Za-z]","_","all")>
 	<cfelse>
 		<cfquery name="new" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			INSERT INTO #tbl#
@@ -1678,6 +2425,255 @@ Terms must be lower-case
 	</cftransaction>
 	<cflocation url="CodeTableEditor.cfm?action=edit&tbl=cttaxon_term" addtoken="false">
 </cfif>
+
+<!------------ waterbody has extra stuff so gets its own block ---->
+<!-------------------------------------------------->
+<cfif action is "editWaterBody">
+	<style>
+		#partstbl tr:nth-child(even) {
+		   background-color: #ccc;
+		}
+		.guidList{max-height: 10em; overflow: auto;}
+
+		.prtctsavbtns{
+		  display: flex;
+		  justify-content: space-between;
+		  flex-wrap: wrap;
+		}
+		.prtctsavbtnsleft{
+			text-align:left;
+		}
+		.prtctsavbtnsright{
+			text-align: right;
+		}
+	</style>
+	<cfset title="ctwater_body editor">
+	<cfquery name="q" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+		select
+			water_body,
+			water_body_type,
+			description,
+			search_terms,
+			array_to_string(issue_url,'#chr(10)#') as issue_url,
+			array_to_string(documentation_url,'#chr(10)#') as documentation_url
+		from ctwater_body
+		ORDER BY
+			water_body_type,water_body
+	</cfquery>
+	<cfoutput>
+		<h2>
+			Edit ctwater_body 
+			<a href="/info/ctchange_log.cfm?tbl=ctwater_body"><input type="button" class="lnkBtn" value="changelog"></a>
+		</h2>
+		<ul>
+			<li>water_body: name of the water body</li>
+			<li>water_body_type: Category, not a great place to get creative</li>
+			<li>Description: Definition or description. No HTML, no nonprinting characters.</li>
+			<li>Search Terms: List of search helpers. Separate with commas or linebreaks.</li>
+			<li>Issue URL: List of relevant GitHub Issues, one per row.</li>
+			<li>Documentation URL: List of relevant/helpful websites or references, one per row.</li>
+		</ul>
+		<table id="partstbl" border="1" class="sortable">
+			<thead>
+				<tr>
+					<th>ctl</th>
+					<th>water_body_type</th>
+					<th>water_body</th>
+					<th>Description</th>
+					<th>Search Terms</th>
+					<th>Issue URL</th>
+					<th>Documentation URL</th>
+				</tr>
+			</thead>
+			<tbody>
+				<tr id="prow_new" class="newRec">
+					<td>
+						<form id="pfrm_new" method="post" action="CodeTableEditor.cfm">
+							<input type="hidden" name="action" value="insertWaterBody">
+							<input type="submit" class="insBtn" value="Create">
+						</form>
+					</td>
+					<td>
+						<input type="text" name="water_body_type" class="reqdClr" size="40" placeholder="water_body_type" form="pfrm_new">
+					</td>
+					<td>
+						<input type="text" name="water_body" class="reqdClr" size="40" placeholder="water_body" form="pfrm_new">
+					</td>
+					<td>
+						<textarea name="description" rows="10" cols="40" form="pfrm_new" class="reqdClr" required></textarea>
+					</td>
+					<td>
+						<textarea name="search_terms" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+					<td>
+						<textarea name="issue_url" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+					<td>
+						<textarea name="documentation_url" rows="10" cols="40" form="pfrm_new"></textarea>
+					</td>
+				</tr>
+				<cfloop query="q">
+					<cfset rid=rereplace(water_body,"[^A-Za-z0-9]","_","all")>
+					<tr id="prow_#rid#">
+						<td>
+							<form id="pfrm#rid#" method="post" action="CodeTableEditor.cfm">
+								<input type="hidden" name="action" value="updateWaterBody">
+								<input type="hidden" name="original_water_body" size="25" value="#EncodeForHTML(canonicalize(water_body,true,true))#">
+								<div class="prtctsavbtns">
+									<div class="prtctsavbtnsleft">
+										<input type="submit" class="savBtn" value="Save">
+									</div>
+									<div class="prtctsavbtnsright">
+										<input type="button" class="delBtn" value="Delete" onclick="pfrm#rid#.action.value='deleteWaterBody';pfrm#rid#.submit();">
+									</div>
+								</div>
+							</form>
+						</td>
+						<td>
+							<input form="pfrm#rid#" type="text" name="water_body_type" size="25" value="#EncodeForHTML(canonicalize(water_body_type,true,true))#" class="reqdClr" required>
+						</td>
+						<td>
+							<input form="pfrm#rid#" type="text" name="water_body" size="25" value="#EncodeForHTML(canonicalize(water_body,true,true))#" class="reqdClr" required>
+						</td>
+						<td>
+							<label>Description</label>
+							<textarea name="description" rows="10" cols="40" form="pfrm#rid#" class="reqdClr" required>#EncodeForHTML(canonicalize(description,true,true))#</textarea>
+						</td>
+						<td>
+							<cfset strms=replace(search_terms,', ','#chr(10)#',"all")>
+							<label>Search Terms</label>
+							<textarea name="search_terms" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(strms,true,true))#</textarea>
+						</td>
+						<td>
+							<label>Issue URL</label>
+							<textarea name="issue_url" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(issue_url,true,true))#</textarea>
+						</td>
+						<td>
+							<label>Documentation URL</label>
+							<textarea name="documentation_url" rows="10" cols="40" form="pfrm#rid#">#EncodeForHTML(canonicalize(documentation_url,true,true))#</textarea>
+						</td>
+					</tr>
+				</cfloop>
+			</tbody>
+		</table>
+	</cfoutput>
+</cfif>
+<cfif action is "deleteWaterBody">
+	<cfoutput>
+		<cfquery name="deleteSpecimenPart" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			delete from ctwater_body where water_body=<cfqueryparam value="#original_water_body#" cfsqltype="cf_sql_varchar">
+		</cfquery>
+		<cflocation url="CodeTableEditor.cfm?action=editWaterBody" addtoken="false">
+	</cfoutput>
+</cfif>
+<cfif action is "updateWaterBody">
+	<cfoutput>
+		<cfif reFind('<[^>]*>', description)>
+			<div class="importantNotification">
+				Description may not contain HTML.
+			</div>
+			<cfabort>
+		</cfif>
+		<cfset sil="">
+		<cfloop list="#issue_url#" index="i" delimiters="#chr(10)#,">
+			<cfset sil=listappend(sil,trim(i))>
+		</cfloop>
+		<cfset sil=listRemoveDuplicates(sil)>
+		<cfset sil=listSort(sil,'text')>
+		<cfset sdil="">
+		<cfloop list="#documentation_url#" index="i"  delimiters="#chr(10)#,">
+			<cfset sdil=listappend(sdil,trim(i))>
+		</cfloop>
+		<cfset sdil=listRemoveDuplicates(sdil)>
+		<cfset sdil=listSort(sdil,'text')>
+
+		<cfset sst="">
+		<cfloop list="#search_terms#" index="i"  delimiters="#chr(10)#,">
+			<cfset sst=listappend(sst,trim(i))>
+		</cfloop>
+		<cfset sst=listRemoveDuplicates(sst)>
+		<cfset sst=listChangeDelims(sst, ", ")>
+		<cfset sst=listSort(sst,'text')>
+
+		<cfquery name="updateSpecimenPart" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			update ctwater_body set 
+				water_body=<cfqueryparam value="#water_body#" cfsqltype="cf_sql_varchar">,
+				water_body_type=<cfqueryparam value="#water_body_type#" cfsqltype="cf_sql_varchar">,
+				description=<cfqueryparam value="#description#" cfsqltype="cf_sql_varchar">,
+				search_terms=<cfqueryparam value="#sst#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sst))#">,
+				issue_url=string_to_array(<cfqueryparam value="#sil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sil))#">,','),
+				documentation_url=string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,',')
+			where water_body=<cfqueryparam value="#original_water_body#" cfsqltype="cf_sql_varchar">
+		</cfquery>
+		<cfset rid=rereplace(water_body,"[^A-Za-z0-9]","_","all")>
+		<cflocation url="CodeTableEditor.cfm?action=editWaterBody##prow_#rid#" addtoken="false">
+	</cfoutput>
+</cfif>
+<!-------------------------------------------------->
+<cfif action is "insertWaterBody">
+	<cfoutput>
+		<cfif reFind('<[^>]*>', description)>
+			<div class="importantNotification">
+				Description may not contain HTML.
+			</div>
+			<cfabort>
+		</cfif>
+		<cfset sil="">
+		<cfloop list="#issue_url#" index="i" delimiters="#chr(10)#,">
+			<cfset sil=listappend(sil,trim(i))>
+		</cfloop>
+		<cfset sil=listRemoveDuplicates(sil)>
+		<cfset sil=listSort(sil,'text')>
+		<cfset sdil="">
+		<cfloop list="#documentation_url#" index="i"  delimiters="#chr(10)#,">
+			<cfset sdil=listappend(sdil,trim(i))>
+		</cfloop>
+		<cfset sdil=listRemoveDuplicates(sdil)>
+		<cfset sdil=listSort(sdil,'text')>
+		<cfset sst="">
+		<cfloop list="#search_terms#" index="i"  delimiters="#chr(10)#,">
+			<cfset sst=listappend(sst,trim(i))>
+		</cfloop>
+		<cfset sst=listRemoveDuplicates(sst)>
+		<cfset sst=listSort(sst,'text')>
+		<cfquery name="insertWaterBody" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			insert into ctwater_body (
+				water_body,
+				water_body_type,
+				description,
+				search_terms,
+				issue_url,
+				documentation_url
+
+			) values (
+				<cfqueryparam value="#water_body#" cfsqltype="cf_sql_varchar">,
+				<cfqueryparam value="#water_body_type#" cfsqltype="cf_sql_varchar">,
+				<cfqueryparam value="#description#" cfsqltype="cf_sql_varchar">,
+				<cfqueryparam value="#sst#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sst))#">,
+				string_to_array(<cfqueryparam value="#sil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sil))#">,','),
+				string_to_array(<cfqueryparam value="#sdil#" cfsqltype="cf_sql_varchar" null="#Not Len(Trim(sdil))#">,',')
+			)
+		</cfquery>
+		<cfset rid=rereplace(water_body,"[^A-Za-z0-9]","_","all")>
+		<cflocation url="CodeTableEditor.cfm?action=editWaterBody##prow_#rid#" addtoken="false">
+	</cfoutput>
+</cfif>
+<!-------------------------------------------------->
+<!------------------------------------------- END weird waterbody code block ------------------>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <!------------------------------------------- specimen parts are weird (is_tissue flag) so get their own code block ------------------>
 <!-------------------------------------------------->
 <cfif action is "editSpecimenPart">
@@ -2660,152 +3656,18 @@ Terms must be lower-case
 <!---------------------------------------------------------- END collection terms block ------------------------------------------------------------------------>
 
 
-<!----------------------------------------------------------------------------------- locality attribute block ------------------------------------------------------------>
-<cfif action is "editLocAttAtt">
-<cfset title="locality attribute controls">
-	<cfoutput>
-		<cfquery name="ctAttribute_type" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			select distinct(attribute_type) from ctlocality_attribute_type
-		</cfquery>
-		<cfquery name="thisRec" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			Select * from ctlocality_att_att order by attribute_type
-		</cfquery>
-		<cfquery name="allCTs" datasource="uam_god">
-			select distinct(table_name) as tablename from information_schema.columns where table_name like 'ct%' order by table_name
-		</cfquery>
-		<br>Create Locality Attribute Control
-		<table class="newRec" border>
-			<tr>
-				<th>Attribute</th>
-				<th>Value Code Table</th>
-				<th>Unit Code Table</th>
-				<th>&nbsp;</th>
-			</tr>
-			<form method="post" action="CodeTableEditor.cfm">
-				<input type="hidden" name="action" value="editLocAttAtt_newValue">
-				<tr>
-					<td>
-						<select name="attribute_type" size="1">
-							<option value=""></option>
-							<cfloop query="ctAttribute_type">
-							<option
-								value="#ctAttribute_type.attribute_type#">#ctAttribute_type.attribute_type#</option>
-							</cfloop>
-						</select>
-					</td>
-					<td>
-						<cfset thisValueTable = #thisRec.value_code_table#>
-						<select name="value_code_table" size="1">
-							<option value="">none</option>
-							<cfloop query="allCTs">
-							<option
-							value="#allCTs.tablename#">#allCTs.tablename#</option>
-							</cfloop>
-						</select>
-					</td>
-					<td>
-						<cfset thisunitTable = #thisRec.unit_code_table#>
-						<select name="unit_code_table" size="1">
-							<option value="">none</option>
-							<cfloop query="allCTs">
-							<option
-							value="#allCTs.tablename#">#allCTs.tablename#</option>
-							</cfloop>
-						</select>
-					</td>
-					<td>
-						<input type="submit" value="Create" class="insBtn">
-					</td>
-				</tr>
-			</form>
-		</table>
-			<br>Locality Event Attribute Controls
-			<table border>
-				<tr>
-					<th>Attribute</th>
-					<th>Value Code Table</th>
-					<th>Unit Code Table</th>
-					<th>&nbsp;</th>
-				</tr>
-				<cfset i=1>
-				<cfloop query="thisRec">
-					<form name="att#i#" method="post" action="CodeTableEditor.cfm">
-						<input type="hidden" name="action" value="locAttAtt_update">
-						<input type="hidden" name="oldAttribute_type" value="#attribute_type#">
-						<input type="hidden" name="oldvalue_code_table" value="#value_code_table#">
-						<input type="hidden" name="oldunit_code_table" value="#unit_code_table#">
-						<tr>
-							<td>
-								<input type="hidden" name="attribute_type" value="#thisRec.attribute_type#">
-								#attribute_type#
-							</td>
-							<td>
-								<cfset thisValueTable = #thisRec.value_code_table#>
-								<select name="value_code_table" size="1">
-									<option value="">none</option>
-									<cfloop query="allCTs">
-									<option
-									<cfif #thisValueTable# is "#allCTs.tablename#"> selected </cfif>value="#allCTs.tablename#">#allCTs.tablename#</option>
-									</cfloop>
-								</select>
-							</td>
-							<td>
-								<cfset thisunitTable = #thisRec.unit_code_table#>
-								<select name="unit_code_table" size="1">
-									<option value="">none</option>
-									<cfloop query="allCTs">
-									<option
-									<cfif #thisunitTable# is "#allCTs.tablename#"> selected </cfif>value="#allCTs.tablename#">#allCTs.tablename#</option>
-									</cfloop>
-								</select>
-							</td>
-							<td>
-								<input type="button"
-									value="Save"
-									class="savBtn"
-								 	onclick="att#i#.action.value='editLocAttAtt_saveEdit';submit();">
-								<input type="button"
-									value="Delete"
-									class="delBtn"
-								  	onclick="att#i#.action.value='editLocAttAtt_deleteValue';submit();">
-							</td>
-						</tr>
-					</form>
-				<cfset i=i+1>
-			</cfloop>
-		</table>
-	</cfoutput>
-</cfif>
-<cfif action is "editLocAttAtt_deleteValue">
-	<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		delete from ctlocality_att_att where attribute_type='#attribute_type#'
-	</cfquery>
-	<cflocation addtoken="false" url="CodeTableEditor.cfm?action=edit&tbl=ctlocality_att_att">
-</cfif>
-<cfif action is "editLocAttAtt_saveEdit">
-	<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		update ctlocality_att_att
-		set VALUE_code_table=<cfqueryparam value = "#value_code_table#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(value_code_table))#">,
-		unit_code_table=<cfqueryparam value = "#unit_code_table#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(unit_code_table))#">
-		 where attribute_type=<cfqueryparam value = "#attribute_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(attribute_type))#">
-	</cfquery>
-	<cflocation addtoken="false" url="CodeTableEditor.cfm?action=edit&tbl=ctlocality_att_att">
-</cfif>
-<cfif action is "editLocAttAtt_newValue">
-	<cfquery name="ins" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		insert into ctlocality_att_att (
-    		attribute_type,
-			VALUE_code_table,
-			unit_code_table
-		) values (
-			<cfqueryparam value = "#attribute_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(attribute_type))#">,
-			<cfqueryparam value = "#value_code_table#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(value_code_table))#">,
-			<cfqueryparam value = "#unit_code_table#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(unit_code_table))#">
-		)
-	</cfquery>
-	<cflocation addtoken="false" url="CodeTableEditor.cfm?action=edit&tbl=ctlocality_att_att">
-</cfif>
-<!----------------------------------------------------------------------------------- END locality attribute block ------------------------------------------------------------>
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 <!------------------------------------------------------------------------------- event attribtues block ------------------------------------------------------------>
@@ -3153,7 +4015,7 @@ Terms must be lower-case
 					<ul>
 						<li>
 							<strong>Arctos Classification Bulkloader</strong> is the only appropriate choice for "local" classifications which are expected
-							to remain consistent. (Data may be managed in the hierarchy editor or external tools.)
+							to remain consistent. (Data may be managed in external tools.)
 						</li>
 						<li>
 							<strong>Arctos UI</strong> should be used in only two cases:
@@ -3476,6 +4338,20 @@ Terms must be lower-case
 
 
 
+
+
+
+
+<!-------------
+
+
+
+
+
+
+
+
+
 <!---------------------------------------------------------------------- attribute type block ----------------------------------------------------->
 <cfif action is "editctattribute_type">
 	<!-------- handle any table with a collection_cde column here --------->
@@ -3665,6 +4541,7 @@ Terms must be lower-case
 </cfif>
 
 
+
 <cfif action is "editctattribute_type_addcc">
 	<cfquery name="sav" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		insert into ctattribute_type (
@@ -3717,7 +4594,9 @@ Terms must be lower-case
 	</cfquery>
 	<cflocation addtoken="false" url="CodeTableEditor.cfm?action=editctattribute_type###rereplace(attribute_type,'[^A-Za-z]','','all')#">
 </cfif>
-<!---------------------------------------------------------------------- END::attribute type block ----------------------------------------------------->
 
+-
+<!---------------------------------------------------------------------- END::attribute type block ----------------------------------------------------->
+--------------->
 
 <cfinclude template="/includes/_footer.cfm">

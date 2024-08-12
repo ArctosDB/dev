@@ -62,6 +62,12 @@ insert into cf_component_loader (
 	'Username has access to corresponding collection' -- description of any in-loader checks
 );
 
+
+update cf_component_loader set rec_per_run=50,remark='50 running in ~40s' where data_table='cf_temp_collector';
+
+
+
+
 ------------->
 
 

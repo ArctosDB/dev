@@ -316,7 +316,7 @@
 		</cfquery>
 		<cfif names.recordcount is 1000>
 			Some records have been excluded, try a more specific search.
-		<cfelseif names.recordcount is 1>
+		<cfelseif names.recordcount is 1 and names.scientific_name does not contain "'">
 			<script>
 				useThisOne('#idfld#','#strfld#','#names.taxon_name_id#','#names.scientific_name#')
 			</script>
@@ -336,8 +336,13 @@
 						<div class="theName">#names.scientific_name#</div>
 						<div class="theNameType">#name_type#</div>
 						<cfif name_type neq 'quarantine'>
+
+							<cfset thisName=replace(scientific_name,"'","\'","all")>
+							<cfset thisName = EncodeForHTML(thisName)>
+
+
 							<input type="button" class="picBtn" value="select" 
-								onclick="useThisOne('#idfld#','#strfld#','#taxon_name_id#','#scientific_name#')">
+								onclick="useThisOne('#idfld#','#strfld#','#taxon_name_id#','#thisName#')">
 						</cfif>
 						<a target="_tab" href="/name/#scientific_name#"><input type="button" class="lnkBtn" value="details"></a>
 					</td>

@@ -104,14 +104,13 @@
 	<cfloop query="loan_core">
 		<cfquery name="collection_contacts" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 			select 
-				agent_name 
+				username 
 			from 
-				agent_name 
-				inner join collection_contacts on agent_name.agent_id=collection_contacts.contact_agent_id
+				cf_users 
+				inner join collection_contacts on collection_contacts.contact_agent_id=cf_users.operator_agent_id
 			where 
 				collection_contacts.collection_id=<cfqueryparam value = "#collection_id#" CFSQLType = "cf_sql_int"> and
-				contact_role in ('loan request','data quality') and
-				agent_name_type='login'
+				contact_role in ('loan request','data quality')
 		</cfquery>
 		<cfsavecontent variable="msg">
 			Loan Number: #guid_prefix# #loan_number#
@@ -127,25 +126,25 @@
 					trans_agent_role,
 					getPreferredAgentName(trans_agent.agent_id) as preferred_agent_name,
 					get_address(trans_agent.agent_id,'email',0) contact_email,
-					agent_name
+					username
 				from
 					trans_agent
-					left outer join agent_name on trans_agent.agent_id=agent_name.agent_id and agent_name_type='login'
+					left outer join cf_users on trans_agent.agent_id=cf_users.operator_agent_id
 				where
 					trans_agent.transaction_id=<cfqueryparam value = "#transaction_id#" CFSQLType = "cf_sql_int">
 			</cfquery>
 			<cfquery name="not_cts" dbtype="query">
-				select agent_name from loan_contacts where trans_agent_role='in-house contact' and agent_name is not null
+				select username from loan_contacts where trans_agent_role='in-house contact' and username is not null
 			</cfquery>
 			<ul>
 				<cfloop query="loan_contacts">
-					<li>#trans_agent_role#: #preferred_agent_name# ( <cfif len(contact_email) gt 0>#contact_email#<cfelse>- no email avaialble -</cfif> )</li>
+					<li>#trans_agent_role#: #preferred_agent_name# ( <cfif len(contact_email) gt 0>#contact_email#<cfelse>- no email available -</cfif> )</li>
 				</cfloop>
 			</ul>
 		</cfsavecontent>
 		<cfset usernames="">
-		<cfset usernames=listAppend(usernames, valuelist(collection_contacts.agent_name))>
-		<cfset usernames=listAppend(usernames, valuelist(not_cts.agent_name))>
+		<cfset usernames=listAppend(usernames, valuelist(collection_contacts.username))>
+		<cfset usernames=listAppend(usernames, valuelist(not_cts.username))>
 		<cfinvoke component="/component/functions" method="deliver_notification">
 			<cfinvokeargument name="usernames" value="#usernames#">
 			<cfinvokeargument name="subject" value="#guid_prefix# Loan Reminder">

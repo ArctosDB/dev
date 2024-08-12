@@ -1009,7 +1009,7 @@
 				<cfset allQueryTbls=allQueryTbls & " inner join shipment shipment_fltr on trans.transaction_id = shipment_fltr.transaction_id ">
 			</cfif>
 			<cfif allQueryTbls does not contain " ship_to_addr ">
-				<cfset allQueryTbls=allQueryTbls & " inner join address ship_to_addr on shipment_fltr.shipped_to_addr_id = ship_to_addr.address_id ">
+				<cfset allQueryTbls=allQueryTbls & " inner join agent_attribute ship_to_addr on shipment_fltr.shipped_to_addr_id = ship_to_addr.attribute_id ">
 				<cfset allQueryTbls=allQueryTbls & " inner join agent_name shipment_to_agnt on ship_to_addr.agent_id = shipment_to_agnt.agent_id ">
 			</cfif>
 			<cfset thisrow={}>
@@ -1025,7 +1025,7 @@
 				<cfset allQueryTbls=allQueryTbls & " inner join shipment shipment_fltr on trans.transaction_id = shipment_fltr.transaction_id ">
 			</cfif>
 			<cfif allQueryTbls does not contain " ship_to_addr ">
-				<cfset allQueryTbls=allQueryTbls & " inner join address ship_fm_addr on shipment_fltr.shipped_from_addr_id = ship_fm_addr.address_id ">
+				<cfset allQueryTbls=allQueryTbls & " inner join agent_attribute ship_fm_addr on shipment_fltr.shipped_from_addr_id = ship_fm_addr.attribute_id ">
 				<cfset allQueryTbls=allQueryTbls & " inner join agent_name shipment_from_agnt on ship_fm_addr.agent_id = shipment_from_agnt.agent_id ">
 			</cfif>
 			<cfset thisrow={}>
@@ -1678,7 +1678,6 @@
 				numberItems
 			order by #accnsort#
 		</cfquery>
-
 		<!----------------------------------------------------------- end accn query ---------------------------------------------------------------------->
 		<!----------------------------------------------------------- begin borrow query ---------------------------------------------------------------------->
 
@@ -1839,6 +1838,7 @@
 							<td>
 								<form name="ln_csv" action="transactionSearch.cfm" method="post">
 									<input type="hidden" name="action" value="srch">
+									<input type="hidden" name="recordLimit" value="#recordLimit#">
 									<input type="hidden" name="loanCSV" value="true">
 									<input type="hidden" name="transaction_id" value="#valuelist(getLoan.transaction_id)#">
 									<input type="submit" class="lnkBtn" value="Get Loan CSV">
@@ -1847,12 +1847,14 @@
 							<td>
 								<form name="ln_mp" action="transactionSearch.cfm" method="post" target="_blank">
 									<input type="hidden" name="action" value="mapShipment">
+									<input type="hidden" name="recordLimit" value="#recordLimit#">
 									<input type="hidden" name="transaction_id" value="#valuelist(getLoan.transaction_id)#">
 									<input type="submit" class="lnkBtn" value="Map Loan Shipments">
 								</form>
 							</td>
 							<td>
 								<form name="ln_lnk" action="search.cfm" method="post" target="_blank">
+									<input type="hidden" name="recordLimit" value="#recordLimit#">
 									<input type="hidden" name="loan_trans_id" value="#valuelist(getLoan.transaction_id)#">
 									<input type="submit" class="lnkBtn" value="Catalog Record Search">
 								</form>
@@ -1867,6 +1869,7 @@
 							<td>
 								<form name="ac_csv" action="transactionSearch.cfm" method="post">
 									<input type="hidden" name="action" value="srch">
+									<input type="hidden" name="recordLimit" value="#recordLimit#">
 									<input type="hidden" name="accnCSV" value="true">
 									<input type="hidden" name="transaction_id" value="#valuelist(getAccn.transaction_id)#">
 									<input type="submit" class="lnkBtn" value="Get Accession CSV">
@@ -1875,6 +1878,7 @@
 							<td>
 								<form name="ac_mp" action="transactionSearch.cfm" method="post" target="_blank">
 									<input type="hidden" name="action" value="mapShipment">
+									<input type="hidden" name="recordLimit" value="#recordLimit#">
 									<input type="hidden" name="transaction_id" value="#valuelist(getAccn.transaction_id)#">
 									<input type="submit" class="lnkBtn" value="Map Accession Shipments">
 								</form>
@@ -2010,7 +2014,7 @@
 			            <cfset x="">
 			        </cfif>
 					<cfloop array="#x#" item="i">
-						<div class="agntRow">#i.transAgentRole#: <a class="newWinLocal" href="/agents.cfm?agent_id=#i.transAgentID#">#i.transAgentName#</a></div>
+						<div class="agntRow">#i.transAgentRole#: <a class="newWinLocal" href="/agent/#i.transAgentID#">#i.transAgentName#</a></div>
 					</cfloop>
 
 					<div class="transDetailRow">
@@ -2046,7 +2050,7 @@
 								<cfif not isNull(i.transagents)>
 									<cfloop array="#i.transagents#" item="a">
 										<div class="agntRow">
-											#a.permit_agent_role#: <a class="newWinLocal" href="/agents.cfm?agent_id=#a.permit_agent_id#">#a.permit_agent_name#</a>
+											#a.permit_agent_role#: <a class="newWinLocal" href="/agent/#a.permit_agent_id#">#a.permit_agent_name#</a>
 										</div>
 									</cfloop>
 								</cfif>
@@ -2111,13 +2115,13 @@
 									<div class="itemSubTitle">Shipment Type: #i.shipment_type#</div>
 								</cfif>
 								<cfif not isNull(i.shipment_packed_by)>
-									<div class="itemSubTitle">Packed By: <a class="newWinLocal" href="/agents.cfm?agent_id=#i.packed_by_agent_id#">#i.shipment_packed_by#</a></div>
+									<div class="itemSubTitle">Packed By: <a class="newWinLocal" href="/agent/#i.packed_by_agent_id#">#i.shipment_packed_by#</a></div>
 								</cfif>
 								<cfif not isNull(i.shipped_to_address)>
-									<div class="itemSubTitle">Shipped to Address: <a class="newWinLocal" href="/agents.cfm?agent_id=#i.shipped_to_agent_id#">#i.shipped_to_address#</a></div>
+									<div class="itemSubTitle">Shipped to Address: <a class="newWinLocal" href="/agent/#i.shipped_to_agent_id#">#i.shipped_to_address#</a></div>
 								</cfif>
 								<cfif not isNull(i.shipped_from_address)>
-									<div class="itemSubTitle">Shipped from Address: <a class="newWinLocal" href="/agents.cfm?agent_id=#i.shipped_from_agent_id#">#i.shipped_from_address#</a></div>
+									<div class="itemSubTitle">Shipped from Address: <a class="newWinLocal" href="/agent/#i.shipped_from_agent_id#">#i.shipped_from_address#</a></div>
 								</cfif>
 								<cfif not isNull(i.contents)>
 									<div class="itemSubTitle">Shipment Contents: #i.contents#</div>
@@ -2182,7 +2186,7 @@
 									<cfloop array="#i.project_agents#" item="a">
 										 <cfif not isNull(a.project_agent_role)>
 										 	<div class="agntRow">
-												#a.project_agent_role#: <a href="/agents.cfm?agent_id=#a.project_agent_id#">#a.project_agent_name#</a>
+												#a.project_agent_role#: <a href="/agent/#a.project_agent_id#">#a.project_agent_name#</a>
 												<cfif not isNull(a.project_agent_remarks)>
 													<div class="itemSubSubTitle">Project Agent Remark: #a.project_agent_remarks#</div>
 												</cfif>
@@ -2259,7 +2263,7 @@
 			            <cfset x="">
 			        </cfif>
 					<cfloop array="#x#" item="i">
-						<div class="agntRow">#i.transAgentRole#: <a class="newWinLocal" href="/agents.cfm?agent_id=#i.transAgentID#">#i.transAgentName#</a></div>
+						<div class="agntRow">#i.transAgentRole#: <a class="newWinLocal" href="/agent/#i.transAgentID#">#i.transAgentName#</a></div>
 					</cfloop>
 					<div class="transDetailRow">
 						Nature of Material: #nature_of_material#
@@ -2288,7 +2292,7 @@
 								<cfif not isNull(i.transagents)>
 									<cfloop array="#i.transagents#" item="a">
 										<div class="agntRow">
-											#a.permit_agent_role#: <a class="newWinLocal" href="/agents.cfm?agent_id=#a.permit_agent_id#">#a.permit_agent_name#</a>
+											#a.permit_agent_role#: <a class="newWinLocal" href="/agent/#a.permit_agent_id#">#a.permit_agent_name#</a>
 										</div>
 									</cfloop>
 								</cfif>
@@ -2353,13 +2357,13 @@
 									<div class="itemSubTitle">Shipment Type: #i.shipment_type#</div>
 								</cfif>
 								<cfif not isNull(i.shipment_packed_by)>
-									<div class="itemSubTitle">Packed By: <a class="newWinLocal" href="/agents.cfm?agent_id=#i.packed_by_agent_id#">#i.shipment_packed_by#</a></div>
+									<div class="itemSubTitle">Packed By: <a class="newWinLocal" href="/agent/#i.packed_by_agent_id#">#i.shipment_packed_by#</a></div>
 								</cfif>
 								<cfif not isNull(i.shipped_to_address)>
-									<div class="itemSubTitle">Shipped to Address: <a class="newWinLocal" href="/agents.cfm?agent_id=#i.shipped_to_agent_id#">#i.shipped_to_address#</a></div>
+									<div class="itemSubTitle">Shipped to Address: <a class="newWinLocal" href="/agent/#i.shipped_to_agent_id#">#i.shipped_to_address#</a></div>
 								</cfif>
 								<cfif not isNull(i.shipped_from_address)>
-									<div class="itemSubTitle">Shipped from Address: <a class="newWinLocal" href="/agents.cfm?agent_id=#i.shipped_from_agent_id#">#i.shipped_from_address#</a></div>
+									<div class="itemSubTitle">Shipped from Address: <a class="newWinLocal" href="/agent/#i.shipped_from_agent_id#">#i.shipped_from_address#</a></div>
 								</cfif>
 								<cfif not isNull(i.contents)>
 									<div class="itemSubTitle">Shipment Contents: #i.contents#</div>
@@ -2424,7 +2428,7 @@
 									<cfloop array="#i.project_agents#" item="a">
 										 <cfif not isNull(a.project_agent_role)>
 										 	<div class="agntRow">
-												#a.project_agent_role#: <a href="/agents.cfm?agent_id=#a.project_agent_id#">#a.project_agent_name#</a>
+												#a.project_agent_role#: <a href="/agent/#a.project_agent_id#">#a.project_agent_name#</a>
 												<cfif not isNull(a.project_agent_remarks)>
 													<div class="itemSubSubTitle">Project Agent Remark: #a.project_agent_remarks#</div>
 												</cfif>
@@ -2509,7 +2513,7 @@
 			            <cfset x="">
 			        </cfif>
 					<cfloop array="#x#" item="i">
-						<div class="agntRow">#i.transAgentRole#: <a class="newWinLocal" href="/agents.cfm?agent_id=#i.transAgentID#">#i.transAgentName#</a></div>
+						<div class="agntRow">#i.transAgentRole#: <a class="newWinLocal" href="/agent/#i.transAgentID#">#i.transAgentName#</a></div>
 					</cfloop>
 
 					<div class="transDetailRow">
@@ -2539,7 +2543,7 @@
 								<cfif not isNull(i.transagents)>
 									<cfloop array="#i.transagents#" item="a">
 										<div class="agntRow">
-											#a.permit_agent_role#: <a class="newWinLocal" href="/agents.cfm?agent_id=#a.permit_agent_id#">#a.permit_agent_name#</a>
+											#a.permit_agent_role#: <a class="newWinLocal" href="/agent/#a.permit_agent_id#">#a.permit_agent_name#</a>
 										</div>
 									</cfloop>
 								</cfif>
@@ -2603,13 +2607,13 @@
 									<div class="itemSubTitle">Shipment Type: #i.shipment_type#</div>
 								</cfif>
 								<cfif not isNull(i.shipment_packed_by)>
-									<div class="itemSubTitle">Packed By: <a class="newWinLocal" href="/agents.cfm?agent_id=#i.packed_by_agent_id#">#i.shipment_packed_by#</a></div>
+									<div class="itemSubTitle">Packed By: <a class="newWinLocal" href="/agent/#i.packed_by_agent_id#">#i.shipment_packed_by#</a></div>
 								</cfif>
 								<cfif not isNull(i.shipped_to_address)>
-									<div class="itemSubTitle">Shipped to Address: <a class="newWinLocal" href="/agents.cfm?agent_id=#i.shipped_to_agent_id#">#i.shipped_to_address#</a></div>
+									<div class="itemSubTitle">Shipped to Address: <a class="newWinLocal" href="/agent/#i.shipped_to_agent_id#">#i.shipped_to_address#</a></div>
 								</cfif>
 								<cfif not isNull(i.shipped_from_address)>
-									<div class="itemSubTitle">Shipped from Address: <a class="newWinLocal" href="/agents.cfm?agent_id=#i.shipped_from_agent_id#">#i.shipped_from_address#</a></div>
+									<div class="itemSubTitle">Shipped from Address: <a class="newWinLocal" href="/agent/#i.shipped_from_agent_id#">#i.shipped_from_address#</a></div>
 								</cfif>
 								<cfif not isNull(i.contents)>
 									<div class="itemSubTitle">Shipment Contents: #i.contents#</div>
@@ -2674,7 +2678,7 @@
 									<cfloop array="#i.project_agents#" item="a">
 										 <cfif not isNull(a.project_agent_role)>
 										 	<div class="agntRow">
-												#a.project_agent_role#: <a href="/agents.cfm?agent_id=#a.project_agent_id#">#a.project_agent_name#</a>
+												#a.project_agent_role#: <a href="/agent/#a.project_agent_id#">#a.project_agent_name#</a>
 												<cfif not isNull(a.project_agent_remarks)>
 													<div class="itemSubSubTitle">Project Agent Remark: #a.project_agent_remarks#</div>
 												</cfif>
@@ -2724,7 +2728,7 @@
 				inner join loan on trans.transaction_id=loan.transaction_id
 				inner join collection on trans.collection_id=collection.collection_id
 				inner join shipment on trans.transaction_id=shipment.transaction_id
-				inner join address on shipment.SHIPPED_TO_ADDR_ID=address.address_id
+				inner join agent_attribute address on shipment.SHIPPED_TO_ADDR_ID=address.attribute_id
 			where
 				s_coordinates is not null and
 				trans.transaction_id in (<cfqueryparam value="#transaction_id#" CFSQLType="cf_sql_int"  list="true">)
@@ -2738,7 +2742,7 @@
 				inner join accn on trans.transaction_id=accn.transaction_id
 				inner join collection on trans.collection_id=collection.collection_id
 				inner join shipment on trans.transaction_id=shipment.transaction_id
-				inner join address on shipment.SHIPPED_TO_ADDR_ID=address.address_id
+				inner join agent_attribute address on shipment.SHIPPED_TO_ADDR_ID=address.attribute_id
 			where
 				s_coordinates is not null and
 				trans.transaction_id in (<cfqueryparam value="#transaction_id#" CFSQLType="cf_sql_int"  list="true">)
@@ -2752,7 +2756,7 @@
 				inner join borrow on trans.transaction_id=borrow.transaction_id
 				inner join collection on trans.collection_id=collection.collection_id
 				inner join shipment on trans.transaction_id=shipment.transaction_id
-				inner join address on shipment.SHIPPED_TO_ADDR_ID=address.address_id
+				inner join address agent_attribute on shipment.SHIPPED_TO_ADDR_ID=address.attribute_id
 			where
 				s_coordinates is not null and
 				trans.transaction_id in (<cfqueryparam value="#transaction_id#" CFSQLType="cf_sql_int"  list="true">)

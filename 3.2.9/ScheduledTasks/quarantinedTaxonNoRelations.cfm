@@ -15,11 +15,11 @@
 <cfquery name="d" datasource="uam_god">
 	select
 		scientific_name,
-		agent_name.agent_name,
+		username,
 		created_date
 	from 
 		taxon_name
-		inner join agent_name on taxon_name.created_by_agent_id=agent_name.agent_id and agent_name_type='login'
+		inner join cf_users on taxon_name.created_by_agent_id=cf_users.operator_agent_id
 	where 
 		name_type='quarantine' and 
 		not exists (
@@ -35,12 +35,12 @@
 			<cfloop query="d">
 				<div>
 					<a class="external" href="#application.serverRootURL#/name/#d.scientific_name#">/name/#d.scientific_name#</a>
-					<br>Created By #agent_name# on #created_date#
+					<br>Created By #username# on #created_date#
 				</div>
 			</cfloop>
 		</cfsavecontent>
 		<cfinvoke component="/component/functions" method="deliver_notification">
-			<cfinvokeargument name="usernames" value="#valuelist(d.agent_name)#">
+			<cfinvokeargument name="usernames" value="#valuelist(d.username)#">
 			<cfinvokeargument name="subject" value="Quarantined Taxon Name Notification">
 			<cfinvokeargument name="message" value="#msg#">
 			<cfinvokeargument name="email_immediate" value="">

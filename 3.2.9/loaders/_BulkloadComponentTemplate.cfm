@@ -22,6 +22,8 @@
 					* better error when update without selecting records
 					* tag closure bugfix
 					* add componentLoaderStatusDisplay CSS to review view status cell
+				1.10: https://github.com/ArctosDB/arctos/issues/7586
+					* add status to template by default
 
 
 	 */
@@ -121,7 +123,7 @@ insert into cf_component_loader (
 <cfparam name="status" default="">
 <cfparam name="username" default="">
 <cfparam name="UUID" default="">
-<cfset ComponentLoaderVersion="1.9">
+<cfset ComponentLoaderVersion="1.10">
 <cfoutput>
 	<cfset hasUpdateAccess=true>
 	<cfloop list="#cf_component_loader.manage_roles#" index="i">
@@ -140,7 +142,7 @@ insert into cf_component_loader (
 			select string_agg(column_name,',') from information_schema.columns where table_name='cf_temp_demotable' and column_name not in ('key','last_ts','username','status');
 	---->
 
-	<cfset templateHeader="guid_prefix,random_varchar_field,random_bigint_field">
+	<cfset templateHeader="guid_prefix,random_varchar_field,random_bigint_field,status">
 </cfoutput>
 
 <!------------------------------------------ BEGIN: documentation table guts ---------------------------------------------------------->

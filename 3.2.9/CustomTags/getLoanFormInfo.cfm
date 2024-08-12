@@ -31,11 +31,11 @@ this may be wholly redundant with /internal now???
 		loan.loan_status,
 		shipment.shipped_date,
 		case when  concattransagent(trans.transaction_id, 'received by') !=  concattransagent(trans.transaction_id, 'outside contact')  then
-		concat('Attn: ',concattransagent(trans.transaction_id, 'outside contact') , '<br>', ship_to_addr.address)
+		concat('Attn: ',concattransagent(trans.transaction_id, 'outside contact') , '<br>', ship_to_addr.attribute_value)
 		else
-		ship_to_addr.address
+		ship_to_addr.attribute_value
 		end  shipped_to_address,
-		ship_from_addr.address  shipped_from_address,
+		ship_from_addr.attribute_value  shipped_from_address,
 		getPreferredAgentName(shipment.PACKED_BY_AGENT_ID) processed_by_name,
 		getPreferredAgentName(project_sponsor.PROJECT_AGENT_ID) project_sponsor_name,
 		PROJECT_AGENT_REMARKS acknowledgement
@@ -43,8 +43,8 @@ FROM
 	loan
 	inner join trans on loan.transaction_id = trans.transaction_id
 	left outer join shipment on loan.transaction_id = shipment.transaction_id
-	left outer join address ship_to_addr on shipment.SHIPPED_TO_ADDR_ID	= ship_to_addr.address_id
-	left outer join address ship_from_addr on shipment.SHIPPED_FROM_ADDR_ID	= ship_from_addr.address_id
+	left outer join agent_attribute ship_to_addr on shipment.SHIPPED_TO_ADDR_ID = ship_to_addr.attribute_id
+	left outer join agent_attribute ship_from_addr on shipment.SHIPPED_FROM_ADDR_ID = ship_from_addr.attribute_id
 	left outer join trans_agent inside_contact on trans.transaction_id = inside_contact.transaction_id and inside_contact.trans_agent_role='in-house contact'
 	left outer join trans_agent outside_contact on trans.transaction_id = outside_contact.transaction_id and outside_contact.trans_agent_role='outside contact'
 	left outer join project_trans on trans.transaction_id = project_trans.transaction_id

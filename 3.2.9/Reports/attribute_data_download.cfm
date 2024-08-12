@@ -87,7 +87,7 @@
 		<div class="flxinner">
 			<div>
 				<a href="attribute_data_download.cfm?getCSV=true&table_name=#table_name#&includeatyp=#includeatyp#">
-					<input type="button" value="download" class="lnkBtn" title="WYSIWYG">
+					<input type="button" value="download" class="lnkBtn" title="WYSIWYG: Most normalized format, will work with largest number of records.">
 				</a>
 			</div>
 			<div>
@@ -97,7 +97,12 @@
 			</div>
 			<div>
 				<a href="attribute_data_download.cfm?getUserCSV=true&table_name=#table_name#&includeatyp=#includeatyp#">
-					<input type="button" value="merge-download" class="lnkBtn" title="denormalize with results columns">
+					<input type="button" value="merge-download" class="lnkBtn" title="Include results columns, one attribute per row. Will fail for large requests or with some results specifications.">
+				</a>
+			</div>
+			<div>
+				<a href="attribute_data_download.cfm?typeFlattenDownload=true&table_name=#table_name#&includeatyp=#includeatyp#">
+					<input type="button" value="type-flatten-download" class="lnkBtn" title="type-flatten-download, fully flattened with attribute-derived column names and results. Most expensive option, will fail with large requests.">
 				</a>
 			</div>
 		</div>
@@ -179,6 +184,81 @@
 		<cflocation url="/download.cfm?file=attributeDataDownload.csv" addtoken="false">
 	</cfif>
 
+
+	<cfif isdefined('typeFlattenDownload') and typeFlattenDownload is true>
+		<cfquery name="get_orig_tbl" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			select * from #table_name#
+		</cfquery>
+		<cfquery name="this_typ" dbtype="query">
+			select attribute_type from filtered where attribute_type is not null group by attribute_type order by attribute_type
+		</cfquery>
+		<cfset tblCols=get_orig_tbl.columnlist>
+		<cfif listfindnocase(tblCols,'collection_object_id')>
+			<cfset tblCols=listDeleteAt(tblCols, listfindnocase(tblCols,'collection_object_id'))>
+		</cfif>
+		<cfset typCols="">
+		<cfloop query="this_typ">
+			<cfset thisCol=reReplace(attribute_type, '[^A-Za-z]', '','all')>
+			<cfset typCols=listAppend(typCols, "#thisCol#_value")>
+			<cfset typCols=listAppend(typCols, "#thisCol#_units")>
+			<cfset typCols=listAppend(typCols, "#thisCol#_method")>
+			<cfset typCols=listAppend(typCols, "#thisCol#_date")>
+			<cfset typCols=listAppend(typCols, "#thisCol#_determiner")>
+			<cfset typCols=listAppend(typCols, "#thisCol#_remark")>
+		</cfloop>
+		<cfset allCols=tblCols>
+		<cfset allCols=listappend(allCols,typCols)>
+		<cfset fr = querynew(allCols)>
+
+		<cfquery name="filtered_guid" dbtype="query">
+			select
+				guid
+			from filtered group by guid
+		</cfquery>
+
+		<cfloop query="filtered_guid">
+			<cfset qr=[=]>
+			<cfquery name="this_oq" dbtype="query">
+				select * from get_orig_tbl where guid=<cfqueryparam value="#guid#" cfsqltype="cf_sql_varchar">
+			</cfquery>
+			<cfloop list="#tblCols#" index="i">
+				<cfset qr["#i#"]=evaluate('this_oq.' & i)>
+			</cfloop>
+			<cfloop query="this_typ">
+				<cfquery name="thisAttRec" dbtype="query">
+					select 
+						attribute_value,
+						attribute_units,
+						attribute_method,
+						attribute_date,
+						attribute_determiner,
+						attribute_remark 
+					from 
+						filtered 
+					where 
+						attribute_value is not null and
+						guid=<cfqueryparam value="#guid#" cfsqltype="cf_sql_varchar"> and
+						attribute_type=<cfqueryparam value="#attribute_type#" cfsqltype="cf_sql_varchar">
+				</cfquery>
+				<cfset thisCol=reReplace(attribute_type, '[^A-Za-z]', '','all')>
+
+				<cfset qr["#thisCol#_value"]=valuelist(thisAttRec.attribute_value)>
+				<cfset qr["#thisCol#_units"]=valuelist(thisAttRec.attribute_units)>
+				<cfset qr["#thisCol#_method"]=valuelist(thisAttRec.attribute_method)>
+				<cfset qr["#thisCol#_date"]=valuelist(thisAttRec.attribute_date)>
+				<cfset qr["#thisCol#_determiner"]=valuelist(thisAttRec.attribute_determiner)>
+				<cfset qr["#thisCol#_remark"]=valuelist(thisAttRec.attribute_remark)>
+			</cfloop>
+			<cfset queryAddRow(fr,qr)>
+		</cfloop>
+		<cfset  util = CreateObject("component","component.utilities")>
+		<cfset csv = util.QueryToCSV2(Query=fr,Fields=fr.columnlist)>
+		<cffile action = "write"
+		    file = "#Application.webDirectory#/download/attributeDataDownload.csv"
+		   	output = "#csv#"
+		   	addNewLine = "no">
+		<cflocation url="/download.cfm?file=attributeDataDownload.csv" addtoken="false">
+	</cfif>
 	<table border="1" id="d" class="sortable">
 		<tr>
 			<th>GUID</th>

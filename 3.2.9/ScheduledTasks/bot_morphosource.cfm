@@ -71,9 +71,8 @@
 				from 
 					flat
 					left outer join coll_obj_other_id_num on flat.collection_object_id=coll_obj_other_id_num.collection_object_id 
-						and coll_obj_other_id_num.other_id_type='identifier' and
-					''
-						and coll_obj_other_id_num.display_value = <cfqueryparam value="#theRecs[i].id[1]#" cfsqltype="cf_sql_varchar">
+						and coll_obj_other_id_num.other_id_type='identifier'
+						and coll_obj_other_id_num.display_value = concat('https://www.morphosource.org/biological_specimens/',<cfqueryparam value="#theRecs[i].id[1]#" cfsqltype="cf_sql_varchar">)
 						and coll_obj_other_id_num.issued_by_agent_id=getAgentId('Morphosource')
 				where 
 					upper(flat.guid) = <cfqueryparam value="#ucase(theRecs[i].catalog_number[1])#" cfsqltype="cf_sql_varchar"> and
@@ -113,7 +112,7 @@
 			) values (
 				<cfqueryparam value="#q_new.guid#" cfsqltype="cf_sql_varchar">,
 				<cfqueryparam value="identifier" cfsqltype="cf_sql_varchar">,
-				<cfqueryparam value="#q_new.msid#" cfsqltype="cf_sql_varchar">,
+				concat('https://www.morphosource.org/biological_specimens/',<cfqueryparam value="#q_new.msid#" cfsqltype="cf_sql_varchar">),
 				<cfqueryparam value="self" cfsqltype="cf_sql_varchar">,
 				<cfqueryparam value="Morphosource" cfsqltype="cf_sql_varchar">,
 				<cfqueryparam value="morphosource_bot" cfsqltype="cf_sql_varchar">,
@@ -122,7 +121,6 @@
 		</cfquery>
 	</cfloop>
 </cfoutput>
-
 <!---------------------- end log --------------------->
 <cfset jtim=datediff('s',jStrtTm,now())>
 <cfset args = StructNew()>

@@ -105,50 +105,18 @@
 		</cfif>
 		<cfset thisIssuer=detr_id.agent_id>
 	</cfif>
-
-
     <cftry>
 		<cftransaction>	
-			<cfquery name="getSplit" datasource="uam_god">
-				select split_other_id ( <cfqueryparam CFSQLType="CF_SQL_varchar" value="#d.new_other_id_number#">)::text as soid
-			</cfquery>
-			<cfdump var="#getSplit#">
-			<cfset theJSON=deSerializeJSON(getSplit.soid)>
-			<cfdump var="#theJSON#">
 			<cfif len(d.new_other_id_references) is 0>
 				<cfset newReferences='self'>
 			<cfelse>
 				<cfset newReferences=d.new_other_id_references>
 			</cfif>
-			<cfif structKeyExists(theJSON, "prefix") and len(theJSON.prefix) gt 0>
-				<cfset theP=theJSON.prefix>
-			<cfelse>
-				<cfset theP="">
-			</cfif>
-			<cfif structKeyExists(theJSON, "number") and len(theJSON.number) gt 0>
-				<cfset theN=theJSON.number>
-			<cfelse>
-				<cfset theN="">
-			</cfif>
-			<cfif structKeyExists(theJSON, "suffix") and len(theJSON.suffix) gt 0>
-				<cfset theS=theJSON.suffix>
-			<cfelse>
-				<cfset theS="">
-			</cfif>
-			<cfif debug>
-				<cfoutput>
-					<p>theP==#theP#
-					<p>theN==#theN#
-					<p>theS==#theS#
-				</cfoutput>
-			</cfif>
 			<cfquery name="newID" datasource="uam_god">
 				insert into coll_obj_other_id_num (
 					collection_object_id,
 					other_id_type,
-					other_id_prefix,
-					other_id_number,
-					other_id_suffix,
+					display_value,
 					id_references,
 					assigned_agent_id,
 					assigned_date,
@@ -157,9 +125,7 @@
 				) values (
 					<cfqueryparam CFSQLType="cf_sql_int" value="#cid#">,
 					<cfqueryparam CFSQLType="CF_SQL_varchar" value="#d.new_other_id_type#">,
-					<cfqueryparam CFSQLType="CF_SQL_varchar" value="#theP#" null="#Not Len(Trim(theP))#">,
-					<cfqueryparam CFSQLType="cf_sql_int" value="#theN#" null="#Not Len(Trim(theN))#">,
-					<cfqueryparam CFSQLType="CF_SQL_varchar" value="#theS#" null="#Not Len(Trim(theS))#">,
+					<cfqueryparam CFSQLType="CF_SQL_varchar" value="#d.new_other_id_number#">,
 					<cfqueryparam CFSQLType="CF_SQL_varchar" value="#newReferences#" null="#Not Len(Trim(newReferences))#">,
 					getAgentId(<cfqueryparam value="#d.username#" CFSQLType="cf_sql_varchar">),
 					current_date,
@@ -172,6 +138,9 @@
 			</cfquery>
 		</cftransaction>
 	<cfcatch>
+		<cfif debug>
+			<cfdump var="#cfcatch#">
+		</cfif>
 		<cfquery name="cleanupf" datasource="uam_god">
 			update cf_temp_oids set status='load fail::#cfcatch.message#' where key=#val(d.key)#
 		</cfquery>

@@ -348,5 +348,3 @@
 
 	</cfoutput>
 </cfif>
-
-<cf_customizeIFrame>

@@ -1,7 +1,7 @@
 
 	<!--- first get records with a pure status ---->
 	<cfquery name="d" datasource="uam_god">
-		select * from cf_temp_accn where status = 'autoload' order by last_ts desc limit #recLimit#
+		select * from cf_temp_accn where status = 'autoload' and coalesce(last_ts,current_timestamp) <  current_timestamp - interval '10 minutes' order by last_ts desc limit #recLimit#
 	</cfquery>
 	<cfif debug is true>
 		<cfdump var=#d#>

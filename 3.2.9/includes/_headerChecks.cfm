@@ -1,10 +1,8 @@
 <!---- include this on every page in one form or another ---->
+<!---------- replicate this from/to _headerChecks.cfm and _includeCheck.cfm ------->
 <cfparam name="session.agree_terms" default="false">
 <cfset exempt_subnet='66.249,130.225,207.241,130.14'>
 <!------------
-	129.114
-
-	
 	list of subnets that DO NOT need to authenticate.
 	Anything not well-documented in this comment should be removed immediately.
 		* 66.249 - googlebot
@@ -14,15 +12,12 @@
 		* 130.14 - NCBI
 
 
-
-<cfif CGI.HTTPS neq "on">
-	Insecure connection denied. Try <a href="https://arctos.database.museum/">https://arctos.database.museum/</a>
-	<cfheader statuscode="426" statustext="Upgrade Required">
-	<cfabort>
-</cfif>
-
-
+		so here's what happened: jerks used facebook proxies to steal images, do not allow this it isn't safe
+		* 173.252 - facebook, let's see what happens
+		* 69.63 - facebook, let's see what happens
+		* 31.13 - facebook, let's see what happens
 ------------->
+<!---------- END replicate this from/to _headerChecks.cfm and _includeCheck.cfm ------->
 <!--- how's this get lost? IDK but it does ---->
 <cfif not isdefined("session.requestingSubnet") or len(session.requestingSubnet) lt 6>
 	<cfinvoke component="component.internal" method="getIpAddress"></cfinvoke>
@@ -37,8 +32,18 @@
 			<p>
 				Please start with the <a href="https://arctosdb.org/arctos-api-policy/" class="external">Arctos API Policy</a> for access by automation.
 			</p>
-			<p>
-			<p><input type="button" id="btn_agree_terms" value="I agree, continue."></p>
+			<!----https://github.com/ArctosDB/arctos/issues/6239#issuecomment-1535370563---->
+			<div style="display:flex;flex-wrap:wrap;gap:2em;">
+				<div>
+					<input type="button" id="btn_agree_terms" value="I agree, continue">
+				</div>
+				<div>
+					<input type="button" onclick="openOverlay('/form/loginformguts.cfm?action=createAccount','Create Account');" value="I agree, create account">
+				</div>
+				<div>
+					<input type="button" onclick="openOverlay('/form/loginformguts.cfm','Log In');" value="I agree, log in">
+				</div>
+			</div>
 		</div>
 		<p>You must log in, create an account, or agree to the terms above to view this content.</p>
 		<cfinclude template="/includes/_footer.cfm">
@@ -83,10 +88,12 @@
 			</cfif>
 		</cfif>
 		<!----------- some low-bar checks of always-garbage ----------->
+		<!----
 		<cfif isdefined("cgi.referer") and cgi.referer contains "pnwherbaria.org">
 			<cfthrow message="Links from that source are blocked. Click in your browser`s URL bar and press ENTER to continue. Do not reload." detail="no">
 			<cfabort>
 		</cfif>
+		----->
 		<cfif isdefined("cgi.HTTP_ACCEPT_ENCODING") and cgi.HTTP_ACCEPT_ENCODING is "identity">
 			<cfabort>
 		</cfif>

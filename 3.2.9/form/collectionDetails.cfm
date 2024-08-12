@@ -1,8 +1,34 @@
 <cfinclude template="/includes/_includeHeader.cfm">
+<script>
+	function copyCollectionID(){
+		var tempInput = document.createElement("input");
+		tempInput.style = "position: absolute; left: -1000px; top: -1000px";
+		tempInput.value = $("#CollectionID").val();
+		document.body.appendChild(tempInput);
+		tempInput.select();
+		document.execCommand("copy");
+		document.body.removeChild(tempInput);
+		$('<span class="copyalert">Copied to clipboard</span>').insertAfter('#fgcopybtn').delay(3000).fadeOut();
+	}
+</script>
 <cfparam name="collection_id" default="-1">
-<cfquery name="detail" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-	select distinct
-		collection.*,
+<cfquery name="raw" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
+	select
+		collection.collection_id,
+		collection.collection_cde,
+		collection.institution_acronym,
+		collection.web_link,
+		collection.web_link_text,
+		collection.loan_policy_url,
+		collection.institution,
+		collection.guid_prefix,
+		collection.citation,
+		collection.catalog_number_format,
+		collection.genbank_collection,
+		collection.default_cat_item_type,
+		collection.collection_agent_id,
+		getPreferredAgentName(collection.collection_agent_id) collection_agent,
+		collection.collection,
 		ctcollection_terms.display as coll_trms_disp,
 		ctcollection_terms.description as coll_trms_desc,
 		ctcollection_terms.uri as coll_trms_uri,
@@ -18,13 +44,25 @@
 		cf_collection.institution_link_text,
 		ctdata_license.display as license_display,
 		ctdata_license.uri as license_uri,
+		ctdata_license.description as license_description,
 		external_license.display as external_display,
 		external_license.uri as external_uri,
 		external_license.display as external_display,
+		external_license.description as external_description,
 		ctcollection_terms.display as terms_display,
-		ctcollection_terms.uri as terms_uri
+		ctcollection_terms.uri as terms_uri,
+		collection_attributes.attribute_type,
+		collection_attributes.attribute_value,
+		collection_contacts.contact_role,
+		collection_contacts.contact_agent_id,
+		getPreferredAgentName(collection_contacts.contact_agent_id) contact_agent,
+		get_address(collection_contacts.contact_agent_id,'GitHub') as contact_github,
+		collection_taxonomy_source.source,
+		collection_taxonomy_source.preference_order
 	 from
 	 	collection
+	 	left outer join collection_attributes on  collection.collection_id=collection_attributes.collection_id
+	 	left outer join collection_taxonomy_source on  collection.collection_id=collection_taxonomy_source.collection_id
 	 	left outer join collection_contacts on  collection.collection_id=collection_contacts.collection_id
 	 	left outer join cf_collection on  collection.collection_id=cf_collection.collection_id
 	 	left outer join ctcollection_terms on collection.collection_terms_id=ctcollection_terms.collection_terms_id	 	
@@ -33,26 +71,90 @@
 	 where
 	 	collection.collection_id=<cfqueryparam value="#collection_id#" CFSQLType="cf_sql_int">
 </cfquery>
-<cfif detail.recordcount eq 0>
+<cfif raw.recordcount eq 0>
 	<cflocation url="/home.cfm" addtoken="false">
 </cfif>
-<cfquery name="c" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
+<cfquery name="detail" dbtype="query">
 	select
-		contact_role,
-		getPreferredAgentName(contact_agent_id) agnt,
-		get_address(contact_agent_id,'GitHub') as ghaddr
-	 from
-	 	collection_contacts
-	 where
-	 	collection_contacts.collection_id=<cfqueryparam value="#collection_id#" CFSQLType="cf_sql_int">
-	 order by contact_role,getPreferredAgentName(contact_agent_id)
+		collection_id,
+		collection_cde,
+		institution_acronym,
+		web_link,
+		web_link_text,
+		loan_policy_url,
+		institution,
+		guid_prefix,
+		citation,
+		catalog_number_format,
+		genbank_collection,
+		default_cat_item_type,
+		collection_agent_id,
+		collection_agent,
+		collection,
+		coll_trms_disp,
+		coll_trms_desc,
+		coll_trms_uri,
+		header_color,
+		header_link_color,
+		header_image_link,
+		header_image,
+		header_credit,
+		stylesheet,
+		collection_url,
+		collection_link_text,
+		institution_url,
+		institution_link_text,
+		license_display,
+		license_uri,
+		license_description,
+		external_display,
+		external_uri,
+		external_description,
+		external_display,
+		terms_display,
+		terms_uri
+	from
+		raw
+	group by
+		collection_id,
+		collection_cde,
+		institution_acronym,
+		web_link,
+		web_link_text,
+		loan_policy_url,
+		institution,
+		guid_prefix,
+		citation,
+		catalog_number_format,
+		genbank_collection,
+		default_cat_item_type,
+		collection_agent_id,
+		collection_agent,
+		collection,
+		coll_trms_disp,
+		coll_trms_desc,
+		coll_trms_uri,
+		header_color,
+		header_link_color,
+		header_image_link,
+		header_image,
+		header_credit,
+		stylesheet,
+		collection_url,
+		collection_link_text,
+		institution_url,
+		institution_link_text,
+		license_display,
+		license_uri,
+		license_description,
+		external_display,
+		external_uri,
+		external_description,
+		external_display,
+		terms_display,
+		terms_uri
 </cfquery>
-<cfquery name="coll_tax" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-	select * from collection_taxonomy_source where collection_id = <cfqueryparam value="#collection_id#" CFSQLType="cf_sql_int"> order by preference_order
-</cfquery>
-<cfquery name="dc" dbtype="query">
-	select agnt from c group by agnt order by agnt
-</cfquery>
+
 <style>
 	<cfif len(detail.header_color) gt 0>
 		#gp_collection_specific_header{
@@ -99,13 +201,10 @@
 </style>
 
 <cfoutput>
-
 	<cfset title="#detail.guid_prefix# collection details">
 	<cfif len(trim(detail.stylesheet)) gt 0>
 		<cfhtmlhead text='<link rel="stylesheet" href="/includes/css/#detail.stylesheet#" />'></cfhtmlhead>
 	</cfif>
-
-
 	<div id="gp_collection_specific_header">
 		<div id="gp_header_image_cell" class="gp_headerColumn">
 			<cfif len(trim(detail.header_image)) gt 0>
@@ -141,7 +240,6 @@
 				</div>
 			</cfif>
 		</div>
-		
 		<div id="gp_header_links_cell" class="gp_headerColumn">
 			<div class="header_row">
 				License: <a class="external" href="#detail.license_uri#">#detail.license_display#</a>
@@ -157,351 +255,210 @@
 			</div>
 		</div>
 	</div>
+	<div class="onerow">
+		<div class="akey">
+			Institution:
+		</div>
+		<div class="aval">
+		 	#detail.institution#
+		</div>
+	</div>
 
+	<div class="onerow">
+		<div class="akey">
+			Institution Acronym:
+		</div>
+		<div class="aval">
+		 	#detail.institution_acronym#
+		</div>
+	</div>
+	<div class="onerow">
+		<div class="akey">
+			Collection ID:
+		</div>
+		<div class="aval">
+			<input id="CollectionID" type="hidden" value="#application.serverRootURL#/collection/#detail.guid_prefix#">
+		 	#application.serverRootURL#/collection/#detail.guid_prefix#
+			<input id="fgcopybtn" type="button" value="copy" onclick="copyCollectionID();">
 
+		</div>
+	</div>
+	<div class="onerow">
+		<div class="akey">
+			Collection:
+		</div>
+		<div class="aval">
+		 	#detail.collection#
+		</div>
+	</div>
+	<div class="onerow">
+		<div class="akey">
+			Collection Agent:
+		</div>
+		<div class="aval">
+		 	<a href="/agent/#detail.collection_agent_id#" class="external">#detail.collection_agent#</a>
+		</div>
+	</div>
 
-<!-------------- END copypasta from specimendetial ----------------->
+    <div class="onerow">
+    	<div class="akey">
+			Web Link:
+		</div>
+		<div class="aval">
+			<cfif len(detail.web_link_text) gt 0>
+		 		<a class="external" target="_blank" href="#detail.web_link#">#detail.web_link_text#</a>
+			<cfelse>
+				-no website provided-
+			</cfif>
+		</div>
+	</div>
 
-	
-            <div class="onerow">
-			<div class="akey">
-				Institution:
-			</div>
-			<div class="aval">
-			 	#detail.institution#
-			</div>
+    <div class="onerow">
+    	<div class="akey">
+			Citation:
 		</div>
+		<div class="aval">
+			<cfif len(detail.citation) gt 0>
+		 		#detail.citation#
+			<cfelse>
+				-no citation provided-
+			</cfif>
+		</div>
+	</div>
 
-		<div class="onerow">
-			<div class="akey">
-				Institution Acronym:
-			</div>
-			<div class="aval">
-			 	#detail.institution_acronym#
-			</div>
-		</div>
-		<div class="onerow">
-			<div class="akey">
-				Collection ID:
-			</div>
-			<div class="aval">
-			 	#application.serverRootURL#/collection/#detail.guid_prefix#
-			</div>
-		</div>
-		<div class="onerow">
-			<div class="akey">
-				Collection:
-			</div>
-			<div class="aval">
-			 	#detail.collection#
-			</div>
-		</div>
-         		<h3>Description</h3>
-        <hr>
-        <div class="onerow">
-			<!---
-            <div class="akey">
-				Description:
-			</div>
-            --->
-			<div class="avalctr">
-				<cfif len(detail.descr) gt 0>
-			 		#detail.descr#
-				<cfelse>
-					-no description provided-
-				</cfif>
-			</div>
-		</div>
-        <h4>More Information</h4>
-        <div class="onerow">
-			<!---div class="akey">
-				Collection Web Page:
-			</div--->
-			<div class="aval">
-				<cfif len(detail.web_link_text) gt 0>
-			 		<a class="external" target="_blank" href="#detail.web_link#">#detail.web_link_text#</a>
-				<cfelse>
-					-no website provided-
-				</cfif>
-			</div>
-		</div>
-        <div class="onerow">
-            <div class="akey">
-                Purpose:
-            </div>
-            <div class="aval">
-                <cfif len(detail.purpose_of_collection) gt 0>
-                    #detail.purpose_of_collection#
-                <cfelse>
-                    -not provided-
-                </cfif>
-            </div>
-        </div>
-		<div class="onerow">
-			<div class="akey">
-				Preservation Method(s):
-			</div>
-			<div class="aval">
-				<cfif len(detail.specimen_preservation_method) gt 0>
-			 		#detail.specimen_preservation_method#
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
-		</div>
-		<!---div class="onerow">
-			<div class="akey"--->
-				<h3>Citation</h3>
-                <hr>
-			<!---/div--->
-			<div class="aval">
-				<cfif len(detail.citation) gt 0>
-			 		#detail.citation#
-				<cfelse>
-					-no citation provided-
-				</cfif>
-			</div>
+	<h3>Contacts</h3>
+	<cfquery name="contacts" dbtype="query">
+		select 
+			contact_role,
+			contact_agent_id,
+			contact_agent,
+			contact_github
+		from raw
+		group by
+			contact_role,
+			contact_agent_id,
+			contact_agent,
+			contact_github
+		order by
+			contact_role,
+			contact_agent
+	</cfquery>
+	<cfif contacts.recordcount gt 0>
+		<table border="1">
+			<tr>
+				<th>Role</th>
+				<th>Agent</th>
+				<th>GitHub</th>
+			</tr>
+			<cfloop query="contacts">
+				<tr>
+					<td>
+						 <span class="ctDefLink" onclick="getCtDoc('ctcoll_contact_role','#contact_role#')">#contact_role#</span>
+					</td>
+					<td>
+						<a href="/agent/#contact_agent_id#" class="external">#contact_agent#</a>
+					</td>
+					<td>
+						<cfif len(contact_github) gt 0>
+							<a href="#contact_github#" class="external">#contact_github#</a>
+						</cfif>
+					</td>
+				</tr>
+			</cfloop>
+		</table>
+	<cfelse>
+		-no contacts provided-
+	</cfif>
 
-		<!---/div>
-		<div class="onerow">
-			<div class="akey"--->
-            <h3>Contacts</h3>
-            <hr>
-			<!---/div--->
-			<div class="aval">
-				<cfif dc.recordcount gt 0>
-			 		<ul>
-						<cfloop query="dc">
-							<cfquery name="acr" dbtype="query">
-								select contact_role,ghaddr from c where agnt='#agnt#' group by contact_role,ghaddr order by contact_role
-							</cfquery>
-							<li>
-                                <a href="/agent.cfm?agent_name=#agnt#" class="newWinLocal">#agnt#</a> (#ValueList(acr.contact_role,"; ")#)
-								<cfif len(acr.ghaddr) gt 0>
-									<cfloop list="#acr.ghaddr#" index="adr">
-										<a class="external" href="#adr#">#adr#</a>
-									</cfloop>
-								</cfif>
-							</li>
-						</cfloop>
-					</ul>
-				<cfelse>
-					-no contacts provided-
-				</cfif>
-			</div>
-		<!---/div--->
-        <h3>Licenses, Terms and Loan Policy</h3>
-        <hr>
-		<div class="onerow">
-			<div class="akey">
-				License for data downloaded from Arctos:
-			</div>
-			<div class="aval">
-				<cfif len(detail.license_display) gt 0>
-			 		<a class="external" target="_blank" href="#detail.license_uri#">#detail.license_display#</a>
-			 		<div class="licDes">
-			 			#detail.license_display#
-			 		</div>
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
+	<h3>Licenses, Terms and Loan Policy</h3>
+	<hr>
+	<table border="1">
+		<tr>
+			<th>Document</th>
+			<th>Display</th>
+			<th>URI</th>
+			<th>Description</th>
+		</tr>
+		<tr>
+			<td>License for data downloaded from Arctos</td>
+			<td>#detail.license_display#</td>
+			<td><a class="external" target="_blank" href="#detail.license_uri#">#detail.license_uri#</a></td>
+			<td>#detail.license_description#</td>
+		</tr>
+		<tr>
+			<td>License for data downloaded from data aggregators</td>
+			<td>#detail.external_display#</td>
+			<td><a class="external" target="_blank" href="#detail.external_uri#">#detail.external_uri#</a></td>
+			<td>#detail.external_description#</td>
+		</tr>
+		<tr>
+			<td>Terms of Use</td>
+			<td>#detail.coll_trms_disp#</td>
+			<td><a class="external" target="_blank" href="#detail.coll_trms_uri#">#detail.coll_trms_uri#</a></td>
+			<td>#detail.coll_trms_desc#</td>
+		</tr>
+		<tr>
+			<td>Loan Policy</td>
+			<td></td>
+			<td><a class="external" target="_blank" href="#detail.loan_policy_url#">#detail.loan_policy_url#</a></td>
+			<td></td>
+		</tr>
+	</table>
+    <h3>Other Collection Identifiers</h3>
+    <hr>
+	<div class="onerow">
+		<div class="akey">
+			GenBank Identifier:
 		</div>
-
-
-		<div class="onerow">
-			<div class="akey">
-				License for data downloaded from data aggregators:
-			</div>
-			<div class="aval">
-				<cfif len(detail.external_display) gt 0>
-			 		<a class="external" target="_blank" href="#detail.external_uri#">#detail.external_display#</a>
-			 		<div class="licDes">
-			 			#detail.external_display#
-			 		</div>
-				<cfelse>
-					-not provided-
-				</cfif>
-
-
-			</div>
+		<div class="aval">
+			<cfif len(detail.genbank_collection) gt 0>
+		 		#detail.genbank_collection# (<a href="https://www.ncbi.nlm.nih.gov/nuccore/?cmd=search&term=collection #detail.genbank_collection#[prop] loprovarctos[filter]" class="external">open</a>)
+			<cfelse>
+				-not provided-
+			</cfif>
 		</div>
-		<div class="onerow">
-			<div class="akey">
-				Terms of Use:
-			</div>
-			<div class="aval">
-				<cfif len(detail.coll_trms_disp) gt 0>
-			 		<a class="external" target="_blank" href="#detail.coll_trms_uri#">#detail.coll_trms_disp#</a>
-			 		&nbsp;
-                    <span class="licDes">
-			 			#detail.coll_trms_desc#
-			 		</span>
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
+	</div>
+    <h3>Collection Data Details</h3>
+    <hr>
+	<div class="onerow">
+		<div class="akey">
+			Catalog Number Format:
 		</div>
-		<div class="onerow">
-			<div class="akey">
-				Loan Policy:
-			</div>
-			<div class="aval">
-				<cfif len(detail.loan_policy_url) gt 0>
-			 		<a class="external" target="_blank" href="#detail.loan_policy_url#">#detail.loan_policy_url#</a>
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
+		<div class="aval">
+		 	#detail.catalog_number_format#
 		</div>
-        <h3>Other Collection Identifiers</h3>
-        <hr>
-        <div class="onerow">
-			<div class="akey">
-				Alternate Identifier 1:
-			</div>
-			<div class="aval">
-				<cfif len(detail.alternate_identifier_1) gt 0>
-			 		 #detail.alternate_identifier_1#
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
+	</div>
+	<cfquery name="taxsrc" dbtype="query">
+		select source,preference_order from raw group by source,preference_order order by preference_order
+	</cfquery>
+	<div class="onerow">
+		<div class="akey">
+			Taxonomic Source Preference(s):
 		</div>
-		<div class="onerow">
-			<div class="akey">
-				Alternate Identifier 2:
-			</div>
-			<div class="aval">
-				<cfif len(detail.alternate_identifier_2) gt 0>
-			 		 #detail.alternate_identifier_2#
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
+		<div class="aval">
+		 	<ol>
+				<cfloop query="taxsrc">
+					<li>
+						<span class="ctDefLink" onclick="getCtDoc('cttaxonomy_source','#source#')">#source#</span>
+					</li>
+				</cfloop>
+			</ol>
 		</div>
-		<div class="onerow">
-			<div class="akey">
-				GenBank Identifier:
+	</div>
+	<cfquery name="colnattrs" dbtype="query">
+		select attribute_type,attribute_value from raw group by attribute_type,attribute_value order by attribute_type,attribute_value
+	</cfquery>
+	<cfif colnattrs.recordcount gt 0>
+		<h3>Collection Attributes</h3>
+		<cfloop query="colnattrs">
+			<div class="onerow">
+				<div class="akey">
+					#attribute_type#:
+				</div>
+				<div class="aval">
+					#attribute_value#
+				</div>
 			</div>
-			<div class="aval">
-				<cfif len(detail.genbank_collection) gt 0>
-			 		#detail.genbank_collection#
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
-		</div>
-        <h3>Geographic Coverage</h3>
-        <hr>
-        <div class="onerow">
-			<div class="akey">
-				Geographic Description:
-			</div>
-			<div class="aval">
-				<cfif len(detail.geographic_description) gt 0>
-			 		#detail.geographic_description#
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
-		</div>
-        <div class="onerow">
-			<div class="akey">
-				Bounding Coordinates (N,E,S,W):
-			</div>
-			<div class="aval">
-				<cfif len(detail.west_bounding_coordinate) gt 0>
-			 		 #detail.north_bounding_coordinate#,#detail.east_bounding_coordinate#,#detail.south_bounding_coordinate#,#detail.west_bounding_coordinate#
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
-		</div>
-
-        <h3>Taxonomic Coverage</h3>
-        <hr>
-		<div class="onerow">
-			<div class="akey">
-				General Taxonomic Coverage:
-			</div>
-			<div class="aval">
-				<cfif len(detail.general_taxonomic_coverage) gt 0>
-			 		#detail.general_taxonomic_coverage#
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
-		</div>
-		<div class="onerow">
-			<div class="akey">
-				Taxon Name Rank:
-			</div>
-			<div class="aval">
-				<cfif len(detail.taxon_name_rank) gt 0>
-			 		 #detail.taxon_name_rank#
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
-		</div>
-		<div class="onerow">
-			<div class="akey">
-				Taxon Name Value:
-			</div>
-			<div class="aval">
-				<cfif len(detail.taxon_name_value) gt 0>
-			 		 #detail.taxon_name_value#
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
-		</div>
-
-        <h3>Temporal Coverage</h3>
-        <hr>
-		<div class="onerow">
-			<!---div class="akey">
-				Time Coverage:
-			</div--->
-			<div class="aval">
-				<cfif len(detail.time_coverage) gt 0>
-			 		#detail.time_coverage#
-				<cfelse>
-					-not provided-
-				</cfif>
-			</div>
-		</div>
-
-        <h3>Collection Data Details</h3>
-        <hr>
-		<div class="onerow">
-			<div class="akey">
-				Arctos Code Tables:
-			</div>
-			<div class="aval">
-			 	#detail.collection_cde#
-			</div>
-		</div>
-		<div class="onerow">
-			<div class="akey">
-				Catalog Number Format:
-			</div>
-			<div class="aval">
-			 	#detail.catalog_number_format#
-			</div>
-		</div>
-		<div class="onerow">
-			<div class="akey">
-				Taxonomic Source Preference(s):
-			</div>
-			<div class="aval">
-			 	<ol>
-					<cfloop query="coll_tax">
-						<li>#source#</li>
-					</cfloop>
-				</ol>
-			</div>
-		</div>
-	</body>
+		</cfloop>
+	</cfif>
 </cfoutput>

@@ -39,13 +39,13 @@ Div structure for cssmagic
 		border:1px solid green;
 	}
 	body{
-		background-color: #bed88f;
+		background-color: var(--arctosgreencolor);
 	}
 	.slowTransition{
 		transition: background-color 3s;
 	}
 	.happySave{
-		background-color: #bed88f;
+		background-color: var(--arctosgreencolor);
 	}
 	.sadSave{
 		background-color: #ffb8b3;
@@ -315,25 +315,21 @@ Div structure for cssmagic
 			}
 		});
 	}
-
 	function closeCustomAndReload(){
 		closeOverlay('customizeDataEntry2');
 		location.reload();
 	}
-
 </script>
 <cfoutput>
 	<cfparam name="seed_record_key" default="">
 	<cfparam name="guid_prefix" default="">
 	<input type="hidden" id="session_username" value="#session.username#">
-
 	<cfif len(guid_prefix) gt 0>
 		<cfset load_mode="guid_prefix">
 		<cfquery name="ctattribute_type" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
 			select attribute_type from ctattribute_type 
-			inner join collection on ctattribute_type.collection_cde=collection.collection_cde
-			where collection.guid_prefix=<cfqueryparam value="#guid_prefix#" cfsqltype="cf_sql_varchar">
-			group by attribute_type order by attribute_type
+			where <cfqueryparam cfsqltype="cf_sql_varchar" value="#guid_prefix#"> = any(collections)
+			order by attribute_type
 		</cfquery>
 	<cfelseif len(seed_record_key) gt 0>
 		<cfset load_mode="seed_record_key">
@@ -342,32 +338,26 @@ Div structure for cssmagic
 				attribute_type 
 			from 
 				ctattribute_type
-				inner join collection on ctattribute_type.collection_cde=collection.collection_cde
-				inner join bulkloader on collection.guid_prefix=bulkloader.guid_prefix
+				inner join  bulkloader on bulkloader.guid_prefix=any(ctattribute_type.collections)
 			where 
 				bulkloader.key=<cfqueryparam value="#seed_record_key#" cfsqltype="cf_sql_varchar">
-			group by attribute_type order by attribute_type
-
+			order by attribute_type
 		</cfquery>
 	<cfelse>
 		<cfquery name="myCollections" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
 			select guid_prefix from collection group by guid_prefix order by guid_prefix
 		</cfquery>
 		<h2>
-			More Information Needed!
+			Create Catalog Records
 		</h3>
 		<p>
-			You must specify a collection to use this form. Options are below.
+			Select one of the options below to begin entering data into Arctos. Once the data entry page you select has opened, you can use the customize button at the bottom of the page to customize the form or select a previously created profile
 		</p>
-		<p>
-			Once you've selected a collection in some way, the form will load and you may customize or choose a Profile.
-		</p>
-
 		<h3>
-			Begin with previous records
+			Option 1: Begin with previous records
 		</h3>
 		<p>
-			Use this option to bring previous data into the form.
+			Use one of these options to bring previously entered data into the form.
 		</p>
 		<cfquery name="mylast" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			select guid_prefix,identification_1,key
@@ -388,7 +378,7 @@ Div structure for cssmagic
 		</div>
 
 		<h3>
-			Choose a collection
+			Option 2: Choose a collection
 		</h3>
 		<p>
 			Use this option to start from scratch, or from the values stored in a Profile.
@@ -403,11 +393,7 @@ Div structure for cssmagic
 		</div>
 		<cfabort>
 	</cfif>
-
-	<cfquery name="ak" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-		select api_key from api_key inner join agent on api_key.issued_to=agent.agent_id where preferred_agent_name='arctos_api_user'
-	</cfquery>
-
+	<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
 	<!--- these don't need to be in the form, just stashes for js to get data--->
 	<input type="hidden" id="load_mode" value="#load_mode#">
 	<input type="hidden" id="frm_serialized" value="">
@@ -480,7 +466,7 @@ Div structure for cssmagic
 	</cfif>
 	<input type="hidden" id="frm_serialized" value="">
 	<input type="hidden" name="seed_record_key" value="#seed_record_key#" id="seed_record_key">
-	<input type="hidden" name="api_key" value="#ak.api_key#" id="api_key">
+	<input type="hidden" name="api_key" value="#api_key#" id="api_key">
 	<input type="hidden" name="usr" value="#session.username#" id="usr">
 	<input type="hidden" name="pwd" value="#session.epw#" id="pwd">
 	<input type="hidden" name="pk" value="#session.sessionKey#" id="pk">
@@ -581,7 +567,7 @@ Div structure for cssmagic
 									</select>
 								</td>
 								<td>
-									<input type="text" name="identifier_#i#_value" id="identifier_#i#_value">
+									<input type="text" name="identifier_#i#_value" id="identifier_#i#_value" class="identifierValueInput">
 								</td>
 								<td>
 									<select name="identifier_#i#_relationship" id="identifier_#i#_relationship" size="1">
@@ -596,7 +582,12 @@ Div structure for cssmagic
 								</td>
 								<td>
 									<input type="button" value="pull" onclick="getRelatedData(#i#);">
-									<input type="button" value="build" onclick="identifierBuilder(#i#);">
+									<!----
+										https://github.com/ArctosDB/arctos/issues/7808
+										https://github.com/ArctosDB/arctos/issues/7822
+										tentatiely removing this, don't think it does anything useful, might rebuild as a simplified version
+										<input type="button" value="build" onclick="identifierBuilder(#i#);">
+									---->
 								</td>
 							</tr>
 						</cfloop>
@@ -775,7 +766,7 @@ Div structure for cssmagic
 					<div class="asectiontitle">
 						Record-Event
 						<div class="asectionsubtitle">
-							Locality stack is ignored unless this is given. record_event_type,record_event_determiner,record_event_determined_date,record_event_verificationstatus are required to use.
+							Locality stack is ignored unless this is given. record_event_type,record_event_determiner,record_event_determined_date are required to use.
 							<a href="https://handbook.arctosdb.org/documentation/specimen-event.html" class="external">Handbook</a>
 						</div>
 					</div>
@@ -877,7 +868,6 @@ Div structure for cssmagic
 							<label for="event_name">
 								event_name
 								<input type="button" class="pullBtn" onclick="syncEvent(); return false;" value="pull/sync event">
-
 								<input type="button" class="clrBtn" onclick="clearEvent(); return false;" value="clear all event">
 							</label>
 							<input type="text" name="event_name" id="event_name" onchange="pickCollectingEvent('event_id','event_verbatim_locality',this.value);">
@@ -1091,8 +1081,7 @@ Div structure for cssmagic
 								Locality Attributes
 								<div class="asectionsubtitle">
 									Ignored unless type and value are given
-									<span class="likeLink" onclick="getCtDocVal('ctlocality_attribute_type','');">Type Documentation</span>
-									<span class="likeLink" onclick="getCtDocVal('ctlocality_att_att','');">Control Documentation</span>
+									<span class="likeLink" onclick="getCtDocVal('ctlocality_attribute_type','');">Documentation</span>
 								</div>
 							</div>
 							<table border>
@@ -1375,10 +1364,7 @@ Div structure for cssmagic
 						</div>
 					</div>
 				</div><!-- END locality -->
-				
-				
 			</div>
-
 			<cfif bulk_attr_count gt 0>
 				<div class="asection" id="record_attributes">
 					<div class="asectiontitle">
@@ -1386,7 +1372,6 @@ Div structure for cssmagic
 						<div class="asectionsubtitle">
 							Ignored unless type and value are given
 							<span class="likeLink" onclick="getCtDocVal('ctattribute_type','');">Type Documentation</span>
-							<span class="likeLink" onclick="getCtDocVal('ctattribute_code_tables','');">Control Documentation</span>
 							<a href="https://handbook.arctosdb.org/documentation/attributes.html" class="external">Handbook</a>
 						</div>
 					</div>

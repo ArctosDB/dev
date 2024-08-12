@@ -314,7 +314,7 @@
 			<cfset queryaddrow(flds,{k='record_event_type',o='nohide',t='record-event'})>
 			<cfset queryaddrow(flds,{k='record_event_determiner',o='nohide',t='record-event'})>
 			<cfset queryaddrow(flds,{k='record_event_determined_date',o='nohide',t='record-event'})>
-			<cfset queryaddrow(flds,{k='record_event_verificationstatus',o='nohide',t='record-event'})>
+			<cfset queryaddrow(flds,{k='record_event_verificationstatus',o='',t='record-event'})>
 			<cfset queryaddrow(flds,{k='record_event_verified_by',o='',t='record-event'})>
 			<cfset queryaddrow(flds,{k='record_event_verified_date',o='',t='record-event'})>
 			<cfset queryaddrow(flds,{k='record_event_collecting_source',o='',t='record-event'})>

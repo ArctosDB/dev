@@ -978,11 +978,7 @@
 			<div class="error">You must enter search criteria.</div>
 			<cfabort>
 		</cfif>
-
-
 		<cfset recordLimit=500>
-
-
 		<cfquery timeout="10" name="raw" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
 			#selsmt# from #preserveSingleQuotes(tabls)# where
 			<cfloop from="1" to="#qal#" index="i">
@@ -1024,7 +1020,6 @@
 			</cfif>
 			limit #recordLimit#
 		</cfquery>
-
 		<cfif raw.recordcount is recordLimit>
 			<div class="importantNotification">
 				Note: Some relevant records may not be included. Please try more specific search terms.

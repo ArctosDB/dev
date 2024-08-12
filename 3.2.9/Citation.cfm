@@ -211,13 +211,13 @@
 		<cfquery name="auth" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			select
 				row_number() over () as r,
-				preferred_agent_name.agent_id,
-				agent_name
+				agent.agent_id,
+				preferred_agent_name
 			from
 				preferred_agent_name,
 				publication_agent
+				inner join agent on publication_agent.agent_id=agent.agent_id
 			where
-				publication_agent.agent_id=preferred_agent_name.agent_id and
 				publication_agent.publication_id = <cfqueryparam value="#publication_id#" CFSQLType="cf_sql_int">
 		</cfquery>
 		<style>
@@ -380,15 +380,15 @@
 										<option value="1">yes, ignore author info below</option>
 									</select>
 									<label for="newIdBy"><span class="helpLink" id="id_by">ID Agent 1 (save and edit for more agents)</span></label>
-									<input type="text" name="newIdBy" id="newIdBy" class="reqdClr" size="50" value="#a1.agent_name#"
+									<input type="text" name="newIdBy" id="newIdBy" class="reqdClr" size="50" value="#a1.preferred_agent_name#"
 										onchange="pickAgentModal('newIdBy_id',this.id,this.value);">
 									<input type="hidden" name="newIdBy_id" id="newIdBy_id" class="reqdClr" value="#a1.agent_id#">
 									<label for="newIdBy_two"><span class="helpLink" id="id_by">ID Agent 2</span></label>
-									<input type="text" name="newIdBy_two" id="newIdBy_two" size="50"  value="#a2.agent_name#"
+									<input type="text" name="newIdBy_two" id="newIdBy_two" size="50"  value="#a2.preferred_agent_name#"
 										onchange="pickAgentModal('newIdBy_two_id',this.id,this.value);">
 								    <input type="hidden" name="newIdBy_two_id" id="newIdBy_two_id" value="#a2.agent_id#">
 									<label for="newIdBy_three"><span class="helpLink" id="id_by">ID Agent 3</span></label>
-									<input type="text" name="newIdBy_three" id="newIdBy_three" size="50" value="#a3.agent_name#"
+									<input type="text" name="newIdBy_three" id="newIdBy_three" size="50" value="#a3.preferred_agent_name#"
 										onchange="pickAgentModal('newIdBy_three_id',this.id,this.value);">
 								    <input type="hidden" name="newIdBy_three_id" id="newIdBy_three_id" value="#a3.agent_id#">
 									<label for="made_date"><span class="helpLink" id="identification_made_date">ID Date:</span></label>
@@ -635,15 +635,10 @@
 
 	<cfset mids.identifications=ids>
 
-
-	<cfdump var="#mids#">
-
-	<cfquery name="ak" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-			select api_key from api_key inner join agent on api_key.issued_to=agent.agent_id where preferred_agent_name='arctos_api_user'
-		</cfquery>
+	<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
 
 		<cfinvoke component="/component/api/tools" method="create_identification" returnvariable="x">
-			<cfinvokeargument name="api_key" value="#ak.api_key#">
+			<cfinvokeargument name="api_key" value="#api_key#">
 			<cfinvokeargument name="usr" value="#session.dbuser#">
 			<cfinvokeargument name="pwd" value="#session.epw#">
 			<cfinvokeargument name="pk" value="#session.sessionKey#">
@@ -715,7 +710,7 @@
 				identification.identification_order,
 				identification.made_date,
 				guid_prefix || ':' || cat_num guid,
-				agent_name,
+				preferred_agent_name,
 				IDENTIFIER_ORDER,
 				IDENTIFICATION_REMARKS,
 				sensu.short_citation sensupub,
@@ -840,7 +835,7 @@
 				</tr>
 				<cfloop query="citns">
 					<cfquery name="agnts" dbtype="query">
-						select agent_name from getCited where
+						select preferred_agent_name from getCited where
 						idid=#idid#
 						order by IDENTIFIER_ORDER
 					</cfquery>
@@ -861,7 +856,7 @@
 						<td>
 							<a target="_blank" href="/publication/#sensupubid#">#sensupub#</a>
 						</td>
-						<td>#replace(valuelist(agnts.agent_name),",",", ","all")#</td>
+						<td>#replace(valuelist(agnts.preferred_agent_name),",",", ","all")#</td>
 						<td><input type="radio" name="identification_id" <cfif idid is one.identification_id> checked="true" </cfif>value="#idid#"></td>
 					</tr>
 				</cfloop>

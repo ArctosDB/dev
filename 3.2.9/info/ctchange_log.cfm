@@ -235,7 +235,7 @@
 					</tr>
 				</cfloop>
 			</table>
-		<cfelseif tbl is 'ctlife_stage'>	
+		<cfelseif listFind("ctlife_stage,ctsex_cde", tbl)>
 			<!-------------
 				all new-format collection-specific code tables
 				critical assumption: data field is table name minus the ct

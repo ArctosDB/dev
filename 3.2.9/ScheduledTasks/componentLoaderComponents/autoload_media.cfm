@@ -119,10 +119,9 @@
 						</cfif>
 					<cfelseif listlast(thisRelationship," ") is "cataloged_item">
 						<cfquery name="ck_catitem" datasource="uam_god">
-							select cataloged_item.collection_object_id from cataloged_item
-							inner join collection on cataloged_item.collection_id=collection.collection_id
+							select collection_object_id from flat
 							where
-							collection.guid_prefix || ':' || cataloged_item.cat_num=<cfqueryparam value="#thisRelationshipTrm#" CFSQLType="CF_SQL_varchar">
+							flat.guid=stripArctosGuidURL(<cfqueryparam value="#thisRelationshipTrm#" CFSQLType="CF_SQL_VARCHAR">)
 						</cfquery>
 						<cfif debug>
 							<cfdump var=#ck_catitem#>
@@ -167,6 +166,19 @@
 							<cfset "mr_key#i#"=ck_collecting_event.collecting_event_id>
 						<cfelse>
 							<cfset errs=listappend(errs,'#thisRelationship#=#thisRelationshipTrm#: ck_collecting_event not found',"; ")>
+						</cfif>
+
+					<cfelseif listlast(thisRelationship," ") is "loan">
+						<cfquery name="ck_loan" datasource="uam_god">
+							select transaction_id from loan where transaction_id=<cfqueryparam value="#thisRelationshipTrm#" CFSQLType="cf_sql_int">
+						</cfquery>
+						<cfif debug>
+							<cfdump var=#ck_loan#>
+						</cfif>
+						<cfif len(ck_loan.transaction_id) gt 0>
+							<cfset "mr_key#i#"=ck_loan.transaction_id>
+						<cfelse>
+							<cfset errs=listappend(errs,'#thisRelationship#=#thisRelationshipTrm#: loan not found',"; ")>
 						</cfif>
 					<cfelse>
 						<cfif debug>

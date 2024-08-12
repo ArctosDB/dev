@@ -32,6 +32,7 @@
 				<a href="media.cfm?action=edit&media_id=#media_id#">try this instead</a>
 			</p>
 		</div>
+
 		<cfif len(FILETOUPLOAD) gt 0>
 			<!---- temporary safe name ---->
 			<cfset tempName=createUUID()>
@@ -71,6 +72,7 @@
 				<cfelse>
 					<cfset thisRelationID=-1>
 				</cfif>
+
 				<cfif thisRelationID is -1>
 					<cfquery name="makeRelation" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 						insert into media_relations (
@@ -86,7 +88,7 @@
 						<cfquery name="upRelation" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 							delete from
 								media_relations
-							where media_relations_id=#thisRelationID#
+							where media_relations_id=<cfqueryparam value="#thisRelationID#" CFSQLType="cf_sql_int">
 						</cfquery>
 					<cfelse>
 						<cfquery name="upRelation" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
@@ -123,7 +125,7 @@
 						<cfquery name="delRelation" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 							delete from
 								media_labels
-							where media_label_id=#thisLabelID#
+							where media_label_id=<cfqueryparam value="#thisLabelID#" CFSQLType="cf_sql_int">
 						</cfquery>
 					<cfelse>
 						<cfquery name="upMediaLbl" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">

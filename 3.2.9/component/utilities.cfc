@@ -1,4 +1,18 @@
 <cfcomponent>
+<cffunction name="get_local_api_key" returnformat="plain" access="public" output="true">
+	<cfquery name="ak" datasource="uam_god">
+		select 
+			api_key
+		from 
+			api_key 
+		where
+			expires > current_timestamp and
+			issued_to=21335541
+		order by expires desc 
+		limit 1
+	</cfquery>
+	<cfreturn ak.api_key>
+</cffunction>
 <cffunction name="gl_poly_to_wkt_string" returnformat="json" access="remote" output="false">
 	<!---
 		INPUT: geolocate polygon string
@@ -23,68 +37,11 @@
 		<cfreturn rslt>
 	</cfoutput>
 </cffunction>
-
-<cffunction name="gl_poly_to_wkt_media" returnformat="json" access="remote" output="false">
-	<!---
-		INPUT: geolocate polygon string
-		RETURN: media_id
-	---->
-	<cfargument name="wkt_string" type="string" required="true">
-	<cfoutput>
-		<cfset chars = "23456789ABCDEFGHJKMNPQRS">
-		<cfset fileName="glwkt">
-		<cfloop from="1" to="10" index="i">
-			<cfset fileName=fileName & mid(chars, randRange(1, len(chars)),1)>
-		</cfloop>
-		<cfset rslt=StructNew()>
-
-		<!---- geolocate makes a not-wkt string, so.... ---->
-		<cfset convertedWKT="">
-		<cfset numPairs=listlen(wkt_string)/2>
-		<cfset lp=1>
-		<cfloop from="1" to="#numPairs#" index="i">
-			<cfset lp1=lp+1>
-			<cfset thisEl=listGetAt(wkt_string,lp1) & ' ' & listGetAt(wkt_string,lp)>
-			<cfset convertedWKT=listAppend(convertedWKT,thisEl)>
-			<cfset lp=lp+2>
-		</cfloop>
-		<cfset convertedWKT='POLYGON (( ' & convertedWKT & ' )) '>
-		<cfset fileName=fileName & ".wkt">
-		<cffile action="write" file="#Application.webDirectory#/temp/#fileName#" nameconflict="overwrite" output="#convertedWKT#">
-		<cfset s3loadres=fileToS3(file_path="#Application.webDirectory#/temp/#fileName#",base_bucket="wkt",file_name="#fileName#")>
-		<cfif left(s3loadres.statuscode,3) is "200">
-			<cfquery name="imsmm" datasource="uam_god" result="istdmda">
-				insert into media (
-					media_id,
-					media_uri,
-					mime_type,
-					media_type,
-					preview_uri,
-					media_license_id
-				) values (
-					nextval('sq_media_id'),
-					<cfqueryparam value = "#s3loadres.media_uri#" CFSQLType="CF_SQL_VARCHAR">,
-					<cfqueryparam value = "text/plain" CFSQLType="CF_SQL_VARCHAR">,
-					<cfqueryparam value = "text" CFSQLType="CF_SQL_VARCHAR">,
-					NULL,
-					NULL
-				)
-			</cfquery>
-			<cfset rslt.status="OK">
-			<cfset rslt.media_id=istdmda.media_id>
-			<cfreturn SerializeJSON(rslt)>
-		<cfelse>
-			<cfset rslt.status="ERROR: S3 upload failed">
-			<cfreturn SerializeJSON(rslt)>
-		</cfif>
-	</cfoutput>
-</cffunction>
 <!------------------------------------------------------------------------------------>
 <cffunction name="getCodeTableMeta" access="remote">
 	<cfargument name="code_table" type="string" required="false"/>
 	<cftry>
-	<!----cachedwithin="#createtimespan(0,0,60,0)#"---->
-		<cfquery name="r" datasource="uam_god" >
+		<cfquery name="r" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 			select
 				table_name,
 				column_name,
@@ -111,6 +68,8 @@
 	</cftry>
 	<cfreturn r>
 </cffunction>
+
+
 <cffunction name="getS3MMT" output="false" returnType="any" access="remote">
 	<cfargument name="fext" required="yes" type="string">
 	<!---
@@ -491,7 +450,7 @@
 			--->
 			<cfset idburl=URLEncodedFormat('{"catalognumber":"#guid#"}')>
 			<cfhttp result="idbr" url="https://search.idigbio.org/v2/search/records?fields=uuid&rq=#idburl#" method="get" timeout="2"></cfhttp>
-			<cfif idbr.statusCode is "200 OK" and len(idbr.filecontent) gt 0 and isjson(idbr.filecontent)>
+			<cfif left(idbr.statusCode,3) is "200" and len(idbr.filecontent) gt 0 and isjson(idbr.filecontent)>
 				<cfset idb=DeserializeJSON(idbr.filecontent)>
 				<cfloop from ="1" to="#arraylen(idb.items)#" index="i">
 					<cfset thisStruct=idb.items[i]>
@@ -1048,7 +1007,9 @@
 					<cfif StructKeyExists(idx, "ORCID")>
 						<ul>
 							<cfquery name="au" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-								select agent_id from address where ADDRESS_TYPE='ORCID' and address='#idx["ORCID"]#'
+								select agent_id from agent_attribute where deprecation_type is null and 
+									attribute_type='ORCID' and 
+									attribute_value=<cfqueryparam value='#idx["ORCID"]#' cfsqltype="cf_sql_varchar">
 							</cfquery>
 							<cfif au.recordcount gt 0>
 								<li><a href="/agent.cfm?agent_id=#au.agent_id#" target="_blank">[ Arctos Agent ]</a></li>
@@ -1166,154 +1127,6 @@
 	</cfoutput>
 	<cfreturn r>
 </cffunction>
-<!-------------------------------------------------------->
-<cffunction name="makeMBLDownloadFile">
-	 <cfargument name="zid" required="true" type="numeric"/>
-	 <cfquery name="f" datasource="uam_god">
-		select * from cf_temp_zipfiles where zid=#zid#
-	</cfquery>
-	<cfset q=QueryNew("TEMP_original_filename, TEMP_new_filename,MEDIA_URI,MIME_TYPE,MEDIA_TYPE,PREVIEW_URI,media_license,media_label_1,media_label_value_1")>
-	<cfloop query="f">
-		<cfset queryaddrow(q,
-				{
-				TEMP_original_filename=filename,
-				TEMP_new_filename=new_filename,
-				MEDIA_URI=remotepath,
-				MIME_TYPE=mime_type,
-				MEDIA_TYPE=media_type,
-				PREVIEW_URI=remote_preview,
-				media_license='',
-				media_label_1='MD5 checksum',
-				media_label_value_1=md5
-				}
-			)>
-	</cfloop>
-	<!----
-	<cfset  util = CreateObject("component","component.utilities")>
-	<cfset csv = util.QueryToCSV2(Query=q,Fields=q.columnlist)>
-	---->
-	<cfset csv = QueryToCSV2(Query=q,Fields=q.columnlist)>
-
-	<cffile action = "write"
-	    file = "#Application.webDirectory#/download/media_bulk_zip#zid#.csv"
-    	output = "#csv#"
-    	addNewLine = "no"
-    	mode="644">
-</cffunction>
-
-<cffunction name="isProtectedIp" returnType="string" access="public" output="false">
-	<cfargument name="ip" type="string" required="yes">
-	<cfquery name="protected_ip_list" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-		select protected_ip_list from cf_global_settings
-	</cfquery>
-	<cfset isprot=false>
-	<cfloop list="#protected_ip_list.protected_ip_list#" index="i">
-		<cfset lclip=ip>
-		<cfif listlast(i,".") is "*">
-			<cfset i=listDeleteAt(i,listlen(i,'.'),'.')>
-			<cfset lclip=listDeleteAt(lclip,listlen(lclip,'.'),'.')>
-		</cfif>
-		<cfif listlast(i,".") is "*">
-			<cfset i=listDeleteAt(i,listlen(i,'.'),'.')>
-			<cfset lclip=listDeleteAt(lclip,listlen(lclip,'.'),'.')>
-		</cfif>
-		<cfif i is lclip>
-			<cfset isprot=true>
-		</cfif>
-	</cfloop>
-	<cfreturn isprot>
-</cffunction>
-
-<cffunction name="georeferenceAddress" access="remote">
-	<cfargument name="address" type="string" required="yes">
-	<cfargument name="agent_id" type="string" required="no">
-
-
-	<!--- 
-		<!--- census.gov: not very "smart" but given an acceptable format works great --->
-
-		if we got an agent_id, see if we can strip the agent's name out of the address; this occasionally gets
-		under census.gov's 100-character limit
-	---->
-		<cfset r=[=]>
-		<cftry>
-		<cfif len(agent_id) gt 0>
-			<cfquery name="agent_name" datasource="uam_god">
-				select agent_name from agent_name where agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int">
-			</cfquery>
-			<cfloop query="agent_name">
-				<cfset address=replace(address, agent_name, "")>
-			</cfloop>
-		</cfif>
-		<cfset address=replace(address,"%0D"," ","all")>
-		<cfset address=replace(address,"%0A"," ","all")>
-		<cfset address=replace(address,"%2C"," ","all")>
-		<cfset address=replace(address,chr(13)," ","all")>
-		<cfset address=replace(address,chr(10)," ","all")>
-		<cfset address=replace(address,chr(9)," ","all")>
-		<cfset address=replace(address,"%20"," ","all")>
-		<cfset address=replace(address,"  "," ","all")>
-		<cfif len(address) gt 99>
-			<cfloop from="1" to="10" index="i">
-				<cfif listlen(address,' ') gt 1>
-					<cfset address=listdeleteat(address,1,' ')>
-					<cfif len(address) lt 99>
-						<cfcontinue>
-					</cfif>
-				</cfif>
-			</cfloop>
-		</cfif>
-		<cfhttp result="x" method="GET" url="https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?benchmark=Public_AR_Current&format=json&address=#urlencodedformat(address)#"  timeout="20"/>
-			<cfset llresult=DeserializeJSON(x.filecontent)>
-			<cfset r.coords=llresult.result.addressMatches[1].coordinates.y  & "," & llresult.result.addressMatches[1].coordinates.x >
-		<cfcatch>
-			<cfset r.coords="">
-		</cfcatch>
-	</cftry>
-
-
-	<!-----------
-
-	<cfreturn>
-
-	<cftry>
-		<cfif len(agent_id) gt 0>
-			<cfquery name="agent_name" datasource="uam_god">
-				select agent_name from agent_name where agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int">
-			</cfquery>
-
-			<cfloop query="agent_name">
-				<cfset address=replace(address, agent_name, "")>
-			</cfloop>
-		</cfif>
-
-		<cfset address=replace(address,"%0D"," ","all")>
-		<cfset address=replace(address,"%0A"," ","all")>
-		<cfset address=replace(address,"%2C"," ","all")>
-		<cfset address=replace(address,chr(13)," ","all")>
-		<cfset address=replace(address,chr(10)," ","all")>
-		<cfset address=replace(address,chr(9)," ","all")>
-		<cfset address=replace(address,"%20"," ","all")>
-		<cfset address=replace(address,"  "," ","all")>
-	
-		<cfhttp result="x" method="GET" url="https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?benchmark=Public_AR_Current&format=json&address=#urlencodedformat(address)#"  timeout="20"/>
-			<cfset llresult=DeserializeJSON(x.filecontent)>
-			<cfset r.coords=llresult.result.addressMatches[1].coordinates.y  & "," & llresult.result.addressMatches[1].coordinates.x >
-		<cfcatch>
-			<cfset r.coords="">
-		</cfcatch>
-	</cftry>
-
-
-
-
-	---------->
-
-			<cfreturn r>
-
-</cffunction>
-
-
 <!--------------------------------------------->
 <cffunction name="getGeogGeoJSON" returnType="string" access="remote" output="false">
 	<cfargument name="specimen_event_id" type="numeric" required="yes">
@@ -1348,222 +1161,7 @@
 	</cfquery>
 	<cfreturn get_locality_shape.locality_footprint>
 </cffunction>
-<cffunction name="generateDisplayName" returnType="string" access="public">
-	<cfargument name="cid" type="string" required="yes">
-	<cfoutput>
-		<cftry>
-		<cfset nomencode=''>
-		<cfquery name="ct" datasource="uam_god" cachedWithin="#CreateTimeSpan(0,1,0,0)#">
-			select * from cttaxon_term
-		</cfquery>
-		<!--- establish variables --->
-		<cfloop query="ct">
-			<cfset "v_#TAXON_TERM#"=''>
-		</cfloop>
-		<cfquery name="d" datasource="uam_god">
-			select term,term_type from taxon_term where classification_id='#cid#'
-		</cfquery>
-		<!--- set variables --->
-		<cfloop query="d">
-			<cfset "v_#term_type#"=term>
-		</cfloop>
-		<cfset formatstyle=''>
-		<cfif v_nomenclatural_code is "ICBN">
-			<cfset formatstyle='plant'>
-		<cfelseif v_nomenclatural_code is "ICZN">
-			<cfset formatstyle='animal'>
-		<cfelseif v_kingdom is "Plantae">
-			<cfset formatstyle='plant'>
-		<cfelseif v_kingdom is "Animalia">
-			<cfset formatstyle='animal'>
-		</cfif>
-		<cfset gdn=''>
-		<!--- start at the right, add stuff on until we have something ---->
-		<cfif formatstyle is "plant">
-			<cfif len(v_species) gt 0>
-				<!--- most common, deal with it and leave when we can ---->
-				<cfset gdn='<i>#v_species#</i>'>
-				<cfif len(v_author_text) gt 0>
-					<cfset gdn=gdn & ' #v_author_text#'>
-				</cfif>
-				<!---- any subspecific terms we need to care about? ---->
-				<cfquery name="sprank" dbtype="query">
-					select RELATIVE_POSITION from ct where taxon_term='species'
-				</cfquery>
-				<cfset sst=''>
-				<cfloop query="ct">
-					<cfif len(ct.RELATIVE_POSITION) gt 0 and ct.RELATIVE_POSITION gt sprank.RELATIVE_POSITION and len(sst) is 0>
-						<cfif len("v_#taxon_term#") gt 0>
-							<cfset sst=evaluate("v_" & taxon_term)>
-						</cfif>
-					</cfif>
-				</cfloop>
-				<cfif len(sst) gt 0>
-					<cfset itrm=replace(sst,v_species,'')>
-					<cfif listlen(itrm,' ') gt 0>
-						<!--- the last item is a name and needs italicized. The rest is rank stuff and does NOT need italicized. ---->
-						<cfset ttrm=listlast(itrm,' ')>
-						<cfset nttrm=listDeleteAt(itrm,listlen(itrm,' '),' ')>
-						<cfset gdn=gdn & ' #nttrm# <i>#ttrm#</i>'>
-					<cfelseif len(itrm) gt 0>
-						<!--- shuold never, but whatever --->
-						<cfset gdn=gdn & ' <i>#itrm#</i>'>
-					</cfif>
-				</cfif>
-				<cfif len(v_infraspecific_author) gt 0>
-					<cfset gdn=gdn & ' ' & v_infraspecific_author>
-				</cfif>
-			</cfif>
-			<!--- genus separate, because italics ---->
-			<cfif len(gdn) is 0 and len(v_genus) gt 0>
-				<cfset gdn='<i>#v_genus#</i>'>
-				<cfif len(v_author_text) gt 0>
-					<cfset gdn=gdn & ' #v_author_text#'>
-				</cfif>
-			</cfif>
-			<!--- if if we didn't get anything, try scientific_name ---->
-			<cfif len(gdn) is 0 and len(v_scientific_name) gt 0>
-				<cfset gdn=v_scientific_name>
-				<cfif len(v_author_text) gt 0>
-					<cfset gdn=gdn & ' #v_author_text#'>
-				</cfif>
-			</cfif>
-			<cfif len(gdn) is 0>
-				<!---- if we STILL didn't get anything, grab the lowest term ---->
-				<cfquery name="genusrank" dbtype="query">
-					select RELATIVE_POSITION from ct where taxon_term='genus'
-				</cfquery>
-				<cfloop query="ct">
-					<cfif len(RELATIVE_POSITION) gt 0 and RELATIVE_POSITION lt genusrank.RELATIVE_POSITION and len(gdn) is 0>
-						<cfif len("v_#taxon_term#") gt 0>
-							<br>got this one
-							<cfset gdn=evaluate("v_" & taxon_term)>
-						</cfif>
-					</cfif>
-				</cfloop>
-				<cfif len(v_author_text) gt 0>
-					<cfset gdn=gdn & ' #v_author_text#'>
-				</cfif>
-			</cfif>
-		<cfelse>
-			<!---
-				default, I suppose....
 
-			--->
-			<cfif len(v_subspecies) gt 0>
-				<cfset gdn='<i>#v_subspecies#</i>'>
-			<cfelseif len(v_species) gt 0>
-				<cfset gdn='<i>#v_species#</i>'>
-			<cfelseif len(v_genus) gt 0>
-				<cfset gdn='<i>#v_genus#</i>'>
-			<cfelseif len(v_scientific_name) gt 0>
-				<cfset gdn=v_scientific_name>
-			<cfelse>
-				<!---- lowest-ranked term, no italics ---->
-				<cfquery name="genusrank" dbtype="query">
-					select RELATIVE_POSITION from ct where taxon_term='genus'
-				</cfquery>
-				<cfloop query="ct">
-					<cfif len(RELATIVE_POSITION) gt 0 and RELATIVE_POSITION lt genusrank.RELATIVE_POSITION and len(gdn) is 0>
-						<cfif len("v_#taxon_term#") gt 0>
-							<cfset gdn=evaluate("v_" & taxon_term)>
-						</cfif>
-					</cfif>
-				</cfloop>
-			</cfif>
-			<cfif len(v_author_text) gt 0>
-				<cfset gdn=gdn & ' ' & v_author_text>
-			</cfif>
-		</cfif>
-		<cfset gdn=trim(replace(gdn,' ,',',','all'))>
-		<cfset gdn=trim(replace(gdn,'<i></i>','','all'))>
-		 <cfset gdn=reReplace(gdn,"\s+"," ","All")>
-		<cfreturn gdn>
-
-		<cfcatch>
-			<!---
-			<cfreturn 'ERROR: ' & cfcatch.message>
-			---->
-			<cfreturn ''>
-		</cfcatch>
-		</cftry>
-	</cfoutput>
-</cffunction>
-
-<cffunction name="getblocklistHistory" returnType="string" access="public">
-	<cfargument name="ip" required="yes">
-	<!---- look up blocklist history; return email-safe HTML ---->
-	<cfoutput>
-		<cfsavecontent variable="t">
-			<cftry>
-				<cfif listlen(ip,'.') is not 4>
-					<cfabort>
-				</cfif>
-				<cfset sn=listgetat(ip,1,'.') & '.' & listgetat(ip,2,'.')>
-				<cfquery name="bl" datasource="uam_god" cachedWithin="#CreateTimeSpan(0,1,0,0)#">
-					select
-						count(*) c,
-					    CASE when current_date-LISTDATE > 180 then 'expired'
-					      else 'recent'
-					    END dstatus,
-					    status
-				    from
-				        blocklist
-				        where
-				        generated_subnet=<cfqueryparam value = "#sn#" CFSQLType="CF_SQL_VARCHAR">
-				    group by
-					    CASE when current_date-LISTDATE > 180 then 'expired'
-					      else 'recent'
-					    END,
-					    status
-				</cfquery>
-				<cfquery name="blsn" datasource="uam_god" cachedWithin="#CreateTimeSpan(0,1,0,0)#">
-					select
-						count(*) c,
-						round(current_date-INSERT_DATE) days_since_block,
-					    status
-				    from
-				        blocklist_subnet
-				        where
-				        subnet=<cfqueryparam value = "#sn#" CFSQLType="CF_SQL_VARCHAR">
-				        group by
-				   round(current_date-INSERT_DATE),
-				    status
-				</cfquery>
-				Block history:
-				<table border>
-					<tr>
-						<th>BlockAt</th>
-						<th>TimeStatus</th>
-						<th>Status</th>
-						<th>Count</th>
-					</tr>
-					<cfloop query="bl">
-						<tr>
-							<td>IP</td>
-							<td>#dstatus#</td>
-							<td>#status#</td>
-							<td>#c#</td>
-						</tr>
-					</cfloop>
-					<cfloop query="blsn">
-						<tr>
-							<td>subnet</td>
-							<td>#days_since_block#</td>
-							<td>#status#</td>
-							<td>#c#</td>
-						</tr>
-					</cfloop>
-				</table>
-				*** summary data are cached; check Arctos for current ***
-				<cfcatch>
-					----exception getting IP/Subnet info-----
-				</cfcatch>
-				</cftry>
-			</cfsavecontent>
-		</cfoutput>
-	<cfreturn t>
-</cffunction>
 
 
 <cffunction name="loadFileS3" output="false" returnType="any" access="remote">

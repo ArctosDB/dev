@@ -1,3 +1,4 @@
+<cfinclude template="/includes/_includeHeader.cfm">
 <!----------------------------------------------------------------->
 <cfif action is "seeWhatsThere">
 	<cfset numPartAttrs=6>

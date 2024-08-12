@@ -90,9 +90,9 @@ CREATE TRIGGER tr_log_#tabl.table_name#
 		<!--- used in attributes of some sort? ---->
 		<cfquery name="usedforattrs" datasource="uam_god">
 		select sum(c) c from (
-			select count(*) c from ctattribute_code_tables where lower(value_code_table)='#tabl.table_name#'
+			select count(*) c from ctattribute_type where lower(value_code_table)='#tabl.table_name#'
 			union
-			select count(*) c from ctattribute_code_tables where lower(units_code_table)='#tabl.table_name#'
+			select count(*) c from ctattribute_type where lower(unit_code_table)='#tabl.table_name#'
 			union
 			select count(*) c from ctspec_part_att_att where lower(value_code_table)='#tabl.table_name#'
 			union
@@ -144,19 +144,7 @@ CREATE TRIGGER tr_log_#tabl.table_name#
 				BAD!!!! control column not found; manual intervention required!!!!
 			</div>
 		</cfif>
-		<!-----
-
-		just ignoring this for now; shouldn't much happen. Might need to pass CC on to check function if this becomes unmanageable
-		<cfquery name="hasCollectionCode" dbtype="query">
-			select count(*) c from cols where column_name = 'collection_cde'
-		</cfquery>
-		<cfif hasCollectionCode.c gt 0>
-			<cfset hasCC=true>
-		<cfelse>
-			<cfset hasCC=false>
-		</cfif>
-		<br>hasCollectionCode.c====#hasCollectionCode.c#
-		----->
+	
 		<span class="likeLink" onclick="tgl('acgt_#tabl.table_name#')">toggle CT-control code</span>
 		<div id="acgt_#tabl.table_name#" class="hide">
 <textarea rows="100" cols="200">
@@ -190,106 +178,6 @@ CREATE TRIGGER trg_#tabl.table_name#_ud
   BEFORE UPDATE OR DELETE ON #tabl.table_name# FOR EACH ROW
   EXECUTE PROCEDURE trigger_fct_trg_#tabl.table_name#_ud();
 
-<!-----
-DROP TRIGGER IF EXISTS trg_#tabl.table_name#_ud ON #tabl.table_name# CASCADE;
-CREATE OR REPLACE FUNCTION trigger_fct_trg_#tabl.table_name#_ud() RETURNS trigger AS $BODY$
-DECLARE
-  tbls record;
-  cnt int;
-  usedcnt int;
-  old_value varchar;
-BEGIN
-  -- only run this if data are changing; allow docs to update anytime
-  IF TG_OP ='DELETE' or (NEW.#theControlColumnName.column_name# != OLD.#theControlColumnName.column_name#) THEN
-  old_value:=OLD.#theControlColumnName.column_name#;
-  -- find all attributes that use this as value
-  select count(*) into strict cnt from ctattribute_code_tables where lower(value_code_table)=TG_TABLE_NAME;
-  if cnt > 0 then
-    -- this attribute is used as value, see if the actual value is used
-    for tbls in (select attribute_type from ctattribute_code_tables where lower(value_code_table)=TG_TABLE_NAME) loop
-      SELECT COUNT(*) into usedcnt FROM attributes WHERE attribute_type = tbls.attribute_type AND attribute_value = old_value;
-      IF usedcnt > 0 THEN
-        RAISE EXCEPTION '%', old_value || ' is used in attribute value for ' || tbls.attribute_type  USING ERRCODE = '45001';
-      END IF;
-    end loop;
-  end if;
-  -- find all attributes that use this as units
-  select count(*) into strict cnt from ctattribute_code_tables where lower(units_code_table)=TG_TABLE_NAME;
-  if cnt > 0 then
-    -- this attribute is used as units, see if the actual value is used
-    for tbls in (select attribute_type from ctattribute_code_tables where lower(units_code_table)=TG_TABLE_NAME) loop
-      SELECT COUNT(*) into usedcnt FROM attributes WHERE attribute_type = tbls.attribute_type AND attribute_units = old_value;
-      IF usedcnt > 0 THEN
-        RAISE EXCEPTION '%', old_value || ' is used in attribute units for ' || tbls.attribute_type  USING ERRCODE = '45001';
-      END IF;
-    end loop;
-  end if;
-  -- now do the same for part attributes
-  -- find all part attributes that use this as value
-  select count(*) into strict cnt from ctspec_part_att_att where lower(value_code_table)=TG_TABLE_NAME;
-  if cnt > 0 then
-    -- this attribute is used as value, see if the actual value is used
-    for tbls in (select attribute_type from ctspec_part_att_att where lower(value_code_table)=TG_TABLE_NAME) loop
-      SELECT COUNT(*) into usedcnt FROM specimen_part_attribute WHERE attribute_type = tbls.attribute_type AND attribute_value = old_value;
-      IF usedcnt > 0 THEN
-        RAISE EXCEPTION '%', old_value || ' is used in part attribute value for ' || tbls.attribute_type  USING ERRCODE = '45001';
-      END IF;
-    end loop;
-  end if;
-  -- find all part attributes that use this as units
-  select count(*) into strict cnt from ctspec_part_att_att where lower(unit_code_table)=TG_TABLE_NAME;
-  if cnt > 0 then
-    -- this attribute is used as units, see if the actual value is used
-    for tbls in (select attribute_type from ctspec_part_att_att where lower(unit_code_table)=TG_TABLE_NAME) loop
-      SELECT COUNT(*) into usedcnt FROM specimen_part_attribute WHERE attribute_type = tbls.attribute_type AND attribute_units = old_value;
-      IF usedcnt > 0 THEN
-        RAISE EXCEPTION '%', old_value || ' is used in part attribute units for ' || tbls.attribute_type  USING ERRCODE = '45001';
-      END IF;
-    end loop;
-  end if;
-
-  -- now do the same for event attributes
-  -- find all event attributes that use this as value
-  select count(*) into strict cnt from ctcoll_event_att_att where lower(value_code_table)=TG_TABLE_NAME;
-  if cnt > 0 then
-    -- this attribute is used as value, see if the actual value is used
-    for tbls in (select event_attribute_type from ctcoll_event_att_att where lower(value_code_table)=TG_TABLE_NAME) loop
-      SELECT COUNT(*) into usedcnt FROM collecting_event_attributes WHERE event_attribute_type = tbls.event_attribute_type AND event_attribute_value = old_value;
-      IF usedcnt > 0 THEN
-        RAISE EXCEPTION '%', old_value || ' is used in event attribute value for ' || tbls.event_attribute_type  USING ERRCODE = '45001';
-      END IF;
-    end loop;
-  end if;
-  -- find all event attributes that use this as units
-  select count(*) into strict cnt from ctcoll_event_att_att where lower(unit_code_table)=TG_TABLE_NAME;
-  if cnt > 0 then
-    -- this attribute is used as units, see if the actual value is used
-    for tbls in (select attribute_type from ctcoll_event_att_att where lower(unit_code_table)=TG_TABLE_NAME) loop
-      SELECT COUNT(*) into usedcnt FROM collecting_event_attributes WHERE event_attribute_type = tbls.event_attribute_type AND event_attribute_units = old_value;
-      IF usedcnt > 0 THEN
-        RAISE EXCEPTION '%', old_value || ' is used in event attribute units for ' || tbls.event_attribute_type  USING ERRCODE = '45001';
-      END IF;
-    end loop;
-  end if;
-end if;
-
-IF TG_OP = 'DELETE' THEN
-  RETURN OLD;
-ELSE
-  RETURN NEW;
-END IF;
-
-END
-$BODY$
-  LANGUAGE 'plpgsql' SECURITY DEFINER;
--- REVOKE ALL ON FUNCTION trigger_fct_trg_#tabl.table_name#_ud() FROM PUBLIC;
-
-CREATE TRIGGER trg_#tabl.table_name#_ud
-  BEFORE UPDATE OR DELETE ON #tabl.table_name# FOR EACH ROW
-  EXECUTE PROCEDURE trigger_fct_trg_#tabl.table_name#_ud();
-
-
------>
 </textarea>
 		</div>
 </cfloop>

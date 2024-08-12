@@ -10,17 +10,16 @@
 	</cfquery>
 	<cfquery name="getColls" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		SELECT
-			agent_name,
+			preferred_agent_name,
 			collector_role,
 			coll_order,
 			collector.agent_id,
 			collector_id
 		FROM
-			collector,
-			preferred_agent_name
+			collector
+			inner join agent on collector.agent_id=agent.agent_id			
 		WHERE
-			collector.collection_object_id = <cfqueryparam value = "#collection_object_id#" CFSQLType = "CF_SQL_INTEGER"> and
-			collector.agent_id = preferred_agent_name.agent_id
+			collector.collection_object_id = <cfqueryparam value = "#collection_object_id#" CFSQLType = "CF_SQL_INTEGER"> 
 		ORDER BY
 			coll_order
 	</cfquery>
@@ -109,7 +108,7 @@
 								(drag row here)
 							</td>
 							<td>
-								<input type="text" name="name_#i#" id="name_#i#" value="#encodeForHTML(getColls.agent_name)#" class="reqdClr"
+								<input type="text" name="name_#i#" id="name_#i#" value="#encodeForHTML(getColls.preferred_agent_name)#" class="reqdClr"
 									onchange="pickAgentModal('agent_id_#i#','name_#i#',this.value); return false;"
 							 		onKeyPress="return noenter(event);">
 								<input type="hidden" name="agent_id_#i#" id="agent_id_#i#" value="#getColls.agent_id#">
@@ -367,4 +366,3 @@
 		<cflocation url="editColls.cfm?collection_object_id=#collection_object_id#" addtoken="false">
 	</cfoutput>
 </cfif>
-<cf_customizeIFrame>

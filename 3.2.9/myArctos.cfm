@@ -90,7 +90,11 @@
 <!------------------------------------------------------------------->
 <cfif action is "nothing">
 	<cfquery name="getPrefs" datasource="cf_dbuser">
-		select * from cf_users
+		select 
+			username,
+			pw_change_date,
+			operator_agent_id
+		from cf_users
 		where
 		username=<cfqueryparam value='#session.username#' CFSQLType="cf_sql_varchar">
 	</cfquery>
@@ -116,8 +120,10 @@
 	<h2>Welcome back, <b>#getPrefs.username#</b>!</h2>
 	<ul>
 		<li>
-			<a href="ChangePassword.cfm">Change your password</a>
+			<a href="ChangePassword.cfm">Change your password</a> 
 			<cfif isdefined("session.roles") and session.roles contains "coldfusion_user">
+				<!---- https://github.com/ArctosDB/internal/issues/291 ---->
+				(Operators must change password every #Application.max_pw_age# days.)
 				<cfset pwtime =  round(now() - getPrefs.pw_change_date)>
 				<cfset pwage = Application.max_pw_age - pwtime>
 				<cfif pwage lte 0>
@@ -134,17 +140,7 @@
 					</span>
 				</cfif>
 			<cfelse>
-				<!--- doublecheck, if they've never had a login then they can delete ---->
-				 <cfquery name="has_login" datasource="uam_god">
-				 	select 
-				 		count(*) c
-				 	from 
-				 		agent_name 
-				 	where 
-				 		agent_name_type='login' and 
-				 		agent_name=<cfqueryparam value='#session.username#' CFSQLType="cf_sql_varchar">
-				 </cfquery>
-				 <cfif has_login.c eq 0>
+				 <cfif len(getPrefs.operator_agent_id) eq 0>
 				 	<li>
 				 		<a href="myArctos.cfm?action=preDeleteAccount">Delete this account</a>
 				 	</li>
@@ -282,19 +278,18 @@
 		<!---- double-double check ---->
 		<cfquery name="has_login" datasource="uam_god">
 		 	select 
-		 		count(*) c
+		 		operator_agent_id
 		 	from 
-		 		agent_name 
+		 		cf_users 
 		 	where 
-		 		agent_name_type='login' and 
-		 		upper(agent_name)=<cfqueryparam value='#ucase(session.username)#' CFSQLType="cf_sql_varchar">
+		 		lower(username)=<cfqueryparam value='#lcase(session.username)#' CFSQLType="cf_sql_varchar">
 		 </cfquery>
-		 <cfif has_login.c gt 0>
+		 <cfif len(has_login.operator_agent_id) gt 0>
 		 	Ineligible<cfabort>
 		 </cfif>
 
 		<cfquery name="alreadyGotOne" datasource="uam_god">
-			select count(*) c from pg_roles where upper(rolname)=<cfqueryparam value='#ucase(session.username)#' CFSQLType="cf_sql_varchar">
+			select count(*) c from pg_roles where lower(rolname)=<cfqueryparam value='#lcase(session.username)#' CFSQLType="cf_sql_varchar">
 		</cfquery>
 		 <cfif alreadyGotOne.c gt 0>
 		 	Ineligible<cfabort>
@@ -314,14 +309,13 @@
 		<!---- double-double-double check ---->
 		<cfquery name="has_login" datasource="uam_god">
 		 	select 
-		 		count(*) c
+		 		operator_agent_id
 		 	from 
-		 		agent_name 
+		 		cf_users 
 		 	where 
-		 		agent_name_type='login' and 
-		 		agent_name=<cfqueryparam value='#session.username#' CFSQLType="cf_sql_varchar">
+		 		lower(username)=<cfqueryparam value='#lcase(session.username)#' CFSQLType="cf_sql_varchar">
 		 </cfquery>
-		 <cfif has_login.c gt 0>
+		 <cfif has_login.operator_agent_id gt 0>
 		 	Ineligible<cfabort>
 		 </cfif>
 

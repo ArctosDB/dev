@@ -53,7 +53,6 @@
 			collection_id,
 			collection_cde,
 			institution_acronym,
-			descr,
 			collection,
 			web_link,
 			web_link_text,
@@ -62,19 +61,6 @@
 			guid_prefix,
 			citation,
 			catalog_number_format,
-			geographic_description,
-			west_bounding_coordinate,
-			east_bounding_coordinate,
-			north_bounding_coordinate,
-			south_bounding_coordinate,
-			general_taxonomic_coverage,
-			taxon_name_rank,
-			taxon_name_value,
-			purpose_of_collection,
-			alternate_identifier_1,
-			alternate_identifier_2,
-			specimen_preservation_method,
-			time_coverage,
 			genbank_collection,
 			internal_license.display internal_license_disp,
 			external_license.display external_license_disp,
@@ -97,13 +83,12 @@
     <hr>
 
 	<div><strong>GUID_PREFIX:</strong> #coln.GUID_PREFIX#</div>
-	<div><strong>CollectionID:</strong> #coln.COLLECTION_ID#</div>
-	<div><strong>Code Tables:</strong> #coln.COLLECTION_CDE#</div>
+	<div><strong>CollectionID:</strong> #application.serverRootURL#/collection/#coln.guid_prefix#</div>
+	<div><strong>COLLECTION_CDE:</strong> #coln.COLLECTION_CDE#</div>
 	<div><strong>Collection:</strong> #coln.COLLECTION#</div>
 	<div><strong>Institution Acronym:</strong> #coln.INSTITUTION_ACRONYM#</div>
 	<div><strong>INSTITUTION:</strong> #coln.INSTITUTION#</div>
 
-	<div><strong>Description:</strong> #coln.DESCR#</div>
 	<div><strong>Web Link:</strong> #coln.WEB_LINK#</div>
 	<div><strong>Web Link Text:</strong> #coln.WEB_LINK_TEXT#</div>
 	<div><strong>Loan Policy:</strong> #coln.LOAN_POLICY_URL#</div>
@@ -137,8 +122,8 @@
               pg_catalog.pg_roles r
               JOIN pg_catalog.pg_auth_members m ON (m.member = r.oid)
               JOIN pg_roles r1 ON (m.roleid=r1.oid)
-              join agent_name on r.rolname=agent_name.agent_name and agent_name_type='login'
-              join agent on agent_name.agent_id=agent.agent_id
+              join cf_users on r.rolname=lower(cf_users.username)
+              join agent on cf_users.operator_agent_id=agent.agent_id
             WHERE
               r1.rolname=lower(replace('#guid_prefix#',':','_'))
             ORDER BY 1
@@ -203,8 +188,7 @@
 			<br>Username: #users.username#
 			<br>Account Status: #acts.account_status#
 			<br><a href="/AdminUsers.cfm?action=edit&username=#users.username#">manage user account</a>
-			<br><a href="/agents.cfm?agent_id=#users.agent_id#">manage agent record</a>
-			<br><a href="/info/agentActivity.cfm?agent_id=#users.agent_id#">view agent activity report</a>
+			<br><a href="/agent/#users.agent_id#">agent record</a>
 			<cfquery name="cct" datasource="uam_god">
 				select * from collection_contacts where CONTACT_AGENT_ID=#users.agent_id#  and
 				collection_contacts.collection_id=#coln.collection_id#

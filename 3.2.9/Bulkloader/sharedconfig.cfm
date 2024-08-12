@@ -9,9 +9,6 @@
 <cfset bulk_attr_count=30>
 <cfset bulk_otherid_count=5>
 
-
-
-
 <script src="/includes/geolocate.js"></script>
 <style>
 	.requiredCheck{
@@ -29,9 +26,11 @@
 		gap: 1em;
 		margin: .3em;
 	}
+	<!---- https://github.com/ArctosDB/arctos/issues/7386#issuecomment-1933036695 ---->
 	.deeditnote{
 		border:1px solid black;
-		font-size: smaller;
+		font-size: large;
+		font-weight: bold;
 		margin: .2em;
 		padding: .2em;
 	}
@@ -101,6 +100,9 @@
 	}
 	.tblbgstripe{
 		background-color: #f2f2f2;
+	}
+	.identifierValueInput{
+		width: 30em;
 	}
 	
 	input[type="checkbox"][class="allnonecheck"]  {
@@ -764,8 +766,6 @@
 		return jsonDate;
 	}
 	function getDEAccn() {
-		//var institution_acronym=$("#institution_acronym").val();
-		//var collection_cde=$("#collection_cde").val();
 		var InstAcrColnCde=$("#guid_prefix").val();
 		var accnNumber=$("#accn").val();
 		getAccn(accnNumber,'accn',InstAcrColnCde);
@@ -1218,6 +1218,7 @@
 		openOverlay(u,'reduce reuse recycle!');
 	}
 	function identifierBuilder(id) {
+		// see https://github.com/ArctosDB/arctos/issues/7822 this can probably go awaw
 		var u='/form/identifierBuilder.cfm?';
 		u+='idtype=' + $("#identifier_" + id + "_type").val();
 		u+='&idval=' + $("#identifier_" + id + "_value").val();
@@ -1288,7 +1289,7 @@
    	select n_or_s from ctns order by n_or_s
 </cfquery>
 <cfquery name="ctcoll_other_id_type" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-	select distinct other_id_type,sort_order from ctcoll_other_id_type order by sort_order, other_id_type
+	select distinct other_id_type from ctcoll_other_id_type order by other_id_type
 </cfquery>
 
 <cfquery name="ctgeoreference_protocol" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">

@@ -39,11 +39,11 @@
 	<cfloop query="d">
 		<cfquery name="contacts"  datasource="uam_god">
 			select 
-				agent_name.agent_name
+				cf_users.username
 			from
 				collection
 				inner join collection_contacts on collection.collection_id=collection_contacts.collection_id and contact_role='data quality'
-				inner join agent_name on collection_contacts.contact_agent_id=agent_name.agent_id and agent_name_type='login'
+				inner join cf_users on collection_contacts.contact_agent_id=cf_users.operator_agent_id
 			where 
 				guid_prefix=<cfqueryparam value="#guid_prefix#" CFSQLType="CF_SQL_VARCHAR">
 		</cfquery>
@@ -59,7 +59,7 @@
 			</p>
 		</cfsavecontent>
 		<cfinvoke component="/component/functions" method="deliver_notification">
-			<cfinvokeargument name="usernames" value="#valuelist(contacts.agent_name)#">
+			<cfinvokeargument name="usernames" value="#valuelist(contacts.username)#">
 			<cfinvokeargument name="subject" value="Uncited Loaned Records Notification">
 			<cfinvokeargument name="message" value="#msg#">
 			<cfinvokeargument name="email_immediate" value="">

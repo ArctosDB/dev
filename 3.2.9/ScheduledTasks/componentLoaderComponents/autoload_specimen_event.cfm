@@ -233,11 +233,13 @@
 			<cfif x.c is not 1>
 				<cfset problems=listappend(problems,'DATUM is not valid')>
 			</cfif>
-			<cfquery name="x" datasource="uam_god">
-				select count(*) c from ctGEOREFERENCE_PROTOCOL where GEOREFERENCE_PROTOCOL=<cfqueryparam value="#trim(d.GEOREFERENCE_PROTOCOL)#" CFSQLType="CF_SQL_VARCHAR">
-			</cfquery>
-			<cfif x.c is not 1>
-				<cfset problems=listappend(problems,'GEOREFERENCE_PROTOCOL is not valid')>
+			<cfif len(d.GEOREFERENCE_PROTOCOL) gt 0>
+				<cfquery name="x" datasource="uam_god">
+					select count(*) c from ctGEOREFERENCE_PROTOCOL where GEOREFERENCE_PROTOCOL=<cfqueryparam value="#trim(d.GEOREFERENCE_PROTOCOL)#" CFSQLType="CF_SQL_VARCHAR">
+				</cfquery>
+				<cfif x.c is not 1>
+					<cfset problems=listappend(problems,'GEOREFERENCE_PROTOCOL is not valid')>
+				</cfif>
 			</cfif>
 			<cfif len(d.datum) is 0 or len(d.GEOREFERENCE_PROTOCOL) is 0>
 				<cfset problems=listappend(problems,'invalid datum,GEOREFERENCE_PROTOCOL')>
@@ -438,7 +440,9 @@
 						MAX_ERROR_UNITS,
 						DATUM,
 						georeference_protocol,
-						primary_spatial_data
+						primary_spatial_data,
+						last_usr,
+						last_chg
 					)  values (
 						<cfqueryparam value="#locid#" CFSQLType="cf_sql_int">,
 						<cfqueryparam value="#geoid#" CFSQLType="cf_sql_int">,
@@ -456,7 +460,9 @@
 	           			<cfqueryparam value="#d.MAX_ERROR_UNITS#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.MAX_ERROR_UNITS))#">,
 	           			<cfqueryparam value="#loc_datum#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(loc_datum))#">,
 	           			<cfqueryparam value="#d.georeference_protocol#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.georeference_protocol))#">,
-	           			<cfqueryparam value="#d.primary_spatial_data#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.primary_spatial_data))#">
+	           			<cfqueryparam value="#d.primary_spatial_data#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.primary_spatial_data))#">,
+	           			<cfqueryparam value="#d.username#" CFSQLType="CF_SQL_VARCHAR">,
+						<cfqueryparam value="#DateConvert('local2Utc',now())#" cfsqltype="cf_sql_timestamp">
 					)
 				</cfquery>
 			</cfif>

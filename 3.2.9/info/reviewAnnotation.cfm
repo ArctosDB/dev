@@ -1,22 +1,6 @@
 <cfinclude template="/includes/_header.cfm">
 <cfset title="Review Annotations">
 <!--- major revision: after v7.2.3 ---->
-<!--- legacy format, redirect to modern 
-
-
-
-<cfif isdefined("id") and len(id) gt 0>
-	<cfif isdefined("type") and type is "taxon">
-		<cflocation url="reviewAnnotation.cfm?taxon_name_id=#id#" addtoken="false">
-	<cfelseif isdefined("type") and type is "project">
-		<cflocation url="reviewAnnotation.cfm?project_id=#id#" addtoken="false">
-	<cfelseif isdefined("type") and type is "publication">
-		<cflocation url="reviewAnnotation.cfm?publication_id=#id#" addtoken="false">
-	<cfelse>
-		<cflocation url="reviewAnnotation.cfm?collection_object_id=#id#" addtoken="false">
-	</cfif>
-</cfif>
----->
 <div>
 	This page will return a maximum of 500 records.
 </div>
@@ -100,7 +84,6 @@
 	<cfquery name="institution_acronym" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
 		select distinct institution_acronym from collection order by institution_acronym
 	</cfquery>
-
 	<cfparam name="atype" default="">
 	<cfparam name="guid_prefix" default="">
 	<cfparam name="institution" default="">
@@ -141,11 +124,11 @@
 				<span class="likeLink" onclick="$('##reviewer_comment').val('_');">[ NOT NULL (=is reviewed) ]</span>
 				<span class="likeLink" onclick="$('##reviewer_comment').val('NULL');">[ IS NULL (=not reviewed) ]</span>
 			</label>
-			<textarea class="hugetextarea"  name="reviewer_comment" id="reviewer_comment">#reviewer_comment#</textarea>
+			<textarea class="hugetextarea"  name="reviewer_comment" id="reviewer_comment">#EncodeForHTML(canonicalize(reviewer_comment,true,true))#</textarea>
 			<label for="submitter">submitter (Arctos username)</label>
-			<input type="text" size="50" name="submitter" value="#submitter#">
+			<input type="text" size="50" name="submitter" value="#EncodeForHTML(canonicalize(submitter,true,true))#">
 			<label for="reviewer">reviewer</label>
-			<input type="text" size="50" name="reviewer" value="#reviewer#">
+			<input type="text" size="50" name="reviewer" value="#EncodeForHTML(canonicalize(reviewer,true,true))#">
 			<br>
 			<input type="submit" class="lnkBtn" value="Filter">
 			<input type="button" class="clrBtn" onclick="clearForm()" value="Clear Form">

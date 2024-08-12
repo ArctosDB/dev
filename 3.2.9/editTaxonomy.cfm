@@ -138,12 +138,16 @@
 				taxon_term
 			where
 				classification_id=<cfqueryparam CFSQLType="CF_SQL_varchar" value="#classification_id#"> and
-				taxon_name_id=<cfqueryparam CFSQLType="cf_sql_int" value="#taxon_name_id#"> 
+				taxon_name_id=<cfqueryparam CFSQLType="cf_sql_int" value="#taxon_name_id#"> and
+				coalesce(TERM,'') != ''
+			group by 
+				TAXON_NAME_ID,
+				TERM,
+				TERM_TYPE,
+				POSITION_IN_CLASSIFICATION
 			order by
 				POSITION_IN_CLASSIFICATION
 		</cfquery>
-
-
 		<cfset thisSourceID=CreateUUID()>
 		<cftransaction>
 			<!---  new taxon name --->
@@ -1055,39 +1059,6 @@
 </cfoutput>
 </cfif>
 
-<!-----------------Save Vernacular Name----------------------------------------------------------------------------->
-<cfif action is "saveCommon">
-<cfoutput>
-	<cfloop list="#structKeyList(form)#" index="key">
-		<cfif left(key,11) is "COMMON_NAME">
-			<cfset thisCommonNameID=listlast(key,"_")>
-			<cfset thisCommonName=form["COMMON_NAME_#thisCommonNameID#"]>
-			<cfif left(thisCommonNameID,3) is "new">
-				<cfif len(thisCommonName) gt 0>
-					<cfquery name="nwcommon" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-						insert into common_name(TAXON_NAME_ID,COMMON_NAME) values (
-							<cfqueryparam cfsqltype="cf_sql_int" value="#TAXON_NAME_ID#">,
-							<cfqueryparam cfsqltype="CF_SQL_VARCHAR" value="#thisCommonName#">
-						)
-					</cfquery>
-				</cfif>
-			<cfelse>
-				<cfif len(thisCommonName) gt 0>
-					<cfquery name="ucommon" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-						update common_name set common_name=<cfqueryparam cfsqltype="CF_SQL_VARCHAR" value="#thisCommonName#"> where common_name_id=
-						<cfqueryparam cfsqltype="cf_sql_int" value="#thisCommonNameID#">
-					</cfquery>
-				<cfelse>
-					<cfquery name="dcommon" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-						delete from common_name where common_name_id=<cfqueryparam cfsqltype="cf_sql_int" value="#thisCommonNameID#">
-					</cfquery>
-				</cfif>
-			</cfif>
-		</cfif>
-	</cfloop>
-	<cflocation url="editTaxonomy.cfm?Action=editnoclass&taxon_name_id=#taxon_name_id#" addtoken="false">
-</cfoutput>
-</cfif>
 
 <!----------------Validate New Taxon Name---------------------------------------------------------------------------->
 <cfif action is "saveNewName">
@@ -1204,21 +1175,9 @@
 <!---------------Edit Name and Related Data-------------------------------------------------------------------------->
 <cfif action is "editnoclass">
 	<script>
-		function deleteCommon(i){
-			$("#common_name_" + i).val('');
-		}
-		function addCommonName(){
-			var cid=$("#newCommonNames input:last").attr("id");
-			var nid=parseInt(cid.replace('common_name_new','')) + 1;
-			var h='<div><input placeholder="new common name" type="text" id="common_name_new' + nid + '" name="common_name_new' + nid + '" size="50">';
-			h+='<span class="infoLink" onclick="deleteCommon(\'new'+nid+'\');">&nbsp;&nbsp;Clear</span></div>';
-            /***h+='<input type="button" class="delBtn" value="Clear" onclick="deleteCommon(\'new'+nid+'\');">';***/
-            $("#" + cid).parent().after(h);
-		}
         function Openpubview() {
             document.getElementById("pubview").open = true;
         }
-
 	</script>
 
 	<cfoutput>
@@ -1420,110 +1379,8 @@
 			</cfloop>
 		</table>
 		<hr>
-            </details>
-		<cfquery name="common" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			select
-				common_name,
-				common_name_id
-			from common_name where taxon_name_id = <cfqueryparam cfsqltype="cf_sql_int" value="#taxon_name_id#">
-			order by common_name
-		</cfquery>
-        <cfquery name="common" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			select
-				common_name,
-				common_name_id
-			from common_name where taxon_name_id = <cfqueryparam cfsqltype="cf_sql_int" value="#taxon_name_id#">
-			order by common_name
-		</cfquery>
-        <details open class="expdet">
-            <summary>Add or Edit Common Names Associated with <em>#thisname.scientific_name#</em></summary>
-            <p style="text-indent: 25px">
-                <a href="http://handbook.arctosdb.org/documentation/taxonomy.html##common-names" class="handbook" target="_blank">Common Name Documentation</a>
-                &nbsp;
-                <span class="caution">Caution</span>: no changes will be saved without "save all common name changes" button at the bottom of the form.<br>
-            </p>
-            <h3>Add Common Names</h3>
-		<form name="commonname" method="post" action="editTaxonomy.cfm">
-			<input type="hidden" name="taxon_name_id" value="#taxon_name_id#">
-			<input type="hidden" name="action" value="saveCommon">
-            <div id="newCommonNames" class="newRec">
-				<div class="likeLink" onclick="addCommonName()">Add Rows for new Common Names</div>
-				<div>
-					<input placeholder="new common name" type="text" id="common_name_new1" name="common_name_new1" size="50">
-                    <!--input type="button" class="delBtn" value="Clear" onclick="deleteCommon('new1');"-->
-					<span class="infoLink" onclick="deleteCommon('new1');">Clear</span>
-				</div>
-			</div>
-            <h3>Edit Existing Common Names</h3>
-            <table border="1">
-                <tr>
-                    <th>Common Name</th>
-                    <th>Action</th>
-                </tr>
-                <cfloop query="common">
-                    <tr>
-                        <td>
-                            <input placeholder="common name" type="text" id="common_name_#common_name_id#" name="common_name_#common_name_id#" value="#common_name#" size="50">
-                        </td>
-                        <td>
-                            <input type="button" class="delBtn" value="Mark to Delete" onclick="deleteCommon(#common_name_id#);">
-                        </td>
-                    </tr>
-                </cfloop>
-            </table>
-			<br><input type="submit" value="Save all common name changes" class="savBtn">
-		</form>
-		<hr>
-        </details>
-            <!--details class="expdet">
-            <summary>Add or Edit Associated Common Names</summary>
-            <p style="text-indent: 25px">
-                <a href="http://handbook.arctosdb.org/documentation/taxonomy.html##common-names" class="newWinLocal">[ Common Name Documentation ]</a>
-            </p>
-            <h3>Add Common Names</h3>
-		<form name="commonname" method="post" action="editTaxonomy.cfm">
-			<input type="hidden" name="taxon_name_id" value="#taxon_name_id#">
-			<input type="hidden" name="action" value="saveCommon">
-        <div class="likeLink" onclick="addCommonName()">Add a Common Name</div>
-        <table id="newCommonNames" class="newRec">
-            <tr>
-				<td>
-                    <div class="likeLink" onclick="addCommonName()">Add a Common Name</div>
-                </td>
-            <tr>
-            <tr>
-				<td>
-                    <input placeholder="new common name" type="text" id="common_name_new1" name="common_name_new1" size="50">
-                </td>
-                <td>
-					<span class="infoLink" onclick="deleteCommon('new1');">delete</span>
-				</td>
-			</tr>
-        </table>
-            <h3>Edit Existing Common Names</h3>
-		<table>
-            <cfloop query="common">
-				<tr>
-					<td>
-                        <input placeholder="common name" type="text" id="common_name_#common_name_id#" name="common_name_#common_name_id#" value="#common_name#" size="50">
-                    </td>
-                    <td>
-					   <span class="infoLink" onclick="deleteCommon(#common_name_id#);">delete</span>
-                    </td>
-				</tr>
-			</cfloop>
-			<tr id="newCommonNames" class="newRec">
-				<div class="likeLink" onclick="addCommonName()">Add a Row</div>
-				<td>
-					<input placeholder="new common name" type="text" id="common_name_new1" name="common_name_new1" size="50">
-					<span class="infoLink" onclick="deleteCommon('new1');">delete</span>
-				</td>
-			</tr>
-        </table>
-		<br><input type="submit" value="Save all common name changes" class="savBtn">
-		</form>
-		<hr>
-        </details-->
+
+          
         <details open class="expdet">
             <summary>
                 Edit Taxon Name and Name Type for <em>#thisname.scientific_name#</em>

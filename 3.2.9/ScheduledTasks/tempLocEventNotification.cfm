@@ -16,21 +16,21 @@
 <cfoutput>
 	<cfquery name="l" datasource="uam_god">
 		select 
-			agent_name.agent_name
+			cf_users.username
 		from
 			locality_archive
 			inner join locality on locality_archive.locality_id=locality.locality_id
-			inner join agent_name on locality_archive.CHANGED_AGENT_ID=agent_name.agent_id and agent_name_type='login'
+			inner join cf_users on locality_archive.CHANGED_AGENT_ID=cf_users.operator_agent_id
 		where 
 			locality.locality_name='temp_'||locality.locality_id
 	</cfquery>
 	<cfquery name="c" datasource="uam_god">
 		select 
-			agent_name.agent_name
+			cf_users.username
 		from
 			collecting_event_archive
 			inner join collecting_event on collecting_event_archive.collecting_event_id=collecting_event.collecting_event_id
-			inner join agent_name on collecting_event_archive.CHANGED_AGENT_ID=agent_name.agent_id and agent_name_type='login'
+			inner join cf_users on collecting_event_archive.CHANGED_AGENT_ID=cf_users.operator_agent_id
 		where 
 			collecting_event.collecting_event_name='temp_'||collecting_event.collecting_event_id
 	</cfquery>
@@ -38,8 +38,8 @@
 	<cfif l.recordcount gt 1 or c.recordcount gt 1>
 
 		<cfset usrs="">
-		<cfset usrs=listappend(usrs,valuelist(l.agent_name))>
-		<cfset usrs=listappend(usrs,valuelist(c.agent_name))>
+		<cfset usrs=listappend(usrs,valuelist(l.username))>
+		<cfset usrs=listappend(usrs,valuelist(c.username))>
 		<cfsavecontent variable="msg">
 			Temp localities or events have been detected. You may find these by searching locality or event name `temp_`. Please un-name any
 			temporarily-named localities or events for which you no longer need a name.

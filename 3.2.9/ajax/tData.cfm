@@ -75,7 +75,7 @@
 		<cfabort>
 	</cfif>
 	<cfquery name="getc" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-		select lower(value_code_table) as value_code_table from ctattribute_code_tables where attribute_type=<cfqueryparam value = "#att_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(att_type))#">
+		select lower(value_code_table) as value_code_table from ctattribute_type where attribute_type=<cfqueryparam value = "#att_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(att_type))#">
 	</cfquery>
 	<cfif len(getc.value_code_table) is 0>
 		<cfabort>
@@ -133,17 +133,20 @@
 </cfif>
 
 <cfif action is "suggestLocAttVal">
-	<cfif not isdefined("loc_att_type") or len(loc_att_type) is 0>
+	<cfif not isdefined("att_type") or len(att_type) is 0>
 		<cfabort>
 	</cfif>
 	<cfquery name="gtc" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
-		select value_code_table from ctlocality_att_att where attribute_type=<cfqueryparam value = "#loc_att_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(loc_att_type))#">
+		select value_code_table from ctlocality_attribute_type where attribute_type=<cfqueryparam value = "#att_type#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(att_type))#">
 	</cfquery>
 	<cfif len(gtc.value_code_table) is 0>
 		<cfabort>
 	</cfif>
+	<!---- get this with
+		select column_name from information_schema.columns where table_name in (select value_code_table from ctlocality_attribute_type union select unit_code_table from ctlocality_attribute_type ) group by column_name order by column_name;
+	---->
 	<cfquery name="cname" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
-		select column_name from information_schema.columns where table_name='#gtc.value_code_table#' and column_name not in ('description')
+		select column_name from information_schema.columns where table_name=<cfqueryparam value="#gtc.value_code_table#" cfsqltype="cf_sql_varchar"> and column_name not in ('description','documentation_url','issue_url','search_terms','water_body_type')
 	</cfquery>
 	<cfif cname.recordcount is not 1>
 		<cfabort>
@@ -264,12 +267,13 @@
 	<!------------ https://github.com/ArctosDB/arctos/issues/5978 ----------->
 	<cfquery name="sugg_agent" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedwithin="#createtimespan(0,0,60,0)#">
 		select
-			preferred_agent_name 
+		preferred_agent_name 
 		from
-			agent
-			inner join agent_name on agent.agent_id=agent_name.agent_id
+		agent
+		inner join agent_attribute on agent.agent_id=agent_attribute.agent_id and deprecation_type is null
+		inner join ctagent_attribute_type on agent_attribute.attribute_type=ctagent_attribute_type.attribute_type and purpose='name'
 		where
-			agent_name.agent_name ilike <cfqueryparam value="%#q#%" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(q))#">
+		agent_attribute.attribute_value ilike  <cfqueryparam value="%#q#%" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(q))#">
 		group by preferred_agent_name
 		order by preferred_agent_name
 	</cfquery>

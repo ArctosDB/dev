@@ -178,19 +178,19 @@ select temp_randomizelocdata();
 
 		<cfquery name="cc" datasource="uam_god">
 				select
-					agent_name
+					username
 				FROM
 					collection_contacts
-					inner join agent_name on collection_contacts.contact_agent_id=agent_name.agent_id and agent_name_type='login'
+					inner join cf_users on collection_contacts.contact_agent_id=cf_users.operator_agent_id
 				where
 					collection_contacts.contact_role='data quality' and
 					collection_contacts.collection_id in ( <cfqueryparam value="#valuelist(d.collection_id)#" CFSQLType="cf_sql_int" list="true">)
 				group by
-					agent_name
+					username
 		</cfquery>
 
 		<cfinvoke component="/component/functions" method="deliver_notification">
-			<cfinvokeargument name="usernames" value="#valuelist(cc.agent_name)#">
+			<cfinvokeargument name="usernames" value="#valuelist(cc.username)#">
 			<cfinvokeargument name="subject" value="Locality Change Notification">
 			<cfinvokeargument name="message" value="#bdy#">
 			<cfinvokeargument name="email_immediate" value="">

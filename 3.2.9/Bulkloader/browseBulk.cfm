@@ -18,7 +18,6 @@
 	<!---- why is htis here??
 	<link rel="stylesheet" type="text/css" href="/includes/style.min.css"/>
 	---->
-
 	<script>
 		function addFltr(id){
 			var ids=$("#key").val();

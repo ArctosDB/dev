@@ -1,21 +1,29 @@
 <cfinclude template="/includes/_includeHeader.cfm">
 <script>
 	function parseSomeJSON(){
-		$("div[id^='pid_']").each(function(e){
-			var r = $.parseJSON($(this).html());
-			var oneid=r[0];
-			var str = JSON.stringify(oneid, null, 2);
-			$("#" + (this).id).html('<pre>' + str + '</pre>');
+		$(".jsondatacell").each(function(e){
+			try {
+				var r = $.parseJSON($(this).html());
+				//var oneid=r[0];
+				//var str = JSON.stringify(oneid, null, 2);
+				var str = JSON.stringify(r, null, 2);
+				$("#" + (this).id).html('<pre>' + str + '</pre>');
+			} catch (error) {
+				console.log('catchdie');
+				console.log(error);
+				//$("#" + (this).id).html('JSON PARSE FAIL');
+			}
 		});
+
 	}
 	function saveGetRelatedSettings(thenSubmit){
-		//console.log('saveGetRelatedSettings: ' + thenSubmit);
 		var stgs={};
 		stgs.relpick_event=$("#relpick_event").is(':checked');
 		stgs.relpick_locality=$("#relpick_locality").is(':checked');
 		stgs.relpick_collector=$("#relpick_collector").is(':checked');
 		stgs.relpick_attributes=$("#relpick_attributes").is(':checked');
 		stgs.relpick_identification=$("#relpick_identification").is(':checked');
+		stgs.relpick_identifiers=$("#relpick_identifiers").is(':checked');
 		stgs.id_references=$("#id_references").val();
 		var remIfCk=["remember_issuedby","remember_idtype","remember_idval","remember_guid_prefix","remember_catnum"];		
 		for (i=0;i<remIfCk.length;i++) {
@@ -43,14 +51,22 @@
 					//console.log('gonna submit');
 					//$("#frm_s").submit();
 					var gurl='/form/getRelatedData_guts.cfm';
+					gurl+='?search_identifier=' + encodeURIComponent($("#search_identifier").val());
+					<!----
 					gurl+='?catnum=' + encodeURIComponent($("#catnum").val());
 					gurl+='&guid_prefix=' + encodeURIComponent($("#guid_prefix").val());
 					gurl+='&issuedby=' + encodeURIComponent($("#issuedby").val());
 					gurl+='&idtype=' + encodeURIComponent($("#idtype").val());
 					gurl+='&idval=' + encodeURIComponent($("#idval").val());
+					---->
+
+					$("#getRelatedDataGutsGoHere").html('<img src="/images/indicator.gif">');
 					$.get( gurl, function( data ) {
    						 //console.log(data);
    						 $("#getRelatedDataGutsGoHere").html(data);
+   						 
+
+
    						 parseSomeJSON();
 					});
 				}
@@ -62,12 +78,31 @@
 			saveGetRelatedSettings();
 			var j=$("#json_" + id).val();
 			const obj = JSON.parse(j);
-			//console.log('made obj');
 			var ev=$("#relpick_event").is(':checked');
 			var lo=$("#relpick_locality").is(':checked');
 			var co=$("#relpick_collector").is(':checked');
 			var atr=$("#relpick_attributes").is(':checked');
 			var idr=$("#relpick_identification").is(':checked');
+			var ids=$("#relpick_identifiers").is(':checked');
+			<!---- https://github.com/ArctosDB/arctos/issues/7335 ---->			
+			if (ids==true){	
+				var rids=obj.IDS;
+				var ids=JSON.parse(rids);
+				if (ids != null){
+					var pid=2;
+					for (i=0;i<ids.length;i++) {
+						// 1 is for the linking ID, put extra IDs where they'll fit, start with 2
+						parent.jQuery("#identifier_" + pid + "_issued_by").val(ids[i].issued_by);
+						parent.jQuery("#identifier_" + pid + "_type").val(ids[i].identifier_type);
+						parent.jQuery("#identifier_" + pid + "_value").val(ids[i].identifier);
+						parent.jQuery("#identifier_" + pid + "_relationship").val('');
+						parent.jQuery("#identifier_" + pid + "_remark").val(ids[i].remarks);
+						pid++;
+					}
+				}
+			}
+
+
 			if (idr==true){
 				//console.log('obj.IDENTS');
 				//console.log(obj.IDENTS);
@@ -128,16 +163,14 @@
 			if (co==true){
 				var rcls=obj.COLLS;
 				var cls=JSON.parse(rcls);
-				//console.log('made cls');
-				// first purge any existing
-				for (var pid = 1; i <=10 ; i++) {
-					parent.jQuery("#agent_" + pid + "_role").val('').removeClass('reqdClr');
-					parent.jQuery("#agent_" + pid + "_name").val('').removeClass('reqdClr');
+				for (var i = 1; i <=10 ; i++) {
+					parent.jQuery("#agent_" + i + "_role").val('').removeClass('reqdClr');
+					parent.jQuery("#agent_" + i + "_name").val('').removeClass('reqdClr');
 				}
 				for (var i = 0; i < cls.length; i++) {
 				    var rn=i+1;
-					parent.jQuery("#agent_" + pid + "_role").val(cls[i].collector_role).addClass('highlightst');
-					parent.jQuery("#agent_" + pid + "_name").val(cls[i].preferred_agent_name).addClass('highlightst');
+					parent.jQuery("#agent_" + rn + "_role").val(cls[i].collector_role).addClass('highlightst');
+					parent.jQuery("#agent_" + rn + "_name").val(cls[i].preferred_agent_name).addClass('highlightst');
 				}
 			}
 			if (atr==true){
@@ -171,8 +204,8 @@
 			var reln=$("#id_references").val();
 			if (reln.length>0){
 				var i=$("#clickedfrom").val();
-				parent.$("#identifier_" + i + "_type").val('identifier').addClass('highlightst');
-				parent.$("#identifier_" + i + "_issued_by").val(obj.collection_agent).addClass('highlightst');
+				parent.$("#identifier_" + i + "_type").val('Arctos record GUID').addClass('highlightst');
+				parent.$("#identifier_" + i + "_issued_by").val('').addClass('highlightst');
 				parent.$("#identifier_" + i + "_value").val(obj.qualified_guid).addClass('highlightst');
 				parent.$("#identifier_" + i + "_relationship").val(reln).addClass('highlightst');
 			}
@@ -184,12 +217,52 @@
 		}
 	}
 	jQuery(document).ready(function() {
+		var i=$("#clickedfrom").val();
+		var theSrcID=parent.$("#identifier_" + i + "_value").val();
+		if (theSrcID.length > 0){
+			$("#search_identifier").val(theSrcID);
+			saveGetRelatedSettings('yoyogo');
+		}
+
+
+		parseSomeJSON();
+
+		<!---------
+
+
+
+
 		$("div[id^='pid_']").each(function(e){
 			var r = $.parseJSON($(this).html());
 			var oneid=r[0];
 			var str = JSON.stringify(oneid, null, 2);
 			$("#" + (this).id).html('<pre>' + str + '</pre>');
 		});
+		$("div[id^='pidr_']").each(function(e){
+			var r = $.parseJSON($(this).html());
+			var oneid=r[0];
+			var str = JSON.stringify(oneid, null, 2);
+			$("#" + (this).id).html('<pre>' + str + '</pre>');
+		});
+
+
+
+		$("div[id^='pida_']").each(function(e){
+
+			console.log(e);
+
+			var r = $.parseJSON($(this).html());
+
+
+			console.log(r);
+
+
+			var oneid=r[0];
+			var str = JSON.stringify(oneid, null, 2);
+			$("#" + (this).id).html('<pre>' + str + '</pre>');
+		});
+		------------->
+
 		$("#frm_s").on('submit', function (e) {
 		    e.preventDefault();
 		    saveGetRelatedSettings('yoyogo');
@@ -217,7 +290,7 @@
 		font-weight: bold;
 	}
 
-	.idjson{
+	.jsondatacell{
 		max-height: 10em;
 		max-width:50em;
 		overflow: auto;
@@ -231,6 +304,24 @@
 	}
 </style>
 <cfoutput>
+
+
+	<cfparam name="relpick_event" default="false">
+	<cfparam name="relpick_locality" default="false">
+	<cfparam name="relpick_collector" default="false">
+	<cfparam name="relpick_attributes" default="false">
+	<cfparam name="relpick_identification" default="false">
+	<cfparam name="relpick_identifiers" default="false">
+
+
+	<!----------
+
+		https://github.com/ArctosDB/arctos/issues/7808
+
+
+		simplify, drastically
+
+
 	<cfquery name="ctOtherIdType" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 		SELECT other_id_type,sort_order FROM ctColl_Other_id_type order by sort_order,other_id_type
     </cfquery>
@@ -240,11 +331,7 @@
 	<cfquery name="ctid_references" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
 		select id_references from ctid_references where id_references != 'self' order by id_references
 	</cfquery>
-	<cfparam name="relpick_event" default="false">
-	<cfparam name="relpick_locality" default="false">
-	<cfparam name="relpick_collector" default="false">
-	<cfparam name="relpick_attributes" default="false">
-	<cfparam name="relpick_identification" default="false">
+	
 	<cfparam name="remember_issuedby" default="">
 	<cfparam name="remember_idtype" default="">
 	<cfparam name="remember_idval" default="">
@@ -258,6 +345,15 @@
 	<cfparam name="idval" default="">
 	<cfparam name="id_references" default="">
 
+	----------->
+
+
+	<cfquery name="ctid_references" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
+		select id_references from ctid_references where id_references != 'self' order by id_references
+	</cfquery>
+
+	<cfparam name="id_references" default="">
+	<cfparam name="search_identifier" default="">
 	<cfquery name="desettings" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 		select
 		data_entry_related_settings::varchar
@@ -266,6 +362,19 @@
 		where
 		username=<cfqueryparam CFSQLType="CF_SQL_varchar" value="#session.username#">
 	</cfquery>
+	<cfif isJSON(desettings.data_entry_related_settings)>
+        <cfset sobj=deSerializeJSON(desettings.data_entry_related_settings)>
+    <cfelse>
+        <cfset sobj="">
+    </cfif>
+	<cfloop collection="#sobj#" item="itm">
+		<cfset "#itm#"=sobj[itm]>
+	</cfloop>
+
+
+	<!--------
+
+
 
 	<cfif isJSON(desettings.data_entry_related_settings)>
         <cfset sobj=deSerializeJSON(desettings.data_entry_related_settings)>
@@ -291,6 +400,7 @@
 	<cfif len(idval) is 0 and len(remember_idval) gt 0>
 		<cfset idval=remember_idval>
 	</cfif>
+	------->
 	<div class="aboot">
 		<ul>
 			<li>This form includes public data only</li>
@@ -306,9 +416,11 @@
 	<div id="frmWrapper">
 		<div id="frmSrch">
 			<div class="slabel">
-		    	First Step: Find Record (check boxes to remember values)
+		    	First Step: Find Record
 		    </div>
-			<form name="frm_s" id="frm_s" >
+			<form name="frm_s" id="frm_s">
+
+				<!-----------
 				<label for="issuedby">
 					IssuedBy
 				</label>
@@ -352,8 +464,16 @@
 				<input type="text" name="catnum" value="#catnum#" id="catnum">
 				<input type="checkbox" name="remember_catnum" id="remember_catnum" <cfif len(remember_catnum) gt 0>checked</cfif>>
 
-				<input type="hidden" name="clickedfrom" value="#clickedfrom#" id="clickedfrom">
 				<br>
+				---->
+
+
+				<input type="hidden" name="clickedfrom" value="#clickedfrom#" id="clickedfrom">
+
+				<label for="search_identifier">
+					GUID, triplet, catalog number, or identifier
+				</label>
+				<input size="80" type="text" name="search_identifier" value="#search_identifier#" id="search_identifier">
 				<input type="submit" class="lnkBtn" value="go">
 			</form>
 		</div>
@@ -361,8 +481,6 @@
 			<div class="slabel">
 		    	Second Step: Choose what to pull
 		    </div>
-
-
 			<table border>
 				<tr>
 					<th>Data</th>
@@ -399,11 +517,18 @@
 					</td>
 				</tr>
 				<tr>
+					<td>Identifiers</td>
+					<td>
+						<input id="relpick_identifiers" <cfif relpick_identifiers is 1>checked="checked"</cfif> type="checkbox">
+					</td>
+				</tr>
+				<tr>
 					<td>Relationship</td>
 					<td>
 						<cfset x=id_references>
 						<select name="id_references" id="id_references">
 							<option value="">Pick a value to create a relationship</option>
+							<option value="">-no relationship-</option>
 							<cfloop query="ctid_references">
 								<option <cfif x is ctid_references.id_references> selected="selected" </cfif> value="#id_references#">#id_references#</option>
 							</cfloop>

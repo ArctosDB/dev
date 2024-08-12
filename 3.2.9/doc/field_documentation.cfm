@@ -1,4 +1,5 @@
 <cfinclude template="/includes/_header.cfm">
+<cfset title='Documentation'>
 <style>
 	tr:hover {
 		background-color: yellowgreen;
@@ -91,10 +92,10 @@
 					<tr id="#local_documentation_id#">
 						<td><input type="text" name="variable_name" value="#variable_name#" size="25" class="reqdClr" required></td>
 						<td><input type="text" name="display_text" value="#display_text#" size="25" class="reqdClr" required></td>
-						<td><input type="text" name="controlled_vocabulary"  value="#controlled_vocabulary#" size="25"></td>
-						<td><input type="text" name="documentation_link" value="#documentation_link#" size="40"></td>
-						<td><textarea class="largetextarea" name="search_hint">#search_hint#</textarea></td>
-						<td><textarea class="largetextarea" name="definition">#definition#</textarea></td>
+						<td><input type="text" name="controlled_vocabulary"  value="#controlled_vocabulary#" size="25" placeholder="controlled_vocabulary"></td>
+						<td><input type="text" name="documentation_link" value="#documentation_link#" size="40" placeholder="documentation_link"></td>
+						<td><textarea class="largetextarea" name="search_hint" placeholder="search_hint">#search_hint#</textarea></td>
+						<td><textarea class="largetextarea" name="definition" placeholder="definition">#definition#</textarea></td>
 						<td>
 							<input type="submit" class="savBtn" value="Save">
 							<input type="button" class="delBtn" value="Delete" onclick="document.location='field_documentation.cfm?action=delete&local_documentation_id=#local_documentation_id#&trm=#encodeForURL(variable_name)#';">

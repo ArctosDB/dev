@@ -498,7 +498,7 @@
 								<input type="button"
 									value="Print"
 									class="lnkBtn"
-									onclick="window.open('Reports/report_printer.cfm?container_id=#getCont.container_id#');">
+									onclick="window.open('Reports/reporter.cfm?container_id=#getCont.container_id#');">
 							</td>
 							<td>
 								<cfif listfindnocase(session.roles,'admin_container')>
@@ -508,6 +508,7 @@
 										onclick="form1.action.value='delete';confirmDelete('form1');" >
 								</cfif>
 							</td>
+							<!-----
 							<td>
 								<cfif listfindnocase(session.roles,'admin_container')>
 									<input type="button"
@@ -516,6 +517,7 @@
 										onclick="form1.action.value='newContainer';submit();">
 								</cfif>
 							</td>
+							---->
 							<td>
 								<cfif getCont.parent_container_id gt 0>
 									<input type="button"
@@ -1080,6 +1082,8 @@
 		<cflocation url="EditContainer.cfm?action=nothing&container_id=#nextContainer.newid#" addtoken="false">
 	</cfoutput>
 </cfif>
+
+<!---------
 <!---------------------------------------------->
 <cfif action is "newContainer">
 	<cfset title="Create Container">
@@ -1208,5 +1212,6 @@
 		</script>
 	</cfoutput>
 </cfif>
+---------->
 <!---------------------------------------------------->
 <cfinclude template="/includes/_footer.cfm">

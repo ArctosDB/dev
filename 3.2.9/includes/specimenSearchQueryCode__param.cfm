@@ -8,7 +8,6 @@
 		o==>operator
 		t==>term to match
 		v==>value to match
-	* mapurl
 
 
 
@@ -18,7 +17,6 @@
 <cfset tblList='cataloged_item'>
 <cfset qp=[]>
 <cfset tbls="">
-<cfset mapurl="">
 <cfset isLocalitySearch=false>
 <!-------------------------------- convert --------------------------->
 <cffunction name="getMeters" returntype="numeric" output="false">
@@ -70,7 +68,6 @@
 	<cfif left(year,1) is '='>
 		<cfset year=right(year,len(year)-1)>
 	</cfif>
-	<cfset mapurl = listappend(mapurl,"year=#year#","&")>
 	<cfset tblList=listappend(tblList,'specimen_event')>
 
 	<cfset tblList=listappend(tblList,'collecting_event')>
@@ -104,7 +101,6 @@
 	<cfif left(month,1) is '='>
 		<cfset month=right(month,len(month)-1)>
 	</cfif>
-	<cfset mapurl = "#mapurl#&month=#month#">
 	<cfif  compare(month,"NULL") is 0>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -129,7 +125,6 @@
 	<cfif left(day,1) is '='>
 		<cfset day=right(day,len(day)-1)>
 	</cfif>
-	<cfset mapurl = "#mapurl#&day=#day#">
 	<cfif  compare(day,"NULL") is 0>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -150,7 +145,6 @@
 </cfif>
 <cfif isdefined("begYear") AND len(begYear) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&begYear=#begYear#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfif  compare(begYear,"NULL") is 0>
@@ -173,8 +167,6 @@
 </cfif>
 <cfif isdefined("begMon") AND len(begMon) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&begMon=#begMon#">
-
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 		<cfset thisrow={}>
@@ -187,7 +179,6 @@
 </cfif>
 <cfif isdefined("begDay") AND len(begDay) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&begDay=#begDay#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset thisrow={}>
@@ -200,7 +191,6 @@
 </cfif>
 <cfif isdefined("endYear") AND len(endYear) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&endYear=#endYear#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfif  compare(endYear,"NULL") is 0>
@@ -223,7 +213,6 @@
 </cfif>
 <cfif isdefined("endMon") AND len(endMon) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&endMon=#endMon#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset thisrow={}>
@@ -236,7 +225,6 @@
 </cfif>
 <cfif isdefined("endDay") AND len(endDay) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&endDay=#endDay#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset thisrow={}>
@@ -249,7 +237,6 @@
 </cfif>
 <cfif isdefined("specimen_event_id") AND len(specimen_event_id) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&specimen_event_id=#specimen_event_id#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -261,7 +248,6 @@
 </cfif>
 <cfif isdefined("collecting_event_id") AND len(collecting_event_id) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&collecting_event_id=#collecting_event_id#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="true">
@@ -273,7 +259,6 @@
 </cfif>
 <cfif isdefined("coll_event_remarks") AND len(coll_event_remarks) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&coll_event_remarks=#coll_event_remarks#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset thisrow={}>
@@ -286,15 +271,22 @@
 </cfif>
 <cfif isdefined("verificationstatus") AND len(verificationstatus) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&verificationstatus=#verificationstatus#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
-	<cfif left(verificationstatus,1) is '!'>
+	<cfif compare(verificationstatus,"NULL") is 0>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
-		<cfset thisrow.d="cf_sql_varchar">
+		<cfset thisrow.d="isnull">
 		<cfset thisrow.t="specimen_event.verificationstatus">
-		<cfset thisrow.o="!=">
-		<cfset thisrow.v='#right(verificationstatus,len(verificationstatus)-1)#'>
+		<cfset thisrow.o="">
+		<cfset thisrow.v=''>
+		<cfset arrayappend(qp,thisrow)>
+	<cfelseif compare(verificationstatus,"NOTNULL") is 0>
+		<cfset thisrow={}>
+		<cfset thisrow.l="false">
+		<cfset thisrow.d="notnull">
+		<cfset thisrow.t="specimen_event.verificationstatus">
+		<cfset thisrow.o="">
+		<cfset thisrow.v=''>
 		<cfset arrayappend(qp,thisrow)>
 	<cfelse>
 		<cfset thisrow={}>
@@ -308,7 +300,6 @@
 </cfif>
 <cfif isdefined("locality_id") AND len(locality_id) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&locality_id=#locality_id#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset thisrow={}>
@@ -321,7 +312,6 @@
 </cfif>
 <cfif isdefined("inMon") AND len(inMon) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&inMon=#inMon#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset thisrow={}>
@@ -341,7 +331,6 @@
 </cfif>
 <cfif isdefined("verbatim_date") AND len(verbatim_date) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&verbatim_date=#verbatim_date#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset thisrow={}>
@@ -354,11 +343,8 @@
 </cfif>
 <cfif isdefined("began_date") AND len(began_date) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&began_date=#began_date#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
-
-
 	<cfif compare(began_date,"NULL") is 0>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -379,7 +365,6 @@
 </cfif>
 <cfif isdefined("ended_date") AND len(ended_date) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&ended_date=#ended_date#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfif compare(ended_date,"NULL") is 0>
@@ -402,8 +387,6 @@
 </cfif>
 <cfif isdefined("chronological_extent") AND len(chronological_extent) gt 0>
 	<cfset isLocalitySearch=true>
-
-	<cfset mapurl = "#mapurl#&chronological_extent=#chronological_extent#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset thisrow={}>
@@ -431,7 +414,6 @@
 <!---- rcoords is round(n,1) concatenated coordinates from spatial browse ---->
 <cfif isdefined("rcoords") AND len(rcoords) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&rcoords=#rcoords#">
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
 	<cfset thisrow.d="cf_sql_varchar">
@@ -449,7 +431,6 @@
 	<cfset isLocalitySearch=true>
 	<cfset rcl=listqualify(rcoordslist,"'","|")>
 	<cfset rcl=listchangedelims(rcl,",","|")>
-	<cfset mapurl = "#mapurl#&rcoordslist=#rcoordslist#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -463,28 +444,37 @@
 </cfif>
 <cfif isdefined("coordinates") AND len(coordinates) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&coordinates=#coordinates#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
-	<cfset thisrow={}>
-	<cfset thisrow.l="false">
-	<cfset thisrow.d="CF_SQL_NUMERIC">
-	<cfset thisrow.t="round(locality.dec_lat,6)">
-	<cfset thisrow.o="=">
-	<cfset thisrow.v="#round(listgetat(coordinates,1),6)#">
-	<cfset arrayappend(qp,thisrow)>
-	<cfset thisrow={}>
-	<cfset thisrow.l="false">
-	<cfset thisrow.d="CF_SQL_NUMERIC">
-	<cfset thisrow.t="round(locality.dec_long,6)">
-	<cfset thisrow.o="=">
-	<cfset thisrow.v="#round(listgetat(coordinates,2),6)#">
-	<cfset arrayappend(qp,thisrow)>
+	<cfif compare(coordinates,"NULL") is 0>
+		<!---- https://github.com/ArctosDB/arctos/issues/7760 ---->
+		<cfset thisrow={}>
+		<cfset thisrow.l="false">
+		<cfset thisrow.d="isnull">
+		<cfset thisrow.t="locality.dec_lat">
+		<cfset thisrow.o="">
+		<cfset thisrow.v="">
+		<cfset arrayappend(qp,thisrow)>
+	<cfelse>
+		<cfset thisrow={}>
+		<cfset thisrow.l="false">
+		<cfset thisrow.d="CF_SQL_NUMERIC">
+		<cfset thisrow.t="round(locality.dec_lat,6)">
+		<cfset thisrow.o="=">
+		<cfset thisrow.v="#round(listgetat(coordinates,1),6)#">
+		<cfset arrayappend(qp,thisrow)>
+		<cfset thisrow={}>
+		<cfset thisrow.l="false">
+		<cfset thisrow.d="CF_SQL_NUMERIC">
+		<cfset thisrow.t="round(locality.dec_long,6)">
+		<cfset thisrow.o="=">
+		<cfset thisrow.v="#round(listgetat(coordinates,2),6)#">
+		<cfset arrayappend(qp,thisrow)>
+	</cfif>
 </cfif>
 <cfif isdefined("isGeoreferenced") AND len(isGeoreferenced) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&isGeoreferenced=#isGeoreferenced#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -508,7 +498,6 @@
 </cfif>
 <cfif isdefined("collecting_method") AND len(collecting_method) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&collecting_method=#collecting_method#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -520,7 +509,6 @@
 </cfif>
 <cfif isdefined("collecting_source") AND len(collecting_source) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&collecting_source=#collecting_source#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -532,7 +520,6 @@
 </cfif>
 <cfif isdefined("specimen_event_remark") AND len(specimen_event_remark) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&specimen_event_remark=#specimen_event_remark#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -544,7 +531,6 @@
 </cfif>
 <cfif isdefined("specimen_event_type") AND len(specimen_event_type) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&specimen_event_type=#specimen_event_type#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -554,16 +540,44 @@
 	<cfset thisrow.v=specimen_event_type>
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
-
-
+<cfif isdefined("event_assigned_by_agent") AND len(event_assigned_by_agent) gt 0>
+	<cfset isLocalitySearch=true>
+	<cfset tblList=listappend(tblList,'specimen_event')>
+	<cfset tbls = " #tbls# INNER JOIN agent_name event_assigned_by on specimen_event.assigned_by_agent_id=event_assigned_by.agent_id ">
+	<cfset thisrow={}>
+	<cfset thisrow.l="false">
+	<cfset thisrow.d="cf_sql_varchar">
+	<cfset thisrow.t="event_assigned_by.agent_name">
+	<cfset thisrow.o="ilike">
+	<cfif left(event_assigned_by_agent,1) is '='>
+		<cfset thisrow.v='#right(event_assigned_by_agent,len(event_assigned_by_agent)-1)#'>
+	<cfelse>
+		<cfset thisrow.v='%#event_assigned_by_agent#%'>
+	</cfif>
+	<cfset arrayappend(qp,thisrow)>
+</cfif>
+<cfif isdefined("event_verified_by_agent") AND len(event_verified_by_agent) gt 0>
+	<cfset isLocalitySearch=true>
+	<cfset tblList=listappend(tblList,'specimen_event')>
+	<cfset tbls = " #tbls# INNER JOIN agent_name event_verified_by on specimen_event.verified_by_agent_id=event_verified_by.agent_id ">
+	<cfset thisrow={}>
+	<cfset thisrow.l="false">
+	<cfset thisrow.d="cf_sql_varchar">
+	<cfset thisrow.t="event_verified_by.agent_name">
+	<cfset thisrow.o="ilike">
+	<cfif left(event_verified_by_agent,1) is '='>
+		<cfset thisrow.v='#right(event_verified_by_agent,len(event_verified_by_agent)-1)#'>
+	<cfelse>
+		<cfset thisrow.v='%#event_verified_by_agent#%'>
+	</cfif>
+	<cfset arrayappend(qp,thisrow)>
+</cfif>
 <cfif isdefined("place_term_type") and len(place_term_type) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&place_term_type=#URLEncodedFormat(place_term_type)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
-	<cfset tblList=listappend(tblList,'collecting_event')>		
-	<cfset tblList=listappend(tblList,'locality')>		
-	<cfset tblList=listappend(tblList,'place_terms')>		
-	
+	<cfset tblList=listappend(tblList,'collecting_event')>
+	<cfset tblList=listappend(tblList,'locality')>
+	<cfset tblList=listappend(tblList,'place_terms')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
 	<cfset thisrow.d="cf_sql_varchar">
@@ -574,11 +588,10 @@
 </cfif>
 <cfif isdefined("place_term") and len(place_term) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&place_term=#URLEncodedFormat(place_term)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>		
 	<cfset tblList=listappend(tblList,'collecting_event')>		
-	<cfset tblList=listappend(tblList,'locality')>		
-	<cfset tblList=listappend(tblList,'place_terms')>		
+	<cfset tblList=listappend(tblList,'locality')>
+	<cfset tblList=listappend(tblList,'place_terms')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
 	<cfset thisrow.d="cf_sql_varchar">
@@ -589,7 +602,6 @@
 </cfif>
 <cfif isdefined("spec_locality") and len(spec_locality) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&spec_locality=#URLEncodedFormat(spec_locality)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -623,7 +635,6 @@
 </cfif>
 <cfif isdefined("locality_name") and len(locality_name) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&locality_name=#URLEncodedFormat(locality_name)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -662,10 +673,8 @@
 		<cfset arrayappend(qp,thisrow)>
 	</cfif>
 </cfif>
-
 <cfif isdefined("locality_remarks") and len(locality_remarks) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&locality_remarks=#URLEncodedFormat(locality_remarks)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -679,7 +688,6 @@
 </cfif>
 <cfif isdefined("habitat") and len(habitat) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&habitat=#URLEncodedFormat(habitat)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -691,7 +699,6 @@
 </cfif>
 <cfif isdefined("verbatim_locality") and len(verbatim_locality) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&verbatim_locality=#URLEncodedFormat(verbatim_locality)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfif left(verbatim_locality,1) is '='>
@@ -727,7 +734,6 @@
 	<cfset thisrow.o=" >=">
 	<cfset thisrow.v='#getMeters(minimum_elevation,orig_elev_units)#'>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&minimum_elevation=#minimum_elevation#&orig_elev_units=#orig_elev_units#">
 </cfif>
 <cfif isdefined("maximum_elevation") and len(maximum_elevation) gt 0>
 	<cfset isLocalitySearch=true>
@@ -746,10 +752,6 @@
 	<cfset thisrow.o=" <=">
 	<cfset thisrow.v='#getMeters(maximum_elevation,orig_elev_units)#'>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&maximum_elevation=#maximum_elevation#">
-	<cfif mapurl does not contain "orig_elev_units">
-		<cfset mapurl = "#mapurl#&orig_elev_units=#orig_elev_units#">
-	</cfif>
 </cfif>
 <cfif isdefined("feature") AND len(feature) gt 0>
 	<cfset tblList=listappend(tblList,'specimen_event')>
@@ -790,26 +792,20 @@
 			<cfset thisLocAttrDetr="">
 			<cfset thisLocAttrMeth="">
 			<cfset thisLocAttrRemk="">
-			<cfset mapurl = "#mapurl#&locality_attribute_#i#=#thisLocAttr#">
 			<cfif isdefined("locality_attribute_value_#i#")>
 				<cfset thisLocAttrVal=evaluate("locality_attribute_value_" & i)>
-			<cfset mapurl = "#mapurl#&locality_attribute_value_#i#=#thisLocAttrVal#">
 			</cfif>
 			<cfif isdefined("locality_attribute_unit_#i#")>
 				<cfset thisLocAttrUnit=evaluate("locality_attribute_unit_" & i)>
-			<cfset mapurl = "#mapurl#&locality_attribute_unit_#i#=#thisLocAttrUnit#">
 			</cfif>
 			<cfif isdefined("locality_attribute_determiner_#i#")>
 				<cfset thisLocAttrDetr=evaluate("locality_attribute_determiner_" & i)>
-				<cfset mapurl = "#mapurl#&locality_attribute_determiner_#i#=#thisLocAttrDetr#">
 			</cfif>
 			<cfif isdefined("locality_attribute_method_#i#")>
 				<cfset thisLocAttrMeth=evaluate("locality_attribute_method_" & i)>
-				<cfset mapurl = "#mapurl#&locality_attribute_method_#i#=#thisLocAttrMeth#">
 			</cfif>
 			<cfif isdefined("locality_attribute_remark_#i#")>
 				<cfset thisLocAttrRemk=evaluate("locality_attribute_remark_" & i)>
-				<cfset mapurl = "#mapurl#&locality_attribute_remark_#i#=#thisLocAttrRemk#">
 			</cfif>
 			<cfif not listfind(tblList,'specimen_event')>
 				<cfset tblList=listappend(tblList,'specimen_event')>
@@ -881,7 +877,6 @@
 
 <cfif isdefined("continent_ocean") AND len(continent_ocean) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&continent_ocean=#URLEncodedFormat(continent_ocean)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -927,7 +922,6 @@
 </cfif>
 <cfif isdefined("sea") AND len(sea) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&sea=#URLEncodedFormat(sea)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -964,7 +958,6 @@
 </cfif>
 <cfif isdefined("country") AND len(country) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&country=#URLEncodedFormat(country)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -991,7 +984,6 @@
 </cfif>
 <cfif isdefined("state_prov") AND len(state_prov) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&state_prov=#URLEncodedFormat(state_prov)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -1037,7 +1029,6 @@
 </cfif>
 <cfif isdefined("island_group") AND len(island_group) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&island_group=#URLEncodedFormat(island_group)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -1074,7 +1065,6 @@
 </cfif>
 <cfif isdefined("island") AND len(island) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&island=#URLEncodedFormat(island)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -1120,8 +1110,6 @@
 	<cfif len(trim(max_max_error)) is 0>
 		<cfset max_max_error=#default_max_max_err#>
 	</cfif>
-	<cfset mapurl = listappend(mapurl,"geog_shape=#geog_shape#","&")>
-	<cfset mapurl = listappend(mapurl,"geog_srch_type=#geog_srch_type#","&")>
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -1146,8 +1134,6 @@
 <cfif isdefined("poly_coords") AND len(poly_coords) gt 0>
 	<cfparam name="geog_srch_type" default="contains">
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = listappend(mapurl,"poly_coords=#poly_coords#","&")>
-	<cfset mapurl = listappend(mapurl,"geog_srch_type=#geog_srch_type#","&")>
 	<cfparam name="max_max_error" default=#default_max_max_err#>
 	<cfif len(trim(max_max_error)) is 0>
 		<cfset max_max_error=default_max_max_err>
@@ -1195,7 +1181,6 @@
 	<cfset isLocalitySearch=true>
 	<cfparam name="min_max_error" default="">
 	<cfparam name="max_max_error" default="">
-	<cfset mapurl = "#mapurl#&min_max_error=#min_max_error#&max_max_error=#max_max_error#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -1237,7 +1222,6 @@
 </cfif>
 <cfif isdefined("geog_auth_rec_id") AND len(geog_auth_rec_id) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&geog_auth_rec_id=#geog_auth_rec_id#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -1254,7 +1238,6 @@
 </cfif>
 <cfif isdefined("higher_geog") AND len(higher_geog) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&higher_geog=#URLEncodedFormat(higher_geog)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -1289,7 +1272,6 @@
 </cfif>
 <cfif isdefined("datum") AND len(datum) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&datum=#datum#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -1303,7 +1285,6 @@
 </cfif>
 <cfif isdefined("county") AND len(county) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&county=#URLEncodedFormat(county)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -1382,14 +1363,11 @@
 			<cfset isLocalitySearch=true>
 			<cfset thisEAttrVal="">
 			<cfset thisEAttrUnit="">
-			<cfset mapurl = "#mapurl#&event_attribute_type_#i#=#thisEAttr#">
 			<cfif isdefined("event_attribute_value_#i#")>
 				<cfset thisEAttrVal=evaluate("event_attribute_value_" & i)>
-				<cfset mapurl = "#mapurl#&locality_attribute_value_#i#=#thisEAttrVal#">
 			</cfif>
 			<cfif isdefined("event_attribute_units_#i#")>
 				<cfset thisEAttrUnit=evaluate("event_attribute_units_" & i)>
-				<cfset mapurl = "#mapurl#&event_attribute_units_#i#=#thisEAttrUnit#">
 			</cfif>
 			<cfif not listfind(tblList,'specimen_event')>
 				<cfset tblList=listappend(tblList,'specimen_event')>
@@ -1436,7 +1414,6 @@
 <!------ END event/locality ------------------------------------------------------------------------------------------------------------------------------------------------------->
 
 <cfif isdefined("cataloged_item_type") AND len(cataloged_item_type) gt 0>
-	<cfset mapurl = "#mapurl#&cataloged_item_type=#cataloged_item_type#">
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
 		<cfset thisrow.d="cf_sql_varchar">
@@ -1446,7 +1423,6 @@
 		<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("ocr_text") AND len(ocr_text) gt 0>
-	<cfset mapurl = "#mapurl#&ocr_text=#ocr_text#">
 	<cfif not listfind(tblList,'ocr_text')>
 		<cfset tblList=listappend(tblList,'ocr_text')>
 		<cfset tbls = " #tbls# INNER JOIN ocr_text ON (#cacheTbleName#.collection_object_id = ocr_text.collection_object_id)">
@@ -1461,7 +1437,6 @@
 </cfif>
 
 <cfif isdefined("identification_order") AND len(identification_order) gt 0>
-	<cfset mapurl = "#mapurl#&identification_order=#identification_order#">
 	<cfset tblList=listappend(tblList,'identification')>
 
 	<cfif left(identification_order, 1) is '<'>
@@ -1483,7 +1458,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("anyTaxId") AND len(anyTaxId) gt 0>
-	<cfset mapurl = "#mapurl#&anyTaxId=#anyTaxId#">
 	<cfset tblList=listappend(tblList,'identification')>
 	<cfset tblList=listappend(tblList,'identification_taxonomy')>
 	<cfset thisrow={}>
@@ -1495,7 +1469,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("id_pub_id") AND len(id_pub_id) gt 0>
-	<cfset mapurl = "#mapurl#&id_pub_id=#id_pub_id#">
 	<cfset tblList=listappend(tblList,'identification')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -1518,10 +1491,8 @@
 	<cfset thisrow.o="=">
 	<cfset thisrow.v=cited_taxon_name_id>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&cited_taxon_name_id=#cited_taxon_name_id#">
 </cfif>
 <cfif isdefined("cited_scientific_name") AND len(cited_scientific_name) gt 0>
-	<cfset mapurl = "#mapurl#&cited_scientific_name=#URLEncodedFormat(cited_scientific_name)#">
 	<cfif not listfind(tblList,'citation')>
 		<cfset tblList=listappend(tblList,'citation')>
 		<cfset tbls = " #tbls# INNER JOIN citation cname ON (#cacheTbleName#.collection_object_id = cname.collection_object_id)">
@@ -1536,7 +1507,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("taxon_name_id") AND len(taxon_name_id) gt 0>
-	<cfset mapurl = "#mapurl#&taxon_name_id=#taxon_name_id#">
 	<cfset tblList=listappend(tblList,'identification')>
 	<cfset tblList=listappend(tblList,'identification_taxonomy')>
 	<cfset thisrow={}>
@@ -1548,7 +1518,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("formatted_scientific_name") AND len(formatted_scientific_name) gt 0>
-	<cfset mapurl = "#mapurl#&formatted_scientific_name=#URLEncodedFormat(formatted_scientific_name)#">
 	<cfif compare(formatted_scientific_name,"NULL") is 0>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -1579,13 +1548,9 @@
 </cfif>
 
 <cfif isdefined("scientific_name") AND len(scientific_name) gt 0>
-	
 	<cfif not isdefined("scientific_name_match_type") OR len(scientific_name_match_type) is 0>
 		<cfset scientific_name_match_type = "contains">
 	</cfif>
-	<cfset mapurl = "#mapurl#&scientific_name=#URLEncodedFormat(scientific_name)#">
-	<cfset mapurl = "#mapurl#&scientific_name_match_type=#scientific_name_match_type#">
-
 	<cfif scientific_name_match_type is "exact">
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -1629,21 +1594,7 @@
 		<cfset arrayappend(qp,thisrow)>
 	</cfif>
 </cfif>
-
-<!----
-<cfif isdefined("taxon_status") AND len(taxon_status) gt 0>
-	<cfset mapurl = "#mapurl#&taxon_status=#taxon_status#">
-	<cfset thisrow={}>
-	<cfset thisrow.l="false">
-	<cfset thisrow.d="cf_sql_varchar">
-	<cfset thisrow.t="getTaxonTermBySpecimen(#cacheTbleName#.collection_object_id,$$taxon_status$$)">
-	<cfset thisrow.o="=">
-	<cfset thisrow.v=taxon_status>
-	<cfset arrayappend(qp,thisrow)>
-</cfif>
----->
 <cfif isdefined("catnum") and len(trim(catnum)) gt 0>
-	<cfset mapurl = "#mapurl#&catnum=#catnum#">
 	<cfif left(catnum,1) is "=">
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -1655,7 +1606,7 @@
 	<cfelseif catnum contains "," or catnum contains " " or catnum contains "#chr(9)#" or catnum contains "#chr(10)#" or catnum contains "#chr(13)#">
 		<cfset l=ListChangeDelims(catnum,',','#chr(9)##chr(10)##chr(13)#, ;')>
 		<!--- giant lists have melted the production environment multiple times, need to limit this ---->
-		<cfif listlen(l) gt 1500>
+		<cfif listlen(l) gt 1000>
 			<cfthrow message="list too long">
 			<cfabort>
 		</cfif>
@@ -1677,10 +1628,14 @@
 		<cfloop from="#listgetat(catnum,1,'-')#" to="#listgetat(catnum,2,'-')#" index="i">
 			<cfset clist=listappend(clist,i)>
 		</cfloop>
+		<cfif listlen(clist) gt 1000>
+			<cfthrow message="list too long">
+			<cfabort>
+		</cfif>
 		<cfset thisrow={}>
 		<cfset thisrow.l="true">
 		<cfset thisrow.d="cf_sql_varchar">
-		<cfset thisrow.t="#cacheTbleName#.cat_num">
+		<cfset thisrow.t="upper(#cacheTbleName#.cat_num)">
 		<cfset thisrow.o="in">
 		<cfset thisrow.v=clist>
 		<cfset arrayappend(qp,thisrow)>
@@ -1703,7 +1658,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("entered_by") AND len(entered_by) gt 0>
-	<cfset mapurl = "#mapurl#&entered_by=#entered_by#">
 	<cfif not listfind(tblList,'cataloged_item')>
 		<cfset tblList=listappend(tblList,'cataloged_item')>
 		<cfset tbls = " #tbls# INNER JOIN cataloged_item ON #cacheTbleName#.collection_object_id = cataloged_item.collection_object_id">
@@ -1718,7 +1672,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("entered_by_id") AND len(entered_by_id) gt 0>
-	<cfset mapurl = "#mapurl#&entered_by=#entered_by_id#">
 	<cfif not listfind(tblList,'cataloged_item')>
 		<cfset tblList=listappend(tblList,'cataloged_item')>
 		<cfset tbls = " #tbls# INNER JOIN cataloged_item ON #cacheTbleName#.collection_object_id = cataloged_item.collection_object_id">
@@ -1734,7 +1687,6 @@
 
 <cfif isdefined("media_type") AND len(media_type) gt 0>
 	<!---- cataloged item media type ---->
-	<cfset mapurl = "#mapurl#&media_type=#media_type#">
 	<cfif not listfind(tblList,'ci_media_relations')>
 		<cfset tblList=listappend(tblList,'ci_media_relations')>
 		<cfset tbls = " #tbls# INNER JOIN media_relations ci_media_relations ON (#cacheTbleName#.collection_object_id = ci_media_relations.cataloged_item_id)">
@@ -1758,7 +1710,6 @@
     </cfif>
 </cfif>
 <cfif isdefined("mime_type") AND len(mime_type) gt 0>
-	<cfset mapurl = "#mapurl#&mime_type=#mime_type#">
 	<cfif not listfind(tblList,'ci_media_relations')>
 		<cfset tblList=listappend(tblList,'ci_media_relations')>
 		<cfset tbls = " #tbls# INNER JOIN media_relations ci_media_relations ON (#cacheTbleName#.ci_media_relations = media_relations.cataloged_item_id)">
@@ -1770,7 +1721,6 @@
 	<cfset thisrow.o="like">
 	<cfset thisrow.v='% cataloged_item'>
 	<cfset arrayappend(qp,thisrow)>
-
 	<cfif not listfind(tblList,'media')>
 		<cfset tblList=listappend(tblList,'media')>
         <cfset tbls = " #tbls# INNER JOIN ci_media ON (ci_media_relations.media_id = ci_media.media_id)">
@@ -1795,7 +1745,6 @@
 	<cfset thisrow.o=">=">
 	<cfset thisrow.v=beg_entered_date>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&beg_entered_date=#beg_entered_date#">
 </cfif>
 <cfif isdefined("end_entered_date") AND len(end_entered_date) gt 0>
 	<cfif not listfind(tblList,'cataloged_item')>
@@ -1809,7 +1758,6 @@
 	<cfset thisrow.o="<=">
 	<cfset thisrow.v=end_entered_date>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&end_entered_date=#end_entered_date#">
 </cfif>
 <cfif isdefined("avoid_entity") AND avoid_entity is "true">
 	<cfset thisrow={}>
@@ -1819,10 +1767,10 @@
 	<cfset thisrow.o="not like">
 	<cfset thisrow.v="Arctos:Entity:%">
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&avoid_entity=#avoid_entity#">
 </cfif>
 <cfif isdefined("guid") AND len(guid) gt 0>
 	<cfset guid=listChangeDelims(guid,",","#chr(9)##chr(10)##chr(13)#, ;")>
+	<cfset guid=rereplace(guid, 'https?:\/\/arctos.database.museum\/guid\/','','all')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="true">
 	<cfset thisrow.d="cf_sql_varchar">
@@ -1830,7 +1778,6 @@
 	<cfset thisrow.o="in">
 	<cfset thisrow.v="#ucase(guid)#">
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&guid=#guid#">
 </cfif>
 <cfif isdefined("barcode") AND len(barcode) gt 0>
 	<cfset tblList=listappend(tblList,'specimen_part')>
@@ -1872,7 +1819,6 @@
 		<cfset thisrow.v=barcode>
 		<cfset arrayappend(qp,thisrow)>
 	</cfif>
-	<cfset mapurl = "#mapurl#&barcode=#barcode#">
 </cfif>
 <cfif isdefined("part_container_type") AND len(part_container_type) gt 0>
 	<cfset tblList=listappend(tblList,'specimen_part')>
@@ -1895,7 +1841,6 @@
 	<cfset thisrow.o="=">
 	<cfset thisrow.v=part_container_type>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&part_container_type=#part_container_type#">
 </cfif>
 <cfif isdefined("beg_part_ctr_last_date") AND len(beg_part_ctr_last_date) gt 0>
 	<cfset tblList=listappend(tblList,'specimen_part')>
@@ -1918,7 +1863,6 @@
 	<cfset thisrow.o=">=">
 	<cfset thisrow.v=beg_part_ctr_last_date>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&beg_part_ctr_last_date=#beg_part_ctr_last_date#">
 </cfif>
 <cfif isdefined("end_part_ctr_last_date") AND len(end_part_ctr_last_date) gt 0>
 	<cfset tblList=listappend(tblList,'specimen_part')>
@@ -1941,7 +1885,6 @@
 	<cfset thisrow.o="<=">
 	<cfset thisrow.v=end_part_ctr_last_date>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&end_part_ctr_last_date=#end_part_ctr_last_date#">
 </cfif>
 <cfif isdefined("encumbrance_id") AND isnumeric(encumbrance_id)>
 	<cfif not listfind(tblList,'coll_object_encumbrance')>
@@ -1955,7 +1898,6 @@
 	<cfset thisrow.o="=">
 	<cfset thisrow.v=encumbrance_id>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&encumbrance_id=#encumbrance_id#">
 </cfif>
 <cfif isdefined("encumbering_agent_id") AND isnumeric(encumbering_agent_id)>
 	<cfif not listfind(tblList,'coll_object_encumbrance')>
@@ -1973,7 +1915,6 @@
 	<cfset thisrow.o="=">
 	<cfset thisrow.v=encumbering_agent_id>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&encumbering_agent_id=#encumbering_agent_id#">
 </cfif>
 <cfif isdefined("collection_id") AND len(collection_id) gt 0>
 	<cfset thisrow={}>
@@ -1983,7 +1924,6 @@
 	<cfset thisrow.o="in">
 	<cfset thisrow.v=collection_id>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&collection_id=#collection_id#">
 </cfif>
 <cfif isdefined("guid_prefix") AND len(guid_prefix) gt 0>
 	<cfset thisrow={}>
@@ -1993,7 +1933,6 @@
 	<cfset thisrow.o="in">
 	<cfset thisrow.v=guid_prefix>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&guid_prefix=#guid_prefix#">
 </cfif>
 <cfif isdefined("collection_cde") and len(collection_cde) gt 0>
 	<cfif not listfind(tblList,'collection')>
@@ -2007,10 +1946,8 @@
 	<cfset thisrow.o="in">
 	<cfset thisrow.v=collection_cde>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&collection_cde=#collection_cde#">
 </cfif>
 <cfif isDefined ("notCollector") and len(notCollector) gt 0>
-	<cfset mapurl = "#mapurl#&notCollector=#notCollector#">
 	<cfif not listfind(tblList,'srchColl')>
 		<cfset tblList=listappend(tblList,'srchColl')>
 		<cfset tbls = " #tbls# INNER JOIN collector ON	(#cacheTbleName#.collection_object_id = collector.collection_object_id)
@@ -2024,48 +1961,6 @@
 	<cfset thisrow.v='%#UCASE(notCollector)#%'>
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
-<cfif isdefined("collector_agent_id") AND len(collector_agent_id) gt 0>
-	<cfset mapurl = "#mapurl#&collector_agent_id=#collector_agent_id#">
-	<cfif not listfind(tblList,'srchColl')>
-		<cfset tblList=listappend(tblList,'srchColl')>
-		<cfset tbls = " #tbls# INNER JOIN collector ON 	(#cacheTbleName#.collection_object_id = collector.collection_object_id)
-			INNER JOIN agent_name srchColl ON (collector.agent_id = srchColl.agent_id)">
-	</cfif>
-	<cfset thisrow={}>
-	<cfset thisrow.l="false">
-	<cfset thisrow.d="cf_sql_int">
-	<cfset thisrow.t="collector.agent_id">
-	<cfset thisrow.o="=">
-	<cfset thisrow.v=collector_agent_id>
-	<cfset arrayappend(qp,thisrow)>
-	<cfif isdefined("coll_role") and len(coll_role) gt 0>
-		<cfset mapurl = "#mapurl#&coll_role=#coll_role#">
-		<cfset thisrow={}>
-		<cfset thisrow.l="false">
-		<cfset thisrow.d="cf_sql_varchar">
-		<cfset thisrow.t="collector.collector_role">
-		<cfset thisrow.o="=">
-		<cfset thisrow.v=coll_role>
-		<cfset arrayappend(qp,thisrow)>
-	</cfif>
-	<cfif cacheTbleName is not "flat">
-		<cfset thisrow={}>
-		<cfset thisrow.l="false">
-		<cfset thisrow.d="cf_sql_varchar">
-		<cfset thisrow.t="COALESCE(#cacheTbleName#.encumbrances,'')">
-		<cfset thisrow.o="not like ">
-		<cfset thisrow.v="%mask collector%">
-		<cfset arrayappend(qp,thisrow)>
-
-		<cfset thisrow={}>
-		<cfset thisrow.l="false">
-		<cfset thisrow.d="cf_sql_varchar">
-		<cfset thisrow.t="COALESCE(#cacheTbleName#.encumbrances,'')">
-		<cfset thisrow.o="not like ">
-		<cfset thisrow.v="%mask preparator%">
-		<cfset arrayappend(qp,thisrow)>
-	</cfif>
-</cfif>
 <cfif isdefined("begin_made_date") AND len(begin_made_date) gt 0>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -2074,7 +1969,6 @@
 	<cfset thisrow.o=">=">
 	<cfset thisrow.v=begin_made_date>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&begin_made_date=#begin_made_date#">
 </cfif>
 <cfif isdefined("end_made_date") AND len(end_made_date) gt 0>
 	<cfset thisrow={}>
@@ -2084,10 +1978,8 @@
 	<cfset thisrow.o="<=">
 	<cfset thisrow.v=end_made_date>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&end_made_date=#end_made_date#">
 </cfif>
 <cfif isdefined("family") AND len(family) gt 0>
-	<cfset mapurl = "#mapurl#&family=#family#">
 	<cfif left(family,1) is '='>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2122,9 +2014,7 @@
 		<cfset arrayappend(qp,thisrow)>
 	</cfif>
 </cfif>
-
 <cfif isdefined("superfamily") AND len(superfamily) gt 0>
-	<cfset mapurl = "#mapurl#&superfamily=#superfamily#">
 	<cfif left(superfamily,1) is '='>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2161,7 +2051,6 @@
 </cfif>
 
 <cfif isdefined("subfamily") AND len(subfamily) gt 0>
-	<cfset mapurl = "#mapurl#&subfamily=#subfamily#">
 	<cfif left(subfamily,1) is '='>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2197,7 +2086,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("tribe") AND len(tribe) gt 0>
-	<cfset mapurl = "#mapurl#&tribe=#tribe#">
 	<cfif left(tribe,1) is '='>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2233,7 +2121,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("subtribe") AND len(subtribe) gt 0>
-	<cfset mapurl = "#mapurl#&subtribe=#subtribe#">
 	<cfif left(subtribe,1) is '='>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2269,7 +2156,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("genus") AND len(genus) gt 0>
-	<cfset mapurl = "#mapurl#&genus=#genus#">
 	<cfif left(genus,1) is '='>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2305,7 +2191,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("species") AND len(species) gt 0>
-	<cfset mapurl = "#mapurl#&species=#species#">
 	<cfif left(species,1) is '='>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2349,7 +2234,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("subspecies") AND len(subspecies) gt 0>
-	<cfset mapurl = "#mapurl#&subspecies=#subspecies#">
 	<cfif left(subspecies,1) is '='>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2385,7 +2269,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("phylum") AND len(phylum) gt 0>
-	<cfset mapurl = "#mapurl#&phylum=#phylum#">
 	<cfif left(phylum,1) is '='>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2421,7 +2304,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("phylorder") AND len(phylorder) gt 0>
-	<cfset mapurl = "#mapurl#&phylorder=#phylorder#">
 	<cfif left(phylorder,1) is '='>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2457,7 +2339,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("kingdom") AND len(kingdom) gt 0>
-	<cfset mapurl = "#mapurl#&kingdom=#kingdom#">
 	<cfif left(kingdom,1) is '='>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2493,7 +2374,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("Phylclass") AND len(Phylclass) gt 0>
-	<cfset mapurl = "#mapurl#&Phylclass=#Phylclass#">
 	<cfif left(phylclass,1) is '='>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2530,7 +2410,6 @@
 </cfif>
 
 <cfif isdefined("identification_publication") AND len(identification_publication) gt 0>
-	<cfset mapurl = "#mapurl#&identification_publication=#identification_publication#">
 	<cfset tblList=listappend(tblList,'identification')>
 	<cfif not listfind(tblList,'identification_publication')>
 		<cfset tblList=listappend(tblList,'identification_publication')>
@@ -2546,7 +2425,6 @@
 </cfif>
 
 <cfif isdefined("identified_agent_id") AND len(identified_agent_id) gt 0>
-	<cfset mapurl = "#mapurl#&identified_agent_id=#identified_agent_id#">
 	<cfset tblList=listappend(tblList,'identification')>
 	<cfset tbls = " #tbls# INNER JOIN identification_agent ON (identification.identification_id = identification_agent.identification_id)	">
 	<cfset thisrow={}>
@@ -2558,7 +2436,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("identification_remarks") AND len(identification_remarks) gt 0>
-	<cfset mapurl = "#mapurl#&identification_remarks=#identification_remarks#">
 	<cfset tblList=listappend(tblList,'identification')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -2569,7 +2446,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("taxa_formula") AND len(taxa_formula) gt 0>
-	<cfset mapurl = "#mapurl#&taxa_formula=#taxa_formula#">
 	<cfset tblList=listappend(tblList,'identification')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -2580,7 +2456,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("table_name") AND len(table_name) gt 0>
-	<cfset mapurl = "#mapurl#&table_name=#table_name#">
 	<cfset tbls = " #tbls# INNER JOIN #table_name# ON (#cacheTbleName#.collection_object_id = #table_name#.collection_object_id)">
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -2591,7 +2466,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("identified_agent") AND len(identified_agent) gt 0>
-	<cfset mapurl = "#mapurl#&identified_agent=#identified_agent#">
 	<cfif compare(identified_agent,"NULL") is 0>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -2636,7 +2510,6 @@
 	<cfif isdefined("identification_attribute_type_#i#")>
 		<cfset thisAttType=evaluate("identification_attribute_type_" & i)>
 		<cfif len(thisAttType) gt 0>
-			<cfset mapurl = "#mapurl#&identification_attribute_type_#i#=#URLEncodedFormat(thisAttType)#">
 			<cfset thisAttOper='like'>
 			<cfset thisAttVal=''>
 			<cfset thisAttUnit=''>
@@ -2648,31 +2521,24 @@
 			<cfif isdefined("identification_attribute_units_#i#")>
 				<cfset thisAttUnit=evaluate("identification_attribute_units_" & i)>
 			</cfif>
-			<cfset mapurl = "#mapurl#&identification_attribute_units_#i#=#thisAttUnit#">
 			<cfif isdefined("identification_attribute_value_#i#")>
 				<cfset thisAttVal=evaluate("identification_attribute_value_" & i)>
 			</cfif>
-			<cfset mapurl = "#mapurl#&identification_attribute_value_#i#=#thisAttVal#">
 			<cfif isdefined("identification_attribute_method_#i#")>
 				<cfset thisAttMeth=evaluate("identification_attribute_method_" & i)>
 			</cfif>
-			<cfset mapurl = "#mapurl#&identification_attribute_method_#i#=#thisAttMeth#">
 			<cfif isdefined("identification_attribute_determiner_#i#")>
 				<cfset thisAttDet=evaluate("identification_attribute_determiner_" & i)>
 			</cfif>
-			<cfset mapurl = "#mapurl#&identification_attribute_determiner_#i#=#thisAttDet#">
 			<cfif isdefined("identification_attribute_remark_#i#")>
 				<cfset thisAttRmk=evaluate("identification_attribute_remark_" & i)>
 			</cfif>
-			<cfset mapurl = "#mapurl#&identification_attribute_remark_#i#=#thisAttRmk#">
 			<cfif isdefined("identification_attribute_date_min_#i#")>
 				<cfset thisAttDtMn=evaluate("identification_attribute_date_min_" & i)>
 			</cfif>
-			<cfset mapurl = "#mapurl#&identification_attribute_date_min_#i#=#thisAttDtMn#">
 			<cfif isdefined("identification_attribute_date_max_#i#")>
 				<cfset thisAttDtMx=evaluate("identification_attribute_date_max_" & i)>
 			</cfif>
-			<cfset mapurl = "#mapurl#&identification_attribute_date_max_#i#=#thisAttDtMx#">
 			<cfif len(thisAttVal) gt 0>
 				<!---- allow inline operator ---->
 				<cfif left(thisAttVal,1) is '='>
@@ -2828,11 +2694,7 @@
 		</cfif>
 	</cfif>
 </cfloop>
-
-
-
 <cfif isdefined("accn_trans_id") AND len(accn_trans_id) gt 0>
-	<cfset mapurl = "#mapurl#&accn_trans_id=#accn_trans_id#">
 	<cfset thisrow={}>
 	<cfset thisrow.l="true">
 	<cfset thisrow.d="cf_sql_int">
@@ -2845,7 +2707,6 @@
 	<cfif accn_number contains ",">
 		<cfset accn_list=accn_number>
 	<cfelse>
-		<cfset mapurl = "#mapurl#&accn_number=#accn_number#">
 		<cfif left(accn_number,1) is '='>
 			<cfset thisrow={}>
 			<cfset thisrow.l="false">
@@ -2865,12 +2726,7 @@
 		</cfif>
 	</cfif>
 </cfif>
-
-
-
-
 <cfif isdefined("accn_list") and len(accn_list) gt 0>
-	<cfset mapurl = "#mapurl#&accn_list=#accn_list#">
 	<cfif not listfind(tblList,'accn')>
 		<cfset tblList=listappend(tblList,'accn')>
 		<cfset tbls = " #tbls# INNER JOIN accn ON (#cacheTbleName#.accn_id = accn.transaction_id)">
@@ -2884,7 +2740,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("accn_agency") and len(accn_agency) gt 0>
-	<cfset mapurl = "#mapurl#&accn_agency=#URLEncodedFormat(accn_agency)#">
 	<cfif not listfind(tblList,'accn')>
 		<cfset tblList=listappend(tblList,'accn')>
 		<cfset tbls = " #tbls# INNER JOIN accn ON (#cacheTbleName#.accn_id = accn.transaction_id)">
@@ -2913,103 +2768,10 @@
 	<cfset thisrow.v='%#ucase(accn_agency)#%'>
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
-<cfif isdefined("custom_id_prefix") and len(custom_id_prefix) gt 0 and isdefined("session.CustomOtherIdentifier")>
-	<cfset mapurl = "#mapurl#&custom_id_prefix=#custom_id_prefix#">
-	<cfif not listfind(tblList,'customIdentifier')>
-		<cfset tblList=listappend(tblList,'customIdentifier')>
-		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num customIdentifier ON (#cacheTbleName#.collection_object_id = customIdentifier.collection_object_id)">
-	</cfif>
-	<cfset thisrow={}>
-	<cfset thisrow.l="false">
-	<cfset thisrow.d="cf_sql_varchar">
-	<cfset thisrow.t="customIdentifier.other_id_type">
-	<cfset thisrow.o="=">
-	<cfset thisrow.v=session.CustomOtherIdentifier>
-	<cfset arrayappend(qp,thisrow)>
-	<cfset thisrow={}>
-	<cfset thisrow.l="false">
-	<cfset thisrow.d="cf_sql_varchar">
-	<cfset thisrow.t=" upper(customIdentifier.other_id_prefix)">
-	<cfset thisrow.o="like">
-	<cfset thisrow.v='%#ucase(custom_id_prefix)#%'>
-	<cfset arrayappend(qp,thisrow)>
-</cfif>
-<cfif isdefined("custom_id_suffix") and len(custom_id_suffix) gt 0 and isdefined("session.CustomOtherIdentifier")>
-	<cfset mapurl = "#mapurl#&custom_id_suffix=#custom_id_suffix#">
-	<cfif not listfind(tblList,'customIdentifier')>
-		<cfset tblList=listappend(tblList,'customIdentifier')>
-		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num customIdentifier ON (#cacheTbleName#.collection_object_id = customIdentifier.collection_object_id)">
-	</cfif>
-	<cfset thisrow={}>
-	<cfset thisrow.l="false">
-	<cfset thisrow.d="cf_sql_varchar">
-	<cfset thisrow.t="customIdentifier.other_id_type">
-	<cfset thisrow.o="=">
-	<cfset thisrow.v=session.CustomOtherIdentifier>
-	<cfset arrayappend(qp,thisrow)>
-	<cfset thisrow={}>
-	<cfset thisrow.l="false">
-	<cfset thisrow.d="cf_sql_varchar">
-	<cfset thisrow.t=" upper(customIdentifier.other_id_suffix)">
-	<cfset thisrow.o="=">
-	<cfset thisrow.v='%#ucase(custom_id_suffixid_prefix)#%'>
-	<cfset arrayappend(qp,thisrow)>
-</cfif>
-<cfif isdefined("custom_id_number") and len(custom_id_number) gt 0 and isdefined("session.CustomOtherIdentifier")>
-	<cfset mapurl = "#mapurl#&custom_id_number=#custom_id_number#">
-	<cfif not listfind(tblList,'customIdentifier')>
-		<cfset tblList=listappend(tblList,'customIdentifier')>
-		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num customIdentifier ON (#cacheTbleName#.collection_object_id = customIdentifier.collection_object_id)">
-	</cfif>
-	<cfset thisrow={}>
-	<cfset thisrow.l="false">
-	<cfset thisrow.d="cf_sql_varchar">
-	<cfset thisrow.t="customIdentifier.other_id_type">
-	<cfset thisrow.o="=">
-	<cfset thisrow.v='#session.CustomOtherIdentifier#'>
-	<cfset arrayappend(qp,thisrow)>
-	<cfif custom_id_number contains "-">
-		<!--- range --->
-		<cfset start=listgetat(custom_id_number,1,"-")>
-		<cfset stop=listgetat(custom_id_number,2,"-")>
-		<cfset thisrow={}>
-		<cfset thisrow.l="false">
-		<cfset thisrow.d="cf_sql_numeric">
-		<cfset thisrow.t="customIdentifier.other_id_number">
-		<cfset thisrow.o=">=">
-		<cfset thisrow.v=start>
-		<cfset arrayappend(qp,thisrow)>
-		<cfset thisrow={}>
-		<cfset thisrow.l="false">
-		<cfset thisrow.d="cf_sql_numeric">
-		<cfset thisrow.t="customIdentifier.other_id_number">
-		<cfset thisrow.o="<=">
-		<cfset thisrow.v=stop>
-		<cfset arrayappend(qp,thisrow)>
-	<cfelseif custom_id_number contains ",">
-		<cfset thisrow={}>
-		<cfset thisrow.l="true">
-		<cfset thisrow.d="cf_sql_numeric">
-		<cfset thisrow.t="customIdentifier.other_id_number">
-		<cfset thisrow.o="in">
-		<cfset thisrow.v=custom_id_number>
-		<cfset arrayappend(qp,thisrow)>
-	<cfelseif isnumeric(custom_id_number)>
-		<cfset thisrow={}>
-		<cfset thisrow.l="false">
-		<cfset thisrow.d="cf_sql_numeric">
-		<cfset thisrow.t="customIdentifier.other_id_number">
-		<cfset thisrow.o="=">
-		<cfset thisrow.v=custom_id_number>
-		<cfset arrayappend(qp,thisrow)>
-	</cfif>
-</cfif>
 <cfif isdefined("CustomIdentifierValue") and len(CustomIdentifierValue) gt 0 and isdefined("session.CustomOtherIdentifier")>
 	<cfif not isdefined("CustomOidOper")>
 		<cfset CustomOidOper = "LIKE">
 	</cfif>
-	<cfset mapurl = "#mapurl#&CustomIdentifierValue=#URLEncodedFormat(CustomIdentifierValue)#">
-	<cfset mapurl = "#mapurl#&CustomOidOper=#URLEncodedFormat(CustomOidOper)#">
 	<cfif not listfind(tblList,'customIdentifier')>
 		<cfset tblList=listappend(tblList,'customIdentifier')>
 		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num customIdentifier ON (#cacheTbleName#.collection_object_id = customIdentifier.collection_object_id)">
@@ -3079,7 +2841,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("OIDType") AND len(OIDType) gt 0>
-	<cfset mapurl = "#mapurl#&OIDType=#URLEncodedFormat(OIDType)#">
 	<cfif not listfind(tblList,'otherIdSearch')>
 		<cfset tblList=listappend(tblList,'otherIdSearch')>
 		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num otherIdSearch ON (#cacheTbleName#.collection_object_id = otherIdSearch.collection_object_id)">
@@ -3093,9 +2854,24 @@
 	<cfset thisrow.v=OIDType>
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
-
+<cfif isdefined("genbank_fragment") and len(genbank_fragment) gt 0>
+	<!----- 
+		Michelle Koo email "yea identifiers again" 20240229 referencing https://github.com/ArctosDB/arctos/issues/7454
+		"relying on full URL's is not user friendly and will cause untold raging"
+	---->
+	<cfset tblList=listappend(tblList,'genbank_fragment_srch')>
+	<cfset tbls = " #tbls# INNER JOIN (
+		select collection_object_id, replace(display_value,$$http://www.ncbi.nlm.nih.gov/nuccore/$$,$$$$) as gbfrag from coll_obj_other_id_num where issued_by_agent_id=21349032
+		) genbank_fragment_srch ON #cacheTbleName#.collection_object_id = genbank_fragment_srch.collection_object_id ">
+	<cfset thisrow={}>
+	<cfset thisrow.l="true">
+	<cfset thisrow.d="cf_sql_varchar">
+	<cfset thisrow.t="genbank_fragment_srch.gbfrag">
+	<cfset thisrow.o="in">
+	<cfset thisrow.v=genbank_fragment>
+	<cfset arrayappend(qp,thisrow)>
+</cfif>
 <cfif isdefined("oidnum") and len(replace(oidnum,'=','')) gt 0>
-	<cfset mapurl = "#mapurl#&OIDNum=#URLEncodedFormat(OIDNum)#">
 	<cfif not listfind(tblList,'otherIdSearch')>
 		<cfset tblList=listappend(tblList,'otherIdSearch')>
 		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num otherIdSearch ON (#cacheTbleName#.collection_object_id = otherIdSearch.collection_object_id)">
@@ -3136,7 +2912,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("id_references") AND len(id_references) gt 0>
-	<cfset mapurl = "#mapurl#&id_references=#id_references#">
 	<cfif not listfind(tblList,'otherIdSearch')>
 		<cfset tblList=listappend(tblList,'otherIdSearch')>
 		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num otherIdSearch ON (#cacheTbleName#.collection_object_id = otherIdSearch.collection_object_id)">
@@ -3150,7 +2925,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("id_assignedby") AND len(replace(id_assignedby,'=',''))>
-	<cfset mapurl = "#mapurl#&id_assignedby=#id_assignedby#">
 	<cfif not listfind(tblList,'otherIdSearch')>
 		<cfset tblList=listappend(tblList,'otherIdSearch')>
 		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num otherIdSearch ON (#cacheTbleName#.collection_object_id = otherIdSearch.collection_object_id)">
@@ -3176,13 +2950,13 @@
 </cfif>
 
 <cfif isdefined("id_issuedby") AND len(replace(id_issuedby,'=','')) gt 0>
-	<cfset mapurl = "#mapurl#&id_issuedby=#id_issuedby#">
 	<cfif not listfind(tblList,'otherIdSearch')>
 		<cfset tblList=listappend(tblList,'otherIdSearch')>
 		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num otherIdSearch ON (#cacheTbleName#.collection_object_id = otherIdSearch.collection_object_id)">
 	</cfif>
-	<cfset tbls = " #tbls# INNER JOIN agent_name agnt_id_issuer ON otherIdSearch.issued_by_agent_id = agnt_id_issuer.agent_id ">
-
+	<cfif compare(id_issuedby,"NULL") neq 0>
+		<cfset tbls = " #tbls# INNER JOIN agent_name agnt_id_issuer ON otherIdSearch.issued_by_agent_id = agnt_id_issuer.agent_id ">
+	</cfif>
 	<cfif left(id_issuedby,1) is '='>		
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -3190,6 +2964,14 @@
 		<cfset thisrow.t="agnt_id_issuer.agent_name">
 		<cfset thisrow.o="ilike">
 		<cfset thisrow.v=right(id_issuedby,len(id_issuedby)-1)>
+		<cfset arrayappend(qp,thisrow)>
+	<cfelseif compare(id_issuedby,"NULL") is 0>
+		<cfset thisrow={}>
+		<cfset thisrow.l="false">
+		<cfset thisrow.d="isnull">
+		<cfset thisrow.t="otherIdSearch.issued_by_agent_id">
+		<cfset thisrow.o="">
+		<cfset thisrow.v=''>
 		<cfset arrayappend(qp,thisrow)>
 	<cfelse>
 		<cfset thisrow={}>
@@ -3202,10 +2984,10 @@
 	</cfif>
 </cfif>
 <cfif isdefined("id_numeric") AND len(replace(id_numeric,'=','')) gt 0>
-	<cfset mapurl = "#mapurl#&id_numeric=#id_numeric#">
 	<cfif not listfind(tblList,'otherIdSearch')>
 		<cfset tblList=listappend(tblList,'otherIdSearch')>
-		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num otherIdSearch ON (#cacheTbleName#.collection_object_id = otherIdSearch.collection_object_id)">
+		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num otherIdSearch ON (#cacheTbleName#.collection_object_id = otherIdSearch.collection_object_id)
+			and otherIdSearch.display_value ~ '^[0-9]+$'">
 	</cfif>
 	<cfif listlen(id_numeric,'-') is 2>
 		<cfset n1=listgetat(id_numeric,1,'-')>
@@ -3213,14 +2995,14 @@
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
 		<cfset thisrow.d="cf_sql_numeric">
-		<cfset thisrow.t="otherIdSearch.other_id_number">
+		<cfset thisrow.t="otherIdSearch.display_value::numeric">
 		<cfset thisrow.o=">=">
 		<cfset thisrow.v=n1>
 		<cfset arrayappend(qp,thisrow)>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
 		<cfset thisrow.d="cf_sql_numeric">
-		<cfset thisrow.t="otherIdSearch.other_id_number">
+		<cfset thisrow.t="otherIdSearch.display_value::numeric">
 		<cfset thisrow.o="<=">
 		<cfset thisrow.v=n2>
 		<cfset arrayappend(qp,thisrow)>
@@ -3228,16 +3010,15 @@
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
 		<cfset thisrow.d="cf_sql_numeric">
-		<cfset thisrow.t="otherIdSearch.other_id_number">
+		<cfset thisrow.t="otherIdSearch.display_value::numeric">
 		<cfset thisrow.o="<=">
 		<cfset thisrow.v=(mid(id_numeric,2,len(id_numeric)-1))>
 		<cfset arrayappend(qp,thisrow)>
-
 	<cfelseif left(id_numeric,1) is ">">
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
 		<cfset thisrow.d="cf_sql_numeric">
-		<cfset thisrow.t="otherIdSearch.other_id_number">
+		<cfset thisrow.t="otherIdSearch.display_value::numeric">
 		<cfset thisrow.o=">=">
 		<cfset thisrow.v=(mid(id_numeric,2,len(id_numeric)-1))>
 		<cfset arrayappend(qp,thisrow)>
@@ -3245,19 +3026,18 @@
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
 		<cfset thisrow.d="cf_sql_numeric">
-		<cfset thisrow.t="otherIdSearch.other_id_number">
+		<cfset thisrow.t="otherIdSearch.display_value::numeric">
 		<cfset thisrow.o="=">
 		<cfset thisrow.v=id_numeric>
 		<cfset arrayappend(qp,thisrow)>
 	</cfif>
 </cfif>
-
+<!-----
+	See https://github.com/ArctosDB/arctos/issues/7725#issuecomment-2083971054 - the bare-minimum join was returning all sorts of false
+	positives, and using ridiculous resources doing it. Tighten to properly-formatted and properly-typed identifiers to join on.
+---->
 <cfif isdefined("related_id_issuedby") AND len(related_id_issuedby) gt 0>
-	<cfset mapurl = "#mapurl#&related_id_issuedby=#URLEncodedFormat(related_id_issuedby)#">
-	<cfif not listfind(tblList,'related_item_identifiers')>
-		<cfset tblList=listappend(tblList,'related_item_identifiers')>
-		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num related_item_identifiers ON stripArctosGuidURL(related_item_identifiers.display_value)=#cacheTbleName#.guid">
-	</cfif>
+	<cfset tblList=listappend(tblList,'related_item_identifiers')>
 	<cfset tbls = " #tbls# INNER JOIN agent_name agnt_id_related_issuer ON related_item_identifiers.issued_by_agent_id = agnt_id_related_issuer.agent_id ">
 	<cfif left(id_issuedby,1) is '='>		
 		<cfset thisrow={}>
@@ -3278,11 +3058,7 @@
 	</cfif>
 </cfif>
 <cfif isdefined("related_id_type") AND len(related_id_type) gt 0>
-	<cfset mapurl = "#mapurl#&related_id_type=#URLEncodedFormat(related_id_type)#">
-	<cfif not listfind(tblList,'related_item_identifiers')>
-		<cfset tblList=listappend(tblList,'related_item_identifiers')>
-		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num related_item_identifiers ON stripArctosGuidURL(related_item_identifiers.display_value)=#cacheTbleName#.guid">
-	</cfif>
+	<cfset tblList=listappend(tblList,'related_item_identifiers')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
 	<cfset thisrow.d="cf_sql_varchar">
@@ -3293,11 +3069,7 @@
 </cfif>
 
 <cfif isdefined("related_id_value") AND len(related_id_value) gt 0>
-	<cfset mapurl = "#mapurl#&related_id_value=#URLEncodedFormat(related_id_value)#">
-	<cfif not listfind(tblList,'related_item_identifiers')>
-		<cfset tblList=listappend(tblList,'related_item_identifiers')>
-		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num related_item_identifiers ON stripArctosGuidURL(related_item_identifiers.display_value)=#cacheTbleName#.guid">
-	</cfif>
+	<cfset tblList=listappend(tblList,'related_item_identifiers')>
 	<cfif left(related_id_value,1) is '='>		
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
@@ -3317,11 +3089,7 @@
 	</cfif>
 </cfif>
 <cfif isdefined("related_id_references") AND len(related_id_references) gt 0>
-	<cfset mapurl = "#mapurl#&related_id_references=#URLEncodedFormat(related_id_references)#">
-	<cfif not listfind(tblList,'related_item_identifiers')>
-		<cfset tblList=listappend(tblList,'related_item_identifiers')>
-		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num related_item_identifiers ON stripArctosGuidURL(related_item_identifiers.display_value)=#cacheTbleName#.guid">
-	</cfif>
+	<cfset tblList=listappend(tblList,'related_item_identifiers')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
 	<cfset thisrow.d="cf_sql_varchar">
@@ -3332,15 +3100,8 @@
 </cfif>
 
 <cfif isdefined("related_item_identification") AND len(related_item_identification) gt 0>
-	<cfset mapurl = "#mapurl#&related_item_identification=#URLEncodedFormat(related_item_identification)#">
-	<cfif not listfind(tblList,'related_item_identifiers')>
-		<cfset tblList=listappend(tblList,'related_item_identifiers')>
-		<cfset tbls = " #tbls# INNER JOIN coll_obj_other_id_num related_item_identifiers ON stripArctosGuidURL(related_item_identifiers.display_value)=#cacheTbleName#.guid">
-	</cfif>
-	<cfif not listfind(tblList,'related_item')>
-		<cfset tblList=listappend(tblList,'related_item')>
-		<cfset tbls = " #tbls# INNER JOIN filtered_flat related_item on related_item_identifiers.collection_object_id=related_item.collection_object_id">
-	</cfif>
+	<cfset tblList=listappend(tblList,'related_item_identifiers')>
+	<cfset tblList=listappend(tblList,'related_item')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
 	<cfset thisrow.d="cf_sql_varchar">
@@ -3349,14 +3110,18 @@
 	<cfset thisrow.v='%#related_item_identification#%'>
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
-
-
-
-
-
-
+<cfif isdefined("related_item_taxonomy") AND len(related_item_taxonomy) gt 0>
+	<cfset tblList=listappend(tblList,'related_item_identifiers')>
+	<cfset tblList=listappend(tblList,'related_item')>
+	<cfset thisrow={}>
+	<cfset thisrow.l="false">
+	<cfset thisrow.d="cf_sql_varchar">
+	<cfset thisrow.t="related_item.full_taxon_name">
+	<cfset thisrow.o="ilike">
+	<cfset thisrow.v='%#related_item_taxonomy#%'>
+	<cfset arrayappend(qp,thisrow)>
+</cfif>
 <cfif isdefined("any_geog") AND len(any_geog) gt 0>
-	<cfset mapurl = "#mapurl#&any_geog=#URLEncodedFormat(any_geog)#">
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
 	<cfset thisrow.d="cf_sql_varchar">
@@ -3369,7 +3134,6 @@
 	<cfset part_name=partname>
 </cfif>
 <cfif isdefined("part_attribute") AND len(part_attribute) gt 0>
-	<cfset mapurl = "#mapurl#&part_attribute=#URLEncodedFormat(part_attribute)#">
 	<cfset tblList=listappend(tblList,'specimen_part')>
 	<cfset tblList=listappend(tblList,'specimen_part_attribute')>
 	<cfset thisrow={}>
@@ -3390,7 +3154,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("part_attribute_value") AND len(part_attribute_value) gt 0>
-	<cfset mapurl = "#mapurl#&part_attribute_value=#URLEncodedFormat(part_attribute_value)#">
 	<cfset tblList=listappend(tblList,'specimen_part')>
 	<cfset tblList=listappend(tblList,'specimen_part_attribute')>
 	<cfif left(part_attribute_value,1) is '='>
@@ -3412,7 +3175,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("part_attribute_units") AND len(part_attribute_units) gt 0>
-	<cfset mapurl = "#mapurl#&part_attribute_units=#URLEncodedFormat(part_attribute_units)#">
 	<cfset tblList=listappend(tblList,'specimen_part')>
 	<cfset tblList=listappend(tblList,'specimen_part_attribute')>
 	<cfset thisrow={}>
@@ -3424,7 +3186,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("part_attribute_method") AND len(part_attribute_method) gt 0>
-	<cfset mapurl = "#mapurl#&part_attribute_method=#URLEncodedFormat(part_attribute_method)#">
 	<cfset tblList=listappend(tblList,'specimen_part')>
 	<cfset tblList=listappend(tblList,'specimen_part_attribute')>
 	<cfset thisrow={}>
@@ -3436,7 +3197,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("part_attribute_determiner") AND len(part_attribute_determiner) gt 0>
-	<cfset mapurl = "#mapurl#&part_attribute_determiner=#URLEncodedFormat(part_attribute_determiner)#">
 	<cfset tblList=listappend(tblList,'specimen_part')>
 	<cfset tblList=listappend(tblList,'specimen_part_attribute')>
 	<cfset tbls = " #tbls# INNER JOIN agent_name part_attribute_determiner_agent ON specimen_part_attribute.determined_by_agent_id = part_attribute_determiner_agent.agent_id">
@@ -3449,7 +3209,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("part_attribute_date_min") AND len(part_attribute_date_min) gt 0>
-	<cfset mapurl = "#mapurl#&part_attribute_date_min=#URLEncodedFormat(part_attribute_date_min)#">
 	<cfset tblList=listappend(tblList,'specimen_part')>
 	<cfset tblList=listappend(tblList,'specimen_part_attribute')>
 	<cfset thisrow={}>
@@ -3461,7 +3220,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("part_attribute_date_max") AND len(part_attribute_date_max) gt 0>
-	<cfset mapurl = "#mapurl#&part_attribute_date_max=#URLEncodedFormat(part_attribute_date_max)#">
 	<cfset tblList=listappend(tblList,'specimen_part')>
 	<cfset tblList=listappend(tblList,'specimen_part_attribute')>
 	<cfset thisrow={}>
@@ -3473,7 +3231,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("part_attribute_remark") AND len(part_attribute_remark) gt 0>
-	<cfset mapurl = "#mapurl#&part_attribute_remark=#URLEncodedFormat(part_attribute_remark)#">
 	<cfset tblList=listappend(tblList,'specimen_part')>
 	<cfset tblList=listappend(tblList,'specimen_part_attribute')>
 	<cfset thisrow={}>
@@ -3485,7 +3242,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("part_remark") AND len(part_remark) gt 0>
-	<cfset mapurl = "#mapurl#&part_remark=#URLEncodedFormat(part_remark)#">
 	<cfset tblList=listappend(tblList,'specimen_part')>
 	
 	<cfif left(part_remark,1) is '='>
@@ -3507,7 +3263,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("part_name") AND len(part_name) gt 0>
-	<cfset mapurl = "#mapurl#&part_name=#URLEncodedFormat(part_name)#">
 	<cfset tblList=listappend(tblList,'specimen_part')>
 	<cfif part_name contains "|">
 		<cfset part_name=listChangeDelims(part_name,',')>
@@ -3537,7 +3292,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("part_search") AND len(part_search) gt 0>
-	<cfset mapurl = "#mapurl#&part_search=#URLEncodedFormat(part_search)#">
 	<cfset tbls = " #tbls# inner join ( 
 		select specimen_part.derived_from_cat_item as record_id, specimen_part.part_name as part_srch_fld from specimen_part
 		union
@@ -3557,7 +3311,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("is_tissue") AND is_tissue is 1>
-	<cfset mapurl = "#mapurl#&is_tissue=#is_tissue#">
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
 	<cfset thisrow.d="cf_sql_int">
@@ -3567,7 +3320,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("disposition") AND len(disposition) gt 0>
-	<cfset mapurl = "#mapurl#&disposition=#URLEncodedFormat(disposition)#">
 	<cfset tblList=listappend(tblList,'specimen_part')>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -3582,27 +3334,10 @@
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
 	<cfset thisrow.d="cf_sql_varchar">
-	<cfset thisrow.t="specimen_part.condition)">
+	<cfset thisrow.t="specimen_part.condition">
 	<cfset thisrow.o="ilike">
 	<cfset thisrow.v='%#condition#%'>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&condition=#URLEncodedFormat(condition)#">
-</cfif>
-<cfif isdefined("Common_Name") AND len(Common_Name) gt 0>
-	<cfset tblList=listappend(tblList,'identification')>
-	<cfset tblList=listappend(tblList,'identification_taxonomy')>
-	<cfif not listfind(tblList,'common_name')>
-		<cfset tblList=listappend(tblList,'common_name')>
-		<cfset tbls = " #tbls# INNER JOIN common_name ON (identification_taxonomy.taxon_name_id = common_name.taxon_name_id)">
-	</cfif>
-	<cfset thisrow={}>
-	<cfset thisrow.l="false">
-	<cfset thisrow.d="cf_sql_varchar">
-	<cfset thisrow.t="UPPER(common_name.Common_Name)">
-	<cfset thisrow.o="like">
-	<cfset thisrow.v='%#ucase(Common_Name)#%'>
-	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&Common_Name=#URLEncodedFormat(Common_Name)#">
 </cfif>
 
 <cfif isdefined("is_peer_reviewed") AND len(is_peer_reviewed) gt 0>
@@ -3621,7 +3356,6 @@
 	<cfset thisrow.o="=">
 	<cfset thisrow.v=is_peer_reviewed>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&is_peer_reviewed=#URLEncodedFormat(is_peer_reviewed)#">
 </cfif>
 
 <cfif isdefined("publication_doi") AND len(publication_doi) gt 0>
@@ -3641,7 +3375,6 @@
 	<cfset thisrow.o="ilike">
 	<cfset thisrow.v='%#publication_doi#%'>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&publication_doi=#URLEncodedFormat(publication_doi)#">
 </cfif>
 <cfif isdefined("publication_id") AND len(publication_id) gt 0>
 	<cfif not listfind(tblList,'citation')>
@@ -3655,7 +3388,6 @@
 	<cfset thisrow.o="=">
 	<cfset thisrow.v=publication_id>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&publication_id=#publication_id#">
 </cfif>
 <cfif isdefined("ispublished") and len(ispublished) gt 0>
 	<!---
@@ -3663,9 +3395,9 @@
 		MAKE SURE THIS IS PROCESSED BEFORE type_status!!
 	---->
 	<cfif ispublished contains "yes">
-		<cfset 	type_status='any'>
+		<cfset type_status='any'>
 	<cfelse>
-		<cfset 	type_status='NULL'>
+		<cfset type_status='NULL'>
 	</cfif>
 </cfif>
 <cfif isdefined("type_status") and len(type_status) gt 0>
@@ -3694,7 +3426,6 @@
 		<cfset thisrow.v='%#type_status#%'>
 		<cfset arrayappend(qp,thisrow)>
 	</cfif>
-	<cfset mapurl = "#mapurl#&type_status=#URLEncodedFormat(type_status)#">
 </cfif>
 <cfif isdefined("collection_object_id") AND len(collection_object_id) gt 0>
 	<cfset thisrow={}>
@@ -3704,7 +3435,6 @@
 	<cfset thisrow.o="in">
 	<cfset thisrow.v=collection_object_id>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&collection_object_id=#collection_object_id#">
 </cfif>
 <cfif isdefined("project_id") AND len(project_id) gt 0>
 	<cfif not listfind(tblList,'projAccn')>
@@ -3722,7 +3452,6 @@
 	<cfset thisrow.o="in">
 	<cfset thisrow.v=project_id>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&project_id=#project_id#">
 </cfif>
 <cfif isdefined("project_sponsor") AND len(project_sponsor) gt 0>
 	<cfset tbls = " #tbls# INNER JOIN project_trans sProjTrans ON (#cacheTbleName#.accn_id = sProjTrans.transaction_id)
@@ -3742,7 +3471,6 @@
 	<cfset thisrow.o="=">
 	<cfset thisrow.v= 'Sponsor'>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&project_sponsor=#URLEncodedFormat(project_sponsor)#">
 </cfif>
 <cfif isdefined("loan_project_name") AND len(loan_project_name) gt 0>
 	<cfset tblList=listappend(tblList,'specimen_part')>
@@ -3765,7 +3493,6 @@
 	<cfset thisrow.o="like">
 	<cfset thisrow.v= '%#ucase(loan_project_name)#%'>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&loan_project_name=#URLEncodedFormat(loan_project_name)#">
 </cfif>
 <cfif isdefined("project_name") AND len(project_name) gt 0>
 	<cfif not listfind(tblList,'projAccn')>
@@ -3787,11 +3514,9 @@
 	<cfset thisrow.o="like">
 	<cfset thisrow.v= '%#ucase(project_name)#%'>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&project_name=#URLEncodedFormat(project_name)#">
 </cfif>
 
 <cfif isdefined("loan_permit_trans_id") and len(loan_permit_trans_id) gt 0>
-	<cfset mapurl = "#mapurl#&loan_permit_trans_id=#loan_permit_trans_id#">
 	<cfif not listfind(tblList,'loan_permit_trans')>
 		<cfset tblList=listappend(tblList,'loan_permit_trans')>
 		<cfset tbls = " #tbls# INNER JOIN specimen_part loan_part ON (#cacheTbleName#.collection_object_id = loan_part.derived_from_cat_item)
@@ -3807,7 +3532,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("accn_permit_trans_id") and len(accn_permit_trans_id) gt 0>
-	<cfset mapurl = "#mapurl#&accn_permit_trans_id=#accn_permit_trans_id#">
 	<cfif not listfind(tblList,'permit_trans')>
 		<cfset tblList=listappend(tblList,'permit_trans')>
 		<cfset tbls = " #tbls# INNER JOIN permit_trans ON (#cacheTbleName#.accn_id = permit_trans.transaction_id)">
@@ -3822,7 +3546,6 @@
 </cfif>
 
 <cfif isdefined("permit_num") AND len(permit_num) gt 0>
-	<cfset mapurl = "#mapurl#&permit_num=#permit_num#">
 	<cfif not listfind(tblList,'permit_trans')>
 		<cfset tblList=listappend(tblList,'permit_trans')>
 		<cfset tbls = " #tbls# INNER JOIN permit_trans ON (#cacheTbleName#.accn_id = permit_trans.transaction_id)">
@@ -3840,7 +3563,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("remark") AND len(remark) gt 0>
-	<cfset mapurl = "#mapurl#&remark=#URLEncodedFormat(remark)#">
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
 	<cfset thisrow.d="cf_sql_varchar">
@@ -3850,7 +3572,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("attributed_determiner_agent_id") AND len(attributed_determiner_agent_id) gt 0>
-	<cfset mapurl = "#mapurl#&attributed_determiner_agent_id=#attributed_determiner_agent_id#">
 	<cfif tbls does not contain " attributes ">
 		<cfset tbls = " #tbls# INNER JOIN attributes ON
 		(#cacheTbleName#.collection_object_id = attributes.collection_object_id)">
@@ -3873,7 +3594,6 @@
 	<cfset attribute_value_1=attribute_value>
 </cfif>
 <cfif isdefined("attribute_remark") AND len(attribute_remark) gt 0>
-	<cfset mapurl = "#mapurl#&attribute_remark=#URLEncodedFormat(attribute_remark)#">
 	<cfset tbls = " #tbls# INNER JOIN v_attributes attributes_rmk ON (#cacheTbleName#.collection_object_id = attributes_rmk.collection_object_id)">
 	<cfif cacheTbleName is not "flat">
 		<cfset thisrow={}>
@@ -3907,7 +3627,6 @@
 				<cfset tbls = " #tbls# INNER JOIN taxon_term tax_srch_#i# ON (identification_taxonomy.taxon_name_id = tax_srch_#i#.taxon_name_id)">
 				<cfset tblList=listappend(tblList,'tax_srch_#i#')>
 			</cfif>
-			<cfset mapurl = "#mapurl#&tax_trm_#i#=#thisTrm#">
 			<cfif left(thisTrm,1) is '='>
 				<cfset thisOper='equals'>
 				<cfset thisTrm=right(thisTrm,len(thisTrm)-1)>
@@ -3955,7 +3674,6 @@
 				<cfset tbls = " #tbls# INNER JOIN taxon_term tax_srch_#i# ON (identification_taxonomy.taxon_name_id = tax_srch_#i#.taxon_name_id)">
 				<cfset tblList=listappend(tblList,'tax_srch_#i#')>
 			</cfif>
-			<cfset mapurl = "#mapurl#&tax_src_#i#=#thisSrc#">
 			<cfset thisrow={}>
 			<cfset thisrow.l="true">
 			<cfset thisrow.d="cf_sql_varchar">
@@ -3975,7 +3693,6 @@
 				<cfset tbls = " #tbls# INNER JOIN taxon_term tax_srch_#i# ON (identification_taxonomy.taxon_name_id = tax_srch_#i#.taxon_name_id)">
 				<cfset tblList=listappend(tblList,'tax_srch_#i#')>
 			</cfif>
-			<cfset mapurl = "#mapurl#&tax_rnk_#i#=#thisRnk#">
 			<cfif compare(thisRnk,"NULL") is 0>
 				<cfset thisrow={}>
 				<cfset thisrow.l="false">
@@ -4000,49 +3717,38 @@
 <cfloop from="1" to="#numberOfAttributes#" index="i">
 	<cfset thisAttType="">
 	<cfset thisAttVal="">
+		<cfset thisAttDet=''>
 	<cfif isdefined("attribute_type_#i#")>
 		<cfset thisAttType=evaluate("attribute_type_" & i)>
-		<cfset mapurl = "#mapurl#&attribute_type_#i#=#URLEncodedFormat(thisAttType)#">
 	</cfif>
 	<cfif isdefined("attribute_value_#i#")>
 		<cfset thisAttVal=evaluate("attribute_value_" & i)>
-		<cfset mapurl = "#mapurl#&attribute_value_#i#=#URLEncodedFormat(thisAttVal)#">
 	</cfif>
-	<cfif len(thisAttType) gt 0 or len(thisAttVal) gt 0>
+	<cfif isdefined("attribute_determiner_#i#")>
+		<cfset thisAttDet=evaluate("attribute_determiner_" & i)>
+	</cfif>
+	<cfif len(thisAttType) gt 0 or len(thisAttVal) gt 0 or len(thisAttDet) gt 0>
 		<cfset thisAttOper='like'>
 		<cfset thisAttUnit=''>
 		<cfset thisAttMeth=''>
-		<cfset thisAttDet=''>
 		<cfset thisAttRmk=''>
 		<cfset thisAttDtMn=''>
 		<cfset thisAttDtMx=''>
 		<cfif isdefined("attribute_units_#i#")>
 			<cfset thisAttUnit=evaluate("attribute_units_" & i)>
-		</cfif>
-		<cfset mapurl = "#mapurl#&attribute_units_#i#=#thisAttUnit#">
-	
+		</cfif>	
 		<cfif isdefined("attribute_method_#i#")>
 			<cfset thisAttMeth=evaluate("attribute_method_" & i)>
 		</cfif>
-		<cfset mapurl = "#mapurl#&attribute_method_#i#=#thisAttMeth#">
-		<cfif isdefined("attribute_determiner_#i#")>
-			<cfset thisAttDet=evaluate("attribute_determiner_" & i)>
-		</cfif>
-		<cfset mapurl = "#mapurl#&attribute_determiner_#i#=#thisAttDet#">
-
 		<cfif isdefined("attribute_remark_#i#")>
 			<cfset thisAttRmk=evaluate("attribute_remark_" & i)>
 		</cfif>
-		<cfset mapurl = "#mapurl#&attribute_remark_#i#=#thisAttRmk#">
 		<cfif isdefined("attribute_date_min_#i#")>
 			<cfset thisAttDtMn=evaluate("attribute_date_min_" & i)>
 		</cfif>
-		<cfset mapurl = "#mapurl#&attribute_date_min_#i#=#thisAttDtMn#">
 		<cfif isdefined("attribute_date_max_#i#")>
 			<cfset thisAttDtMx=evaluate("attribute_date_max_" & i)>
-		</cfif>
-		<cfset mapurl = "#mapurl#&attribute_date_max_#i#=#thisAttDtMx#">
-		
+		</cfif>		
 		<cfif len(thisAttVal) gt 0>
 			<!---- allow inline operator ---->
 			<cfif left(thisAttVal,1) is '='>
@@ -4167,20 +3873,30 @@
 					<cfset tblList=listappend(tblList,'att_det_#i#')>
 					<cfset tbls = " #tbls# INNER JOIN agent_name att_det_#i#  ON attributes_#i#.determined_by_agent_id = att_det_#i#.agent_id ">
 				</cfif>
-				<cfset thisrow={}>
-				<cfset thisrow.l="false">
-				<cfset thisrow.d="cf_sql_varchar">
-				<cfset thisrow.t="att_det_#i#.agent_name">
-				<cfset thisrow.o="ilike">
-				<cfset thisrow.v='%#thisAttDet#%'>
-				<cfset arrayappend(qp,thisrow)>
+				<cfif left(thisAttDet,1) is '='>
+					<cfset thisrow={}>
+					<cfset thisrow.l="false">
+					<cfset thisrow.d="cf_sql_varchar">
+					<cfset thisrow.t="att_det_#i#.agent_name">
+					<cfset thisrow.o="ilike">
+					<cfset thisrow.v=mid(thisAttDet,2,len(thisAttDet)-1)>
+					<cfset arrayappend(qp,thisrow)>
+				<cfelse>
+					<cfset thisrow={}>
+					<cfset thisrow.l="false">
+					<cfset thisrow.d="cf_sql_varchar">
+					<cfset thisrow.t="att_det_#i#.agent_name">
+					<cfset thisrow.o="ilike">
+					<cfset thisrow.v='%#thisAttDet#%'>
+					<cfset arrayappend(qp,thisrow)>
+				</cfif>		
 			</cfif>
 			<cfif len(thisAttRmk) gt 0>
 				<cfset thisrow={}>
 				<cfset thisrow.l="false">
 				<cfset thisrow.d="cf_sql_varchar">
 				<cfset thisrow.t="attributes_#i#.attribute_remark">
-				<cfset thisrow.o="=">
+				<cfset thisrow.o="ilike">
 				<cfset thisrow.v='%#thisAttRmk#%'>
 				<cfset arrayappend(qp,thisrow)>
 			</cfif>
@@ -4206,7 +3922,6 @@
 	</cfif>
 </cfloop>
 <cfif isdefined("remove_row") and len(remove_row) gt 0>
-	<cfset mapurl = "#mapurl#&remove_row=#remove_row#">
 	<cfset remove_row=listchangedelims(remove_row,",")>
 	<cfset thisrow={}>
 	<cfset thisrow.l="true">
@@ -4218,7 +3933,6 @@
 </cfif>
 <!---- below massively rebuilt --->
 <cfif isdefined("permit_type") AND len(permit_type) gt 0>
-	<cfset mapurl = "#mapurl#&permit_type=#permit_type#">
 	<cfif not listfind(tblList,'permit_trans')>
 		<cfset tblList=listappend(tblList,'permit_trans')>
 		<cfset tbls = " #tbls# INNER JOIN permit_trans ON (#cacheTbleName#.accn_id = permit_trans.transaction_id)">
@@ -4240,7 +3954,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("permit_issued_to") AND len(permit_issued_to) gt 0>
-	<cfset mapurl = "#mapurl#&permit_issued_to=#URLEncodedFormat(permit_issued_to)#">
 	<cfif not listfind(tblList,'permit_trans')>
 		<cfset tblList=listappend(tblList,'permit_trans')>
 		<cfset tbls = " #tbls# INNER JOIN permit_trans ON (#cacheTbleName#.accn_id = permit_trans.transaction_id)">
@@ -4270,7 +3983,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("permit_issued_by") AND len(permit_issued_by) gt 0>
-	<cfset mapurl = "#mapurl#&permit_issued_by=#URLEncodedFormat(permit_issued_by)#">
 	<cfif not listfind(tblList,'permit_trans')>
 		<cfset tblList=listappend(tblList,'permit_trans')>
 		<cfset tbls = " #tbls# INNER JOIN permit_trans ON (#cacheTbleName#.accn_id = permit_trans.transaction_id)">
@@ -4300,7 +4012,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("loan_trans_id") and len(loan_trans_id) gt 0>
-	<cfset mapurl = "#mapurl#&loan_trans_id=#loan_trans_id#">
 	<cfset tbls = " #tbls# INNER JOIN (
 		select 
 			loan_item.transaction_id, 
@@ -4323,7 +4034,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("loan_project_id") AND len(loan_project_id) gt 0>
-	<cfset mapurl = "#mapurl#&loan_project_id=#loan_project_id#">
 	<cfset tbls = " #tbls# INNER JOIN (
 		select
 			specimen_part.derived_from_cat_item as cid,
@@ -4349,7 +4059,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("loan_number") and len(loan_number) gt 0>
-	<cfset mapurl = "#mapurl#&loan_number=#loan_number#">
 	<cfset tbls = " #tbls# INNER JOIN (
 		select
 			loan_item.transaction_id, 
@@ -4389,7 +4098,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("data_loan_trans_id") and len(data_loan_trans_id) gt 0>
-	<cfset mapurl = "#mapurl#&data_loan_trans_id=#data_loan_trans_id#">
 	<cfset tbls = " #tbls# INNER JOIN loan_item dli on #cacheTbleName#.collection_object_id=dli.cataloged_item_id ">
 	<cfset thisrow={}>
 	<cfset thisrow.l="true">
@@ -4399,30 +4107,6 @@
 	<cfset thisrow.v=data_loan_trans_id>
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
-<cfif isdefined("print_fg") AND len(print_fg) gt 0>
-	<!---- get data for printing labels ---->
-	<cfset tblList=listappend(tblList,'specimen_part')>
-	<cfif not listfind(tblList,'coll_obj_cont_hist')>
-		<cfset tblList=listappend(tblList,'coll_obj_cont_hist')>
-		<cfset tbls = " #tbls# INNER JOIN coll_obj_cont_hist ON (specimen_part.collection_object_id = coll_obj_cont_hist.collection_object_id) ">
-	</cfif>
-	<cfif not listfind(tblList,'ctr_p')>
-		<cfset tblList=listappend(tblList,'ctr_p')>
-		<cfset tbls = " #tbls# INNER JOIN container ctr_p ON (coll_obj_cont_hist.container_id = ctr_p.container_id) ">
-	</cfif>
-	<cfif not listfind(tblList,'ctr_p1')>
-		<cfset tblList=listappend(tblList,'ctr_p1')>
-		<cfset tbls = " #tbls# INNER JOIN container ctr_p1 ON (ctr_p.parent_container_id = ctr_p1.container_id) ">
-	</cfif>
-	<cfset thisrow={}>
-	<cfset thisrow.l="false">
-	<cfset thisrow.d="CF_SQL_SMALLINT">
-	<cfset thisrow.t="ctr_p1.print_fg">
-	<cfset thisrow.o="=">
-	<cfset thisrow.v=print_fg>
-	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&print_fg=#print_fg#">
-</cfif>
 <cfif isdefined("anybarcode") AND len(anybarcode) gt 0>
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -4431,10 +4115,8 @@
 	<cfset thisrow.o="ilike">
 	<cfset thisrow.v="%#anybarcode#%">
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&anybarcode=#anybarcode#">
 </cfif>
 <cfif isdefined("media_keywords") AND len(media_keywords) gt 0>
-	<cfset mapurl = "#mapurl#&media_keywords=#media_keywords#">
 	<cfset tbls = " #tbls# INNER JOIN (
 	      select
 	        media_relations.cataloged_item_id as collection_object_id,
@@ -4463,7 +4145,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("ImgNoConfirm") and len(ImgNoConfirm) gt 0>
-	<cfset mapurl = "#mapurl#&ImgNoConfirm=#ImgNoConfirm#">
 	<cfset tbls = " #tbls# INNER JOIN attributes mconatr on #cacheTbleName#.collection_object_id=mconatr.collection_object_id and attribute_type='image confirmed' ">
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
@@ -4473,52 +4154,91 @@
 	<cfset thisrow.v="yes">
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
+
+
+
+
+
+
+
+
+
+
+
+
+
 <cfif isdefined("collector") AND len(collector) gt 0>
 	<cfparam name="coll_role" default="">
-	<cfif len(coll_role) gt 0>
-		<!--- searching for agent-in-role; match agent name only ---->
-		<cfset tbls = " #tbls# INNER JOIN collector collector_srch ON #cacheTbleName#.collection_object_id = collector_srch.collection_object_id ">
-		<cfset tbls = " #tbls# INNER JOIN agent_name agnt ON collector_srch.agent_id=agnt.agent_id">
-		<cfset mapurl = "#mapurl#&coll_role=#coll_role#">
+	<cfif left(collector, 37) is "https://arctos.database.museum/agent/">
+		<cfset tbls = tbls & " INNER JOIN collector collector_srch ON #cacheTbleName#.collection_object_id = collector_srch.collection_object_id ">
+		<cfset thisrow={}>
+		<cfset thisrow.l="false">
+		<cfset thisrow.d="cf_sql_int">
+		<cfset thisrow.t="collector_srch.agent_id">
+		<cfset thisrow.o="=">
+		<cfset thisrow.v=replace(collector, 'https://arctos.database.museum/agent/', '')>
+		<cfset arrayappend(qp,thisrow)>
+		<cfif len(coll_role) gt 0 and coll_role neq 'any'>
+			<cfset thisrow={}>
+			<cfset thisrow.l="false">
+			<cfset thisrow.d="cf_sql_varchar">
+			<cfset thisrow.t="collector_srch.collector_role">
+			<cfset thisrow.o="=">
+			<cfset thisrow.v=coll_role>
+			<cfset arrayappend(qp,thisrow)>
+		</cfif>
+	<cfelse>
+		<cfif len(coll_role) gt 0>
+			<!--- searching for agent-in-role; match agent name only ---->
+			<cfset tbls = tbls & " INNER JOIN collector collector_srch ON #cacheTbleName#.collection_object_id = collector_srch.collection_object_id ">
+			<cfset tbls = tbls & " INNER JOIN agent_name agnt ON collector_srch.agent_id=agnt.agent_id ">
+
+			<cfif coll_role neq 'any'>
+				<!---- any just triggers the join and filter ---->
+				<cfset thisrow={}>
+				<cfset thisrow.l="false">
+				<cfset thisrow.d="cf_sql_varchar">
+				<cfset thisrow.t="collector_srch.collector_role">
+				<cfset thisrow.o="=">
+				<cfset thisrow.v=coll_role>
+				<cfset arrayappend(qp,thisrow)>
+
+			</cfif>
+		<cfelse>
+			<!--- match agent name, or verbatim agent ---->
+			<cfset tbls = tbls & " inner join (
+	   			select agent_name.agent_name,collector.collection_object_id from agent_name inner JOIN collector ON collector.agent_id=agent_name.agent_id
+	    		union 
+	    		select attribute_value,collection_object_id from attributes where attribute_type=$$verbatim agent$$
+				) agnt on agnt.collection_object_id=cataloged_item.collection_object_id ">
+		</cfif>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
 		<cfset thisrow.d="cf_sql_varchar">
-		<cfset thisrow.t="collector_srch.collector_role">
-		<cfset thisrow.o="=">
-		<cfset thisrow.v=coll_role>
+		<cfset thisrow.t="agnt.agent_name">
+		<cfset thisrow.o="ilike">
+		<cfset thisrow.v="%#collector#%">
 		<cfset arrayappend(qp,thisrow)>
-	<cfelse>
-		<!--- match agent name, or verbatim agent ---->
-		<cfset tbls = " #tbls# inner join (
-   			select agent_name.agent_name,collector.collection_object_id from agent_name inner JOIN collector ON collector.agent_id=agent_name.agent_id
-    		union 
-    		select attribute_value,collection_object_id from attributes where attribute_type='verbatim agent'
-			) agnt on agnt.collection_object_id=cataloged_item.collection_object_id ">
+
+
+
 	</cfif>
-	<cfset thisrow={}>
-	<cfset thisrow.l="false">
-	<cfset thisrow.d="cf_sql_varchar">
-	<cfset thisrow.t="agnt.agent_name">
-	<cfset thisrow.o="ilike">
-	<cfset thisrow.v="%#collector#%">
-	<cfset arrayappend(qp,thisrow)>
 	<cfif cacheTbleName is not "flat">
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
 		<cfset thisrow.d="cf_sql_varchar">
 		<cfset thisrow.t="COALESCE(#cacheTbleName#.encumbrances,'')">
-		<cfset thisrow.o="not like ">
+		<cfset thisrow.o="not like">
 		<cfset thisrow.v="%mask collector%">
 		<cfset arrayappend(qp,thisrow)>
 		<cfset thisrow={}>
 		<cfset thisrow.l="false">
 		<cfset thisrow.d="cf_sql_varchar">
 		<cfset thisrow.t="COALESCE(#cacheTbleName#.encumbrances,'')">
-		<cfset thisrow.o="not like ">
+		<cfset thisrow.o="not like">
 		<cfset thisrow.v="%mask preparator%">
 		<cfset arrayappend(qp,thisrow)>
 	</cfif>
-	<cfset mapurl = "#mapurl#&collector=#collector#">
 </cfif>
 <cfif isdefined("publication_title") AND len(publication_title) gt 0>
 	<cfif not listfind(tblList,'citation')>
@@ -4537,10 +4257,8 @@
 	<cfset thisrow.o="like">
 	<cfset thisrow.v='%#ucase(publication_title)#%'>
 	<cfset arrayappend(qp,thisrow)>
-	<cfset mapurl = "#mapurl#&publication_title=#URLEncodedFormat(publication_title)#">
 </cfif>
 <cfif isdefined("archive_name") AND len(archive_name) gt 0>
-	<cfset mapurl = "#mapurl#&archive_name=#archive_name#">
 	<cfset tbls = " #tbls# INNER JOIN specimen_archive ON (#cacheTbleName#.guid = specimen_archive.guid)
 		INNER JOIN archive_name ON 	(specimen_archive.archive_id = archive_name.archive_id)">
 	<cfset thisrow={}>
@@ -4552,7 +4270,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("taxon_name") AND len(taxon_name) gt 2>
-	<cfset mapurl = "#mapurl#&taxon_name=#taxon_name#">
 	<cfset tbls = " #tbls# inner join (
 		select 
 			identification.collection_object_id,
@@ -4565,29 +4282,8 @@
 		from 
 			identification
 			inner join identification_taxonomy on identification.identification_id=identification_taxonomy.identification_id
-			inner join taxon_term on identification_taxonomy.taxon_name_id=taxon_term.taxon_name_id
-		union select 
-			identification.collection_object_id,
-			common_name.common_name as scientific_name 
-		from 
-			identification
-			inner join identification_taxonomy on identification.identification_id=identification_taxonomy.identification_id
-			inner join common_name on identification_taxonomy.taxon_name_id=common_name.taxon_name_id
-		
+			inner join taxon_term on identification_taxonomy.taxon_name_id=taxon_term.taxon_name_id		
 	) as taxon_search on #cacheTbleName#.collection_object_id = taxon_search.collection_object_id ">
-
-	<!-----
-		this should be handled by the arctos relationsh source
-		union select 
-			identification.collection_object_id,
-			taxon_term.term as scientific_name
-		from 
-			identification
-			inner join identification_taxonomy on identification.identification_id=identification_taxonomy.identification_id
-			inner join taxon_relations on identification_taxonomy.taxon_name_id=taxon_relations.taxon_name_id
-			inner join taxon_term on taxon_relations.related_taxon_name_id=taxon_term.taxon_name_id
-	---->
-
 	<cfif left(taxon_name,1) is "=">
 		<cfset strm=ucase(mid(taxon_name,2,len(taxon_name)-1))>
 		<cfset thisrow={}>
@@ -4614,7 +4310,6 @@
 		<cfabort>
 	</cfif>
 	<cfset anyid = replace(anyid,"'","''","all")>
-	<cfset mapurl = "#mapurl#&anyid=#anyid#">
 	<cfset anyid=rereplace(anyid,'^(https?):\/\/arctos.database.museum/guid/','','all')>
 	<cfset tbls = " #tbls# inner join (
 		select collection_object_id, display_value as theValue from	coll_obj_other_id_num
@@ -4637,7 +4332,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("subject_matter") and len(subject_matter) gt 0>
-	<cfset mapurl = "#mapurl#&subject_matter=#subject_matter#">
 	<cfset tbls = " #tbls# left outer JOIN v_attributes tbl_subject_matter ON (#cacheTbleName#.collection_object_id = tbl_subject_matter.collection_object_id) ">
 	<cfset tbls = " #tbls# AND tbl_subject_matter.attribute_type = 'subject matter'">
 	<cfset thisrow={}>
@@ -4649,23 +4343,17 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("portfolio_or_series") and len(portfolio_or_series) gt 0>
-	<cfset mapurl = "#mapurl#&portfolio_or_series=#portfolio_or_series#">
 	<cfset tbls = " #tbls# left outer JOIN v_attributes tbl_portfolio_or_series ON (#cacheTbleName#.collection_object_id = tbl_portfolio_or_series.collection_object_id) ">
 	<cfset tbls = " #tbls# AND tbl_portfolio_or_series.attribute_type = 'portfolio or series'">
 	<cfset thisrow={}>
 	<cfset thisrow.l="false">
 	<cfset thisrow.d="cf_sql_varchar">
-	<cfset thisrow.t="tbl_subject_matter.attribute_value">
+	<cfset thisrow.t="tbl_portfolio_or_series.attribute_value">
 	<cfset thisrow.o="ilike"> 
 	<cfset thisrow.v="%#portfolio_or_series#%">
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
-
-
-
-
 <cfif isdefined("culture_of_origin") and len(culture_of_origin) gt 0>
-	<cfset mapurl = "#mapurl#&culture_of_origin=#culture_of_origin#">
 	<cfset tbls = " #tbls# left outer JOIN v_attributes tbl_culture_of_origin ON (#cacheTbleName#.collection_object_id = tbl_culture_of_origin.collection_object_id) ">
 	<cfset tbls = " #tbls# AND tbl_culture_of_origin.attribute_type = 'culture of origin'">
 	<cfset thisrow={}>
@@ -4677,7 +4365,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("culture_of_use") and len(culture_of_use) gt 0>
-	<cfset mapurl = "#mapurl#&culture_of_use=#culture_of_use#">
 	<cfset tbls = " #tbls# left outer JOIN v_attributes tbl_culture_of_use ON (#cacheTbleName#.collection_object_id = tbl_culture_of_use.collection_object_id) ">
 	<cfset tbls = " #tbls# AND tbl_culture_of_use.attribute_type = 'culture of use'">
 	<cfset thisrow={}>
@@ -4689,7 +4376,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("description") and len(description) gt 0>
-	<cfset mapurl = "#mapurl#&description=#description#">
 	<cfset tbls = " #tbls# left outer JOIN v_attributes tbl_description ON (#cacheTbleName#.collection_object_id = tbl_description.collection_object_id) ">
 	<cfset tbls = " #tbls# AND tbl_description.attribute_type = 'description'">
 	<cfset thisrow={}>
@@ -4701,7 +4387,6 @@
 	<cfset arrayappend(qp,thisrow)>
 </cfif>
 <cfif isdefined("materials") and len(materials) gt 0>
-	<cfset mapurl = "#mapurl#&materials=#materials#">
 	<cfset tbls = " #tbls# left outer JOIN v_attributes tbl_dmaterials ON (#cacheTbleName#.collection_object_id = tbl_dmaterials.collection_object_id) ">
 	<cfset tbls = " #tbls# AND tbl_dmaterials.attribute_type = 'materials'">
 	<cfset thisrow={}>
@@ -4724,8 +4409,6 @@
 	</cfif>
 	<cfset attribute_meta_age_min=rereplace(attribute_meta_age_min, "[^0-9.]", "", "ALL")>
 	<cfset attribute_meta_age_max=rereplace(attribute_meta_age_max, "[^0-9.]", "", "ALL")>
-	<cfset mapurl = "#mapurl#&attribute_meta_age_min=#URLEncodedFormat(attribute_meta_age_min)#">
-	<cfset mapurl = "#mapurl#&attribute_meta_age_max=#URLEncodedFormat(attribute_meta_age_max)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -4734,7 +4417,6 @@
 </cfif>
 <cfif isdefined("attribute_meta_term") AND len(attribute_meta_term) gt 0>
 	<cfset attribute_meta_term=rereplace(attribute_meta_term, "[^a-zA-Z0-9 ]", "", "ALL")>
-	<cfset mapurl = "#mapurl#&attribute_meta_term=#URLEncodedFormat(attribute_meta_term)#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -4775,11 +4457,9 @@
 				subordinates where container_type='collection object'
 				)
 		)">
-	<cfset mapurl = "#mapurl#&anyContainerId=#anyContainerId#">
 </cfif>
 <cfif isdefined("coordslist") AND len(coordslist) gt 0>
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = "#mapurl#&coordslist=#coordslist#">
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -4795,7 +4475,6 @@
 <cfif isdefined("kmlfile") AND len(kmlfile) gt 0>
 	<cfparam name="geog_srch_type" default="contains">
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = listappend(mapurl,"kmlfile=#kmlfile#","&")>
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -4823,8 +4502,6 @@
 <cfif isdefined("kmlfile") AND len(kmlfile) gt 0>
 	<cfparam name="geog_srch_type" default="contains">
 	<cfset isLocalitySearch=true>
-	<cfset mapurl = listappend(mapurl,"kmlfile=#kmlfile#","&")>
-	<cfset mapurl = listappend(mapurl,"geog_srch_type=#geog_srch_type#","&")>
 	<cfset tblList=listappend(tblList,'specimen_event')>
 	<cfset tblList=listappend(tblList,'collecting_event')>
 	<cfset tblList=listappend(tblList,'locality')>
@@ -4850,7 +4527,6 @@
 	</cfif>
 </cfif>
 <cfif isdefined("related_base") and len(related_base) gt 0>
-	<cfset mapurl = "#mapurl#&related_base=#URLEncodedFormat(related_base)#">
 		<cfif related_base contains "$" or related_base contains "(" or related_base contains "'">
 		<!-- garbage, no legit reason to use -->
 		<cfabort>
@@ -4923,5 +4599,16 @@
 </cfif>
 <cfif listfind(tblList,'identification_taxonomy')>
 	<cfset tblJoin=tblJoin & " inner join identification_taxonomy ON identification.identification_id = identification_taxonomy.identification_id ">
+</cfif>
+<!----https://github.com/ArctosDB/arctos/issues/7808 - this is now a different type and the data are required to be more predictable ---->
+<cfif listfind(tblList,'related_item_identifiers')>
+	<!----
+	<cfset tblJoin=tblJoin & " INNER JOIN coll_obj_other_id_num related_item_identifiers ON stripArctosGuidURL(related_item_identifiers.display_value)=#cacheTbleName#.guid and related_item_identifiers.display_value ~ '^http[s]?://arctos.database.museum/guid/' and related_item_identifiers.other_id_type='identifier' and related_item_identifiers.id_references != 'self' ">
+	---->
+	<cfset tblJoin=tblJoin & " INNER JOIN coll_obj_other_id_num related_item_identifiers ON stripArctosGuidURL(related_item_identifiers.display_value)=#cacheTbleName#.guid and related_item_identifiers.other_id_type='Arctos record GUID' and related_item_identifiers.id_references != 'self' ">
+</cfif>
+<cfif listfind(tblList,'related_item')>
+	<!---- important! this must use filtered_flat regardless of the user's status, it's searching across collections and VPDs ---->
+	<cfset tblJoin=tblJoin & " INNER JOIN filtered_flat related_item on related_item_identifiers.collection_object_id=related_item.collection_object_id">
 </cfif>
 <cfset tbls = " #tblJoin# #tbls#">

@@ -1,5 +1,8 @@
 <cfset title="Arctos Home">
-<cfinclude template="/includes/_header.cfm">
+<cfif not isdefined("headerwasincluded") or headerwasincluded neq 'true'>
+	<cfinclude template="/includes/_header.cfm">
+	<cfset inclfooter="true">
+</cfif>
 <cfparam name="getCSV" default="false">
 <script src="/includes/sorttable.js"></script>
 
@@ -38,18 +41,11 @@
 		collection.collection,
 		collection.institution,
 		collection.guid_prefix,
-		count(filtered_flat.collection_object_id) rcnt,
+		collection.cache_public_record_count rcnt,
 		lower(cf_collection.portal_name) as portal_name
 	from
 		collection
 		inner join cf_collection on collection.collection_id=cf_collection.collection_id and cf_collection.PUBLIC_PORTAL_FG = 1
-		inner join filtered_flat on collection.collection_id=filtered_flat.collection_id
-	group by
-		collection.collection_id,
-		collection.collection,
-		collection.institution,
-		collection.guid_prefix,
-		portal_name
 	order by
 		guid_prefix
 </cfquery>
@@ -84,19 +80,19 @@
 	<a target="_blank" class="external" href="https://arctosdb.org/features/">https://arctosdb.org/features</a> for more information.
 </p>
 <p>
-<cfif getCSV is true>
-	<cfset flds=raw.columnlist>
-	<cfset  util = CreateObject("component","component.utilities")>
-	<cfset csv = util.QueryToCSV2(Query=raw,Fields=flds)>
-	<cffile action = "write"
-	    file = "#Application.webDirectory#/download/portals.csv"
-    	output = "#csv#"
-    	addNewLine = "no">
-	<cflocation url="/download.cfm?file=/portals.csv" addtoken="false">
-	<a href="/download.cfm?file=/portals.csv">Download CSV</a>
-<cfelse>
-	<a href="/home.cfm?getCSV=true">download</a>
-</cfif>
+	<cfif getCSV is true>
+		<cfset flds=raw.columnlist>
+		<cfset  util = CreateObject("component","component.utilities")>
+		<cfset csv = util.QueryToCSV2(Query=raw,Fields=flds)>
+		<cffile action = "write"
+		    file = "#Application.webDirectory#/download/portals.csv"
+	    	output = "#csv#"
+	    	addNewLine = "no">
+		<cflocation url="/download.cfm?file=/portals.csv" addtoken="false">
+		<a href="/download.cfm?file=/portals.csv">Download CSV</a>
+	<cfelse>
+		<a href="/home.cfm?getCSV=true">download</a>
+	</cfif>
 </p>
 
 <div class="instr">click headers to sort</div>
@@ -124,5 +120,6 @@
 
 	</cfloop>
 </table>
-</cfoutput>
-<cfinclude template="/includes/_footer.cfm">
+</cfoutput><cfif isdefined("inclfooter") and inclfooter eq 'true'>
+	<cfinclude template="/includes/_footer.cfm">
+</cfif>

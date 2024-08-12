@@ -129,7 +129,38 @@
 
 </cffunction>
 <!------------------------------------------->
-<cffunction name="moveContainerLocation" access="remote">
+
+<cffunction name="moveContainerByBarcode" access="remote">
+	<cfargument name="child_barcode" type="string" required="yes">
+	<cfargument name="parent_barcode" type="string" required="yes">
+	<!---- this has to be called remotely, but only allow logged-in Operators access--->
+	<cfif not isdefined("session.roles") or not listFindNoCase(session.roles, 'COLDFUSION_USER')>
+		<cfset r["status"]='fail'>
+		<cfset r["msg"]='unauthorized'>
+		<cfreturn r>
+	</cfif>
+	<cftry>
+		<cfquery name="updatecontainer" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			select moveContainerByBarcode(
+				child_barcode => <cfqueryparam value='#child_barcode#' CFSQLType="cf_sql_varchar">,
+				parent_barcode => <cfqueryparam value='#parent_barcode#' CFSQLType="cf_sql_varchar">
+			)
+		</cfquery>
+		<cfset r["status"]='success'>
+		<cfset r["msg"]='#child_barcode# --> #parent_barcode#'>
+	<cfcatch>
+		<cfset r["status"]='fail'>
+		<cfset r["msg"]=cfcatch.Message>
+		<cfset r["dump"]=cfcatch>
+	</cfcatch>
+	</cftry>
+	<cfreturn r>
+</cffunction>
+
+
+<cffunction name="moveContainerLocation____disabled" access="remote">
+	<cfreturn>
+
 	<cfargument name="barcode" type="string" required="yes">
 	<cfargument name="parent_barcode" type="string" required="yes">
 	<cfargument name="newdisp" type="string" required="yes">

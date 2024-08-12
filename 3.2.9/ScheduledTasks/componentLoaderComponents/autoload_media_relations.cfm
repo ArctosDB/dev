@@ -28,7 +28,7 @@
 		<cfset errs="">
 		<cfset aid="">
 		<cfquery name="ibaid" datasource="uam_god"  cachedwithin="#createtimespan(0,0,60,0)#">
-			select getAgentId('#d.username#') as aid
+			select getAgentId(<cfqueryparam value="#d.username#" CFSQLType="CF_SQL_VARCHAR">) as aid
 		</cfquery>
 		<cfif len(ibaid.aid) is 0>
 			<cfset errs=listappend(errs,"invalid agent")>

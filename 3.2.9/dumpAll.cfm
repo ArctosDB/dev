@@ -1,4 +1,5 @@
 <cfthrow message="dumpall">
+<cfabort>
 <!----
 ---->
 cgi.HTTP_X_FORWARDED_FOR

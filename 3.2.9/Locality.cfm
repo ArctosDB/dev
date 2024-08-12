@@ -66,8 +66,13 @@
 <cfif action is "goNameLocality">
 	<cfoutput>
 		<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			update locality set locality_name='temp_'||locality_id where locality_name is null and
-			locality_id in (#locality_id#)
+			update locality set 
+				locality_name='temp_'||locality_id::varchar,
+				last_usr=<cfqueryparam value="#session.username#" cfsqltype="cf_sql_varchar">,
+				last_chg=<cfqueryparam value="#DateConvert('local2Utc',now())#" cfsqltype="cf_sql_timestamp">
+			where 
+				locality_name is null and
+				locality_id in (<cfqueryparam value="#locality_id#" cfsqltype="cf_sql_int" list="true">)
 		</cfquery>
 		<cflocation addtoken="no" url="Locality.cfm?action=manageLocalityName&locality_id=#locality_id#">
 	</cfoutput>
@@ -78,9 +83,15 @@
 <cfif action is "goUnNameLocality">
 	<cfoutput>
 		<cfquery name="d" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			update locality set locality_name=null where
-			locality_name='temp_'||locality_id and
-			locality_id in (#locality_id#)
+			update 
+				locality 
+			set 
+				locality_name=null,
+				last_usr=<cfqueryparam value="#session.username#" cfsqltype="cf_sql_varchar">,
+				last_chg=<cfqueryparam value="#DateConvert('local2Utc',now())#" cfsqltype="cf_sql_timestamp">
+			where
+				locality_name='temp_'||locality_id::varchar and
+				locality_id in (<cfqueryparam value="#locality_id#" cfsqltype="cf_sql_int" list="true">)
 		</cfquery>
 		<cflocation addtoken="no" url="Locality.cfm?action=manageLocalityName&locality_id=#locality_id#">
 	</cfoutput>

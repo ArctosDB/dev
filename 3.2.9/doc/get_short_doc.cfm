@@ -2,13 +2,16 @@
 	<cfthrow message="get_doc called without field">
 	<cfabort>
 </cfif>
-<cfset fld=trim(fld)>
+<cfif fld neq trim(rereplace(fld,'[^A-Za-z_]','','all'))>
+	<cfthrow message="get_doc called with invalid field #encodeForHTML(fld)#">
+	<cfabort>
+</cfif>
+<cfset fld=trim(rereplace(fld,'[^A-Za-z_]','','all'))>
 <cfif left(fld,1) is "_" and len(fld) gt 2>
 	<cfset fld=right(fld,len(fld)-1)>
 </cfif>
 <cfoutput>
 	<cftry>
-		<!--- --->
 		<cfquery name="d" datasource="cf_dbuser" cachedwithin="#createtimespan(0,0,60,0)#">
 			select * from local_documentation where variable_name ilike <cfqueryparam value="#fld#" cfsqltype="cf_sql_varchar">
 		</cfquery>
@@ -16,7 +19,6 @@
 			<div>
 				No documentation is available for #fld#. Please <a href="https://github.com/ArctosDB/arctos/issues/new?assignees=&labels=Bug&projects=&template=bug_report.md&title=missing%20documentation" class="external">file an Issue!</a>
 			</div>
-
 			<cfinvoke component="/component/functions" method="deliver_notification">
 				<cfinvokeargument name="usernames" value="#Application.log_notifications#">
 				<cfinvokeargument name="subject" value="missing documentation">

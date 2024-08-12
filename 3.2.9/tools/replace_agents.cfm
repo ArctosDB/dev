@@ -163,7 +163,7 @@
 			<cfloop query="dagnt">	
 				<tr>
 					<td>
-						<a href="/info/agentActivity.cfm?agent_id=#agent_id#" class="external">#preferred_agent_name#</a>
+						<a href="/agent/#agent_id#" class="external">#preferred_agent_name#</a>
 					</td>
 					<td>
 						<cfquery name="q_collector" dbtype="query">

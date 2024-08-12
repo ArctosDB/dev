@@ -1,117 +1,96 @@
 <cfinclude template = "includes/_header.cfm">
 <script src="/includes/sorttable.js"></script>
 <cfset title="Administer Users">
-<form action="AdminUsers.cfm" method="post">
-	<input type="hidden" name="Action" value="list">
-	<label for="username">Search by Arctos Username</label>
-	<input name="username">&nbsp;<input type="submit" value="Find">
-</form>
-<hr>
 
+<cfif action is "nothing">
+	<cfoutput>
+		<form action="AdminUsers.cfm" method="post">
+			<label for="username">Search by Arctos Username</label>
+			<cfparam name="username" default="">
+			<input type="text" name="username" autocomplete="off" value="#username#">&nbsp;<input type="submit" value="Find">
+		</form>
+		<cfif len(username) gt 0>
+			<cfquery name="getUsers" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+				SELECT
+					username,
+					FIRST_NAME,
+					MIDDLE_NAME,
+					LAST_NAME,
+					AFFILIATION,
+					EMAIL,
+					preferred_agent_name
+				FROM
+					cf_users
+					left outer join agent on cf_users.operator_agent_id=agent.agent_id
+				where
+					lower(username) like <cfqueryparam value="%#lcase(username)#%" CFSQLType="CF_SQL_VARCHAR">
+				order by username
+			</cfquery>
 
-<cfif Action is "list">
-	<cfquery name="getUsers" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-		SELECT
-			username,
-			FIRST_NAME,
-			MIDDLE_NAME,
-			LAST_NAME,
-			AFFILIATION,
-			EMAIL,
-			agent_name.agent_name
-		FROM
-			cf_users
-			left outer join agent_name aj on cf_users.username=aj.agent_name and agent_name_type='login'
-			left outer join agent_name on aj.agent_id=agent_name.agent_id
-		where
-			upper(username) like <cfqueryparam value="%#ucase(username)#%" CFSQLType="CF_SQL_VARCHAR">
-	</cfquery>
-	<cfquery name="ud" dbtype="query">
-		select username,FIRST_NAME,
-			MIDDLE_NAME,
-			LAST_NAME,
-			AFFILIATION,
-			EMAIL
-			from getUsers group by
-			username,FIRST_NAME,
-			MIDDLE_NAME,
-			LAST_NAME,
-			AFFILIATION,
-			EMAIL
-			order by username
-		</cfquery>
-	<br>Select a user to administer<br>
-
-		<cfoutput>
-	<table border="1" id="t" class="sortable">
-		<tr>
-			<th>Username</th>
-			<th>Edit</th>
-			<th>Email</th>
-			<th>Collections</th>
-			<th>Roles</th>
-			<th>Names</th>
-			<th>Info</th>
-		</tr>
-		<cfloop query="ud">
-			<cfquery name="c_roles" datasource="uam_god">
-				 WITH RECURSIVE cte AS (
-				         SELECT pg_roles.oid,
-				            pg_roles.rolname
-				           FROM pg_roles
-				          WHERE pg_roles.rolname = <cfqueryparam value="#lcase(username)#" CFSQLType="CF_SQL_VARCHAR">
-				        UNION ALL
-				         SELECT m.roleid,
-				            pgr.rolname
-				           FROM cte cte_1
-				             JOIN pg_auth_members m ON m.member = cte_1.oid
-				             JOIN pg_roles pgr ON pgr.oid = m.roleid
-				        )
-				 SELECT rolname as role_name
-				   FROM cte inner join collection on upper(cte.rolname) = upper(replace(collection.guid_prefix,':','_'))
-				   order by rolname
-			</cfquery>
-			<cfquery name="m_roles" datasource="uam_god">
-				 WITH RECURSIVE cte AS (
-				         SELECT pg_roles.oid,
-				            pg_roles.rolname
-				           FROM pg_roles
-				          WHERE pg_roles.rolname = <cfqueryparam value="#lcase(username)#" CFSQLType="CF_SQL_VARCHAR">
-				        UNION ALL
-				         SELECT m.roleid,
-				            pgr.rolname
-				           FROM cte cte_1
-				             JOIN pg_auth_members m ON m.member = cte_1.oid
-				             JOIN pg_roles pgr ON pgr.oid = m.roleid
-				        )
-				 SELECT rolname as role_name
-				   FROM cte
-				   left outer join collection on upper(cte.rolname) = upper(replace(collection.guid_prefix,':','_'))
-				   where collection.collection_id is null
-				   order by rolname
-			</cfquery>
-			<cfquery name="an" dbtype="query">
-				select agent_name from getUsers where username=<cfqueryparam value="#username#" CFSQLType="CF_SQL_VARCHAR"> order by agent_name
-			</cfquery>
-			<tr>
-				 <td>#username#</td>
-				 <td><a href="AdminUsers.cfm?action=edit&username=#username#"><input type="button" class="lnkBtn" value="edit"></a></td>
-				 <td>#email#</td>
-				 <td>#replace(valuelist(c_roles.role_name),",",", ","all")#</td>
-				 <td>#replace(valuelist(m_roles.role_name),",",", ","all")#</td>
-				 <td>
-				 	<cfloop query="an">
-				 		<div style="white-space: nowrap;">#agent_name#</div>
-				 	</cfloop>
-				 </td>
-				<td>#FIRST_NAME# #MIDDLE_NAME# #LAST_NAME#: #AFFILIATION# (#EMAIL#)</td>
-			</tr>
-		</cfloop>
-	</table>
+			<h3>Found Users</h3>
+			<a href="AdminUsers.cfm">search again</a>
+	
+			<table border="1" id="t" class="sortable">
+				<tr>
+					<th>Edit</th>
+					<th>Username</th>
+					<th>AgentName</th>
+					<th>Email</th>
+					<th>Collections</th>
+					<th>Roles</th>
+					<th>Info</th>
+				</tr>
+				<cfloop query="getUsers">
+					<cfquery name="c_roles" datasource="uam_god">
+						 WITH RECURSIVE cte AS (
+						         SELECT pg_roles.oid,
+						            pg_roles.rolname
+						           FROM pg_roles
+						          WHERE pg_roles.rolname = <cfqueryparam value="#lcase(username)#" CFSQLType="CF_SQL_VARCHAR">
+						        UNION ALL
+						         SELECT m.roleid,
+						            pgr.rolname
+						           FROM cte cte_1
+						             JOIN pg_auth_members m ON m.member = cte_1.oid
+						             JOIN pg_roles pgr ON pgr.oid = m.roleid
+						        )
+						 SELECT rolname as role_name
+						   FROM cte inner join collection on upper(cte.rolname) = upper(replace(collection.guid_prefix,':','_'))
+						   order by rolname
+					</cfquery>
+					<cfquery name="m_roles" datasource="uam_god">
+						 WITH RECURSIVE cte AS (
+						         SELECT pg_roles.oid,
+						            pg_roles.rolname
+						           FROM pg_roles
+						          WHERE pg_roles.rolname = <cfqueryparam value="#lcase(username)#" CFSQLType="CF_SQL_VARCHAR">
+						        UNION ALL
+						         SELECT m.roleid,
+						            pgr.rolname
+						           FROM cte cte_1
+						             JOIN pg_auth_members m ON m.member = cte_1.oid
+						             JOIN pg_roles pgr ON pgr.oid = m.roleid
+						        )
+						 SELECT rolname as role_name
+						   FROM cte
+						   left outer join collection on upper(cte.rolname) = upper(replace(collection.guid_prefix,':','_'))
+						   where collection.collection_id is null
+						   order by rolname
+					</cfquery>
+					<tr>
+						 <td><a href="AdminUsers.cfm?action=edit&username=#username#"><input type="button" class="lnkBtn" value="edit"></a></td>
+						 <td>#username#</td>
+						 <td>#preferred_agent_name#</td>
+						 <td>#email#</td>
+						 <td>#replace(valuelist(c_roles.role_name),",",", ","all")#</td>
+						 <td>#replace(valuelist(m_roles.role_name),",",", ","all")#</td>
+						<td>#FIRST_NAME# #MIDDLE_NAME# #LAST_NAME#: #AFFILIATION# (#EMAIL#)</td>
+					</tr>
+				</cfloop>
+			</table>
+		</cfif>
 	</cfoutput>
 </cfif>
-
-
 <!-------------------------------------------------->
 <cfif action is "edit">
 	<cfoutput>
@@ -123,11 +102,12 @@
 				LAST_NAME,
 				AFFILIATION,
 				EMAIL,
-				failcount
+				failcount,
+				operator_agent_id
 			FROM
 				cf_users
 			where
-			 	upper(username) = <cfqueryparam value="#ucase(username)#" CFSQLType="cf_sql_varchar">
+			 	lower(username) = <cfqueryparam value="#lcase(username)#" CFSQLType="cf_sql_varchar">
 		</cfquery>
 		<cfif getUsers.recordcount is not 1>
 			<div class="error">
@@ -205,17 +185,8 @@
 						<tr>
 							<td align="right">Agent:</td>
 							<td>
-								<cfquery name="isAgent" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-									SELECT
-										agent_id
-									FROM
-										agent_name
-									where
-										agent_name_type='login' and
-									 	agent_name=<cfqueryparam value="#username#" CFSQLType="cf_sql_varchar">
-								</cfquery>
-								<cfif len(isAgent.agent_id) gt 0>
-									<a href="/agents.cfm?agent_id=#isAgent.agent_id#"><input type="button" class="lnkBtn" value="edit Agent"></a>
+								<cfif len(getUsers.operator_agent_id) gt 0>
+									<a href="/edit_agent.cfm?agent_id=#getUsers.operator_agent_id#"><input type="button" class="lnkBtn" value="edit Agent"></a>
 								<cfelse>
 									Agent not found
 								</cfif>
@@ -576,19 +547,24 @@
 
 <cfif action is "submitUnlockOnlyOracleAccount">
 	<cfoutput>
-		<cfquery name="usrChk" datasource="uam_god">
-			select
-				agent_name.agent_name
-			from
-				agent_name 
-				inner join agent on agent_name.agent_id=agent.agent_id
-				where agent_name.agent_name=<cfqueryparam value = "#username#" CFSQLType="CF_SQL_VARCHAR">
-				and agent_type='person'
+		<cfquery name="ckemail" datasource="uam_god">
+			select 
+				count(*) c 
+			from 
+				agent_attribute
+				inner join cf_users on cf_users.operator_agent_id=agent_attribute.agent_id
+			where 
+				agent_attribute.attribute_type='email' and
+				agent_attribute.deprecation_type is null and
+				cf_users.username=<cfqueryparam value='#username#' CFSQLType="cf_sql_varchar">
 		</cfquery>
-		<cfif usrChk.recordcount neq 1 or len(usrChk.agent_name) lt 1>
-			<cfthrow message="Failed Unlock Attempt" detail="Unlock attempt for #username# failed">
+		<cfif ckemail.c lt 1>
+			<cfthrow message="unlock denied" detail="#username#'s agent does not have a valid email address; the account cannot be unlocked.">
 			<cfabort>
 		</cfif>
+
+
+
 		<cfquery name="mkusr" datasource="uam_god">
 			select manage_user(
 				v_opn => <cfqueryparam value='unlock_account' CFSQLType="cf_sql_varchar">,
@@ -608,20 +584,25 @@
 
 <cfif action is "submitUnlockOracleAccount">
 	<cfoutput>
-		<cfquery name="usrChk" datasource="uam_god">
-			select
-				agent_name.agent_name
-			from
-				agent_name 
-				inner join agent on agent_name.agent_id=agent.agent_id
-				where agent_name.agent_name=<cfqueryparam value = "#username#" CFSQLType="CF_SQL_VARCHAR">
-				and agent_type='person'
+
+		<cfquery name="ckemail" datasource="uam_god">
+			select 
+				count(*) c 
+			from 
+				agent_attribute
+				inner join cf_users on cf_users.operator_agent_id=agent_attribute.agent_id
+			where 
+				agent_attribute.attribute_type='email' and
+				agent_attribute.deprecation_type is null and
+				cf_users.username=<cfqueryparam value='#username#' CFSQLType="cf_sql_varchar">
 		</cfquery>
-		<cfif usrChk.recordcount neq 1 or len(usrChk.agent_name) lt 1>
-			<cfthrow message="Failed Unlock Attempt" detail="Unlock attempt for #username# failed">
+		<cfif ckemail.c lt 1>
+			<cfthrow message="unlock denied" detail="#username#'s agent does not have a valid email address; the account cannot be unlocked.">
 			<cfabort>
 		</cfif>
 
+
+		
 		<cfset charList = "a,b,c,d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,z,y,z,A,B,C,D,E,F,G,H,I,J,K,L,M,N,O,P,Q,R,S,T,U,V,W,X,Y,Z,1,2,3,4,5,6,7,8,9,0">
 		<cfset numList="1,2,3,4,5,6,7,8,9,0">
 		<cfset specList="!,$,%,&,_,*,?,-,(,),<,>,=,/,:,;,.">
@@ -640,38 +621,12 @@
 			<cfset newPass=newPass & thisChar>
 		</cfloop>
 		<cfquery name="userEmail" datasource="uam_god">
-			select distinct adr from (
-				select
-					EMAIL adr
-				from
-					cf_users
-				where
-					username=<cfqueryparam value = "#username#" CFSQLType="CF_SQL_VARCHAR">
-				union
-				select
-					ADDRESS adr
-				from
-					ADDRESS,
-					agent_name
-				where
-					ADDRESS.agent_id=agent_name.agent_id and
-					ADDRESS.end_date is null and
-					ADDRESS_TYPE='email' and
-					AGENT_NAME_TYPE='login' and
-					AGENT_NAME=<cfqueryparam value="#username#" CFSQLType="CF_SQL_VARCHAR">
-				union
-				select
-					ADDRESS adr
-				from
-					ADDRESS,
-					agent_name
-				where
-					ADDRESS.agent_id=agent_name.agent_id and
-					ADDRESS.end_date is null and
-					ADDRESS_TYPE='email' and
-					AGENT_NAME_TYPE='login' and
-					AGENT_NAME=<cfqueryparam value = "#session.username#" CFSQLType="CF_SQL_VARCHAR">
-			) x
+			select
+				concat_ws(',',EMAIL,get_address(operator_agent_id,'email')) adr
+			from
+				cf_users
+			where
+				username=<cfqueryparam value = "#username#" CFSQLType="CF_SQL_VARCHAR">			
 		</cfquery>
 		<cfset hpwd=GenerateArgon2Hash(newPass, 'argon2id', 8, 500, 2)>
 		<cfquery name="mkusr" datasource="uam_god">
@@ -770,28 +725,131 @@
 		<cflocation url="AdminUsers.cfm?Action=edit&username=#username#" addtoken="false">
 	</cfoutput>
 </cfif>
+
+<cfif action is "add_agent">
+	<cfoutput>
+		<cfparam name="forceSkipAgentCheck" default="false">
+		<cfset canSkip=true>
+		<cfset needConf=false>
+		<cfif forceSkipAgentCheck is "false">
+			<cfinvoke component="/component/api/agent" method="isAcceptableOperator" returnvariable="x">
+				<cfinvokeargument name="agent_id" value="#operator_agent_id#">
+			</cfinvoke>
+			<cfset str=serialize(x)>
+			<cfloop index="i" from="1" to="#arrayLen(x)#">
+				<cfset needConf=true>
+			    <cfif structKeyExists(x[i], 'SEVERITY') and x[i].SEVERITY is 'fatal'>
+					<cfset canSkip=false>
+			        <div>
+			            A fatal problem has been detected: #x[i].MESSAGE#
+			        </div>
+			    <cfelseif  structKeyExists(x[i], 'SEVERITY') and x[i].SEVERITY is 'advisory'>
+			        <div>
+			            A potential problem has been detected: #x[i].MESSAGE#
+			        </div>
+			    <cfelse>
+			        <div>that's unexpected...</div>
+			    </cfif>
+			</cfloop>
+		</cfif>
+
+		<cfif canSkip is false>
+			<p>
+				Cannot continue with fatal errors.
+			</p>
+			<ul>
+				<li><a href="/AdminUsers.cfm?action=edit&username=abaltens">back to manage operator</a></li>
+				<li><a href="/agent/#operator_agent_id#">manage agent</a></li>
+			</ul>
+			<cfabort>
+		</cfif>
+		<cfif needConf is "true">
+			Please confirm that all of the following are true:
+			<ul>
+				<li>All messages above have been *carefully* reviewed.</li>
+				<li>All low-information assertions have been improved to the extent possible</li>
+				<li>All similar agents have 'not the same as' or better relationships.</li>
+				<li>This agent carries information sufficient to disambiguate it from all other agents (eg similar agents have 'not the same as' or better relationship).</li>
+				<li>No other agent refers to this person.</li>
+			</ul>
+			<p>
+				If you are sure that this operator is linked to a single human agent, and that the agent is not linked to any other operator, you may proceed.
+			</p>
+
+			<form name="fagnt" method="post" action="AdminUsers.cfm">
+				<input type="hidden" name="action" value="add_agent">
+				<input type="hidden" name="username" value="#username#">
+				<input type="hidden" name="operator_agent_id" value="#operator_agent_id#">
+				<input type="hidden" name="forceSkipAgentCheck" value="true">
+				<input class="insBtn" type="submit" value="There are no problems, try again!">
+			</form>
+			<cfabort>
+		</cfif>
+		<cftransaction>
+			<cfquery name="logit" datasource="uam_god">
+				 insert into  user_access_log (
+		            agent_id,
+		            username,
+		            action_type,
+		            role,
+		            by_user_agent_id,
+		            by_username
+		        ) values (
+		            <cfqueryparam value="#operator_agent_id#" CFSQLType="cf_sql_int">,
+		            <cfqueryparam value="#username#" CFSQLType="cf_sql_varchar">,
+		            'Created agent/operator link',
+		            <cfqueryparam CFSQLType="cf_sql_varchar" null="true">,
+		            getagentid(<cfqueryparam value="#session.username#" CFSQLType="cf_sql_varchar">),
+		            <cfqueryparam value="#session.username#" CFSQLType="cf_sql_varchar">
+		        )
+		    </cfquery>
+			<cfquery name="add_agent" datasource="uam_god">
+				update cf_users set operator_agent_id=<cfqueryparam value="#operator_agent_id#" cfsqltype="cf_sql_int">
+					where username=<cfqueryparam value="#username#" CFSQLType="cf_sql_varchar">
+			</cfquery>
+		</cftransaction>
+		<cflocation url="AdminUsers.cfm?action=makeNewDbUser&username=#username#" addtoken="false">
+	</cfoutput>
+</cfif>
 <!---------------------------------------------------->
 <cfif action is "makeNewDbUser">
 	<cfoutput>
+		<cfset canFinal=true>
 		<!--- see if they have all the right stuff to be a user --->
-		<cfquery name="getTheirEmail" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+		<cfquery name="usrdata" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			SELECT
 				EMAIL,
-				username
+				username,
+				operator_agent_id,
+				preferred_agent_name
 			FROM
 				cf_users
+				left outer join agent on cf_users.operator_agent_id=agent.agent_id
 			where
 				username=<cfqueryparam value="#username#" CFSQLType="cf_sql_varchar">
 		</cfquery>
-		<cfif getTheirEmail.email is "">
-			<p>noemail</p>
-			<cfthrow message="invalid user invitation - noemail" detail="A user that does not meet requirements was invited to become an operator.">
-			<cfabort>
+		
+		<cfif len(usrdata.email) lt 5>
+			<cfset canFinal=false>
+			<h3>No Email</h3>
+			<p>
+				Operator creation cannot continue without a valid profile email address. Ask the user to update their profile and try again.
+			</p>
+		<cfelse>
+			<p>
+				<i class="fa-solid fa-check" style="color:green;"></i>Good Profile Email Address: #usrdata.EMAIL#
+			</p>
 		</cfif>
-		<cfif  REFIND("[^A-Za-z0-9_]",getTheirEmail.username) or REFIND("[^A-Za-z]",left(getTheirEmail.username,1))>
-			<p>bad username</p>
-			<cfthrow message="invalid user invitation - bad username" detail="A user that does not meet requirements was invited to become an operator.">
-			<cfabort>
+		<cfif  REFIND("[^A-Za-z0-9_]",usrdata.username) or REFIND("[^A-Za-z]",left(usrdata.username,1))>
+			<cfset canFinal=false>
+			<h3>Bad Username</h3>
+			<p>
+				This user is not eligible to be an operator. Please carefully review the documentation.
+			</p>
+		<cfelse>
+			<p>
+				<i class="fa-solid fa-check" style="color:green;"></i>Good Username: #usrdata.username#
+			</p>
 		</cfif>
 		<cfquery name="getMyEmail" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
 			SELECT
@@ -802,114 +860,189 @@
 				username=<cfqueryparam value="#session.username#" CFSQLType="cf_sql_varchar">
 		</cfquery>
 		<cfif getMyEmail.email is "">
-			<cfthrow message="invalid user invitation" detail="You cannot invite users without a valid email address in your profile.">
-			<cfabort>
+			<cfset canFinal=false>
+			<h3>Bad Me</h3>
+			<p>
+				You cannot invite users without a valid email address in your profile.
+			</p>
+		<cfelse>
+			<p>
+				<i class="fa-solid fa-check" style="color:green;"></i>Good Invitor Email: #getMyEmail.EMAIL#
+			</p>
 		</cfif>
-		<cfquery name="getAgent" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-			SELECT
-				agent_id
-			FROM
-				cf_users
-				inner join agent_name on cf_users.username=agent_name.agent_name				
-			where
-				agent_name.agent_name_type='login' and
-				cf_users.username=<cfqueryparam value="#username#" CFSQLType="cf_sql_varchar">
+
+		<cfquery name="already_got_one" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+			select * from cf_temp_user_invite where invited_username=<cfqueryparam value="#username#" CFSQLType="cf_sql_varchar">
 		</cfquery>
-		<cfif getAgent.agent_id is "" or getAgent.recordcount is not 1>
-			<p>bad agent</p>
-			<cfthrow message="invalid user invitation - bad agent" detail="A user that does not meet requirements was invited to become an operator.">
-			<cfabort>
+		<cfif already_got_one.recordcount gt 0>
+			<cfset canFinal=false>
+			<h3>#username# has already been invited</h3>
+			<p>
+				That ain't right, file an issue.
+			</p>
+		<cfelse>
+			<p>
+				<i class="fa-solid fa-check" style="color:green;"></i>No Pending Invites
+			</p>
 		</cfif>
-		<cfif len(getTheirEmail.EMAIL) gt 0 and len(getMyEmail.EMAIL) gt 0 and getAgent.recordcount is 1>
+
+		<cfif len(usrdata.operator_agent_id) is 0>
+			<cfset canFinal=false>
+			Operators must be associated with Agents before they may be invited. Select an agent below to continue.
+			<form name="fagnt" method="post" action="AdminUsers.cfm">
+				<input type="hidden" name="action" value="add_agent">
+				<input type="hidden" name="username" value="#username#">
+				<input type="text" name="agent_name" id="agent_name" value="" class=""
+					placeholder="Select an Agent"
+					onchange="pickAgentModal('operator_agent_id',this.id,this.value); return false;"
+					onKeyPress="return noenter(event);">
+				<input type="hidden" name="operator_agent_id" id="operator_agent_id"><input class="insBtn" type="submit" value="add link">
+			</form>
+			<cfabort>
+		<cfelse>
+			<p>
+				<i class="fa-solid fa-check" style="color:green;"></i>Agent Link exists: <a href="/agent/#usrdata.operator_agent_id#" class="external">#usrdata.preferred_agent_name#</a>
+			</p>
+		</cfif>
+		<!----- this should already be checked if we made it this far, check it again ---->
+		<cfinvoke component="/component/api/agent" method="isAcceptableOperator" returnvariable="x">
+			<cfinvokeargument name="agent_id" value="#usrdata.operator_agent_id#">
+		</cfinvoke>
+		<cfloop index="i" from="1" to="#arrayLen(x)#">
+			<cfif structKeyExists(x[i], 'SEVERITY') and x[i].SEVERITY is 'fatal'>
+				<cfset canFinal=false>
+		        <div>
+		            A fatal problem has been detected: #x[i].MESSAGE#
+		        </div>
+		    </cfif>
+		</cfloop>
+		<cfif canFinal is false>
+			<h3>Fix and Reload</h3>
+			<p>
+				Above issues must be fixed before this user can be invited.
+			</p>
+		<cfelse>
 			<!--- does the agent have the email? --->
 			<cfquery name="hem" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-				select count(*) c from address where 
-				agent_id=<cfqueryparam value="#getAgent.agent_id#" CFSQLType="cf_sql_int"> and 
-				ADDRESS_TYPE='email' and 
-				address=<cfqueryparam value="#getTheirEmail.EMAIL#" CFSQLType="cf_sql_varchar">
+				select count(*) c from agent_attribute where 
+				agent_id=<cfqueryparam value="#usrdata.operator_agent_id#" CFSQLType="cf_sql_int"> and 
+				attribute_type='email' and 
+				deprecation_type is null and
+				attribute_value=<cfqueryparam value="#usrdata.EMAIL#" CFSQLType="cf_sql_varchar">
 			</cfquery>
 			<cfif hem.c is 0>
 				<cfquery name="giveThemEmail" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-					insert into address (
-						ADDRESS_ID,
-						AGENT_ID,
-						ADDRESS_TYPE,
-						ADDRESS,
-						ADDRESS_REMARK
+					insert into agent_attribute (
+						agent_id,
+						attribute_type,
+						attribute_value,
+						created_by_agent_id,
+						attribute_remark
 					) values (
-						nextval('sq_address_id'),
-						<cfqueryparam value="#getAgent.agent_id#" CFSQLType="cf_sql_int">,
+						<cfqueryparam value="#usrdata.operator_agent_id#" CFSQLType="cf_sql_int">,
 						'email',
-						<cfqueryparam value="#getTheirEmail.EMAIL#" CFSQLType="cf_sql_varchar">,
+						<cfqueryparam value="#usrdata.EMAIL#" CFSQLType="cf_sql_varchar">,
+						<cfqueryparam value="#session.myAgentId#" CFSQLType="cf_sql_int">,
 						'Auto-inserted from user info at operator invite'
 					)
 				</cfquery>
 			</cfif>
-			<cfquery name="already_got_one" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-				select * from cf_temp_user_invite where invited_username=<cfqueryparam value="#username#" CFSQLType="cf_sql_varchar">
-			</cfquery>
-			<cfif already_got_one.recordcount gt 0>
-				#username# has already been invited.
-				<cfdump var="#already_got_one#">
-				<cfabort>
-			</cfif>
+			<cftransaction>
+				<cfquery name="gpw" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+					insert into cf_temp_user_invite (
+						invited_username,
+						invited_by_username,
+						invited_by_email,
+						status,
+						status_date
+					) values (
+						<cfqueryparam value="#username#" CFSQLType="cf_sql_varchar">,
+						<cfqueryparam value = "#session.username#" CFSQLType="cf_sql_varchar">,
+						<cfqueryparam value = "#getMyEmail.EMAIL#" CFSQLType="cf_sql_varchar">,
+						<cfqueryparam value = "invited" CFSQLType="cf_sql_varchar">,
+						current_timestamp
+					)
+				</cfquery>
+				<cfquery name="logit" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+					insert into  user_access_log (
+						agent_id,
+						username,
+						action_type,
+						role,
+						by_user_agent_id,
+						by_username
+					) values (
+						getagentid(<cfqueryparam value = "#usrdata.operator_agent_id#" CFSQLType="CF_SQL_VARCHAR">),
+						<cfqueryparam value = "#usrdata.username#" CFSQLType="CF_SQL_VARCHAR">,
+						<cfqueryparam value = "invite operator" CFSQLType="CF_SQL_VARCHAR">,
+						NULL,
+						<cfqueryparam value = "#session.myAgentID#" CFSQLType="cf_sql_int">,
+						<cfqueryparam value = "#session.username#" CFSQLType="CF_SQL_VARCHAR">
+					)
+				</cfquery>
+				<cfquery name="mk_login_user" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
+					insert into agent_attribute (
+						agent_id,
+						attribute_type,
+						attribute_value,
+						begin_date,
+						determined_date,
+						attribute_determiner_id,
+						attribute_method,
+						created_by_agent_id,
+						created_timestamp,
+						deprecated_by_agent_id,
+						deprecated_timestamp,
+						deprecation_type
+					) values (
+						getagentid(<cfqueryparam value = "#usrdata.operator_agent_id#" CFSQLType="CF_SQL_VARCHAR">),
+						<cfqueryparam value = "login" CFSQLType="CF_SQL_VARCHAR">,
+						<cfqueryparam value = "#usrdata.username#" CFSQLType="CF_SQL_VARCHAR">,
+						<cfqueryparam value = "#dateFormat(now(),'YYYY-MM-DD')#" CFSQLType="CF_SQL_VARCHAR">,
+						<cfqueryparam value = "#dateFormat(now(),'YYYY-MM-DD')#" CFSQLType="CF_SQL_VARCHAR">,
+						<cfqueryparam value = "#session.myAgentID#" CFSQLType="cf_sql_int">,
+						<cfqueryparam value = "operator invitation" CFSQLType="CF_SQL_VARCHAR">,
+						<cfqueryparam value = "#session.myAgentID#" CFSQLType="cf_sql_int">,
+						current_timestamp
+						<!-----,
+						<cfqueryparam value = "#session.myAgentID#" CFSQLType="cf_sql_int">,
+						current_timestamp,
+						<cfqueryparam value = "update" CFSQLType="CF_SQL_VARCHAR">
+						----->
+						,null,null,null
+					)
+				</cfquery>
+				<cfsavecontent variable="msg">
+					Hello, #usrdata.username#.
+					<br>
+					You have been invited to become an Arctos Operator by #session.username#.
+					<br>The next time you log in, your Profile page (#application.serverRootUrl#/myArctos.cfm)
+					will contain an authentication form.
+					<br>You must complete this form. If your password does not meet our rules you may be required
+					to create a new password by following the link from your Profile page.
+					You will then be required to fill out the authentication form again.
+					The form will only be available until you have successfully authenticated.
+					<br>
+					Please email #getMyEmail.EMAIL# if you have any questions, or
+					#Application.bugReportEmail# if you believe you have received this message in error.
+					<br>
+					See <a href="https://doi.org/10.7299/X75B02M5">https://doi.org/10.7299/X75B02M5</a> for Arctos resources.
+				</cfsavecontent>
+				<cfinvoke component="/component/functions" method="deliver_notification">
+					<cfinvokeargument name="usernames" value="#username#,#session.username#">
+					<cfinvokeargument name="subject" value="Arctos Operator Invitation">
+					<cfinvokeargument name="message" value="#msg#">
+					<cfinvokeargument name="email_immediate" value="#usrdata.EMAIL#">
+				</cfinvoke>
+			</cftransaction>
 
-			<cfquery name="gpw" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#">
-				insert into cf_temp_user_invite (
-					invited_username,
-					invited_by_username,
-					invited_by_email,
-					status,
-					status_date
-				) values (
-					<cfqueryparam value="#username#" CFSQLType="cf_sql_varchar">,
-					<cfqueryparam value = "#session.username#" CFSQLType="cf_sql_varchar">,
-					<cfqueryparam value = "#getMyEmail.EMAIL#" CFSQLType="cf_sql_varchar">,
-					<cfqueryparam value = "invited" CFSQLType="cf_sql_varchar">,
-					current_timestamp
-				)
-			</cfquery>
-			<cfquery name="logit" datasource="uam_god">
-				insert into  user_access_log (
-					agent_id,
-					username,
-					action_type,
-					role,
-					by_user_agent_id,
-					by_username
-				) values (
-					getagentid(<cfqueryparam value = "#getTheirEmail.username#" CFSQLType="CF_SQL_VARCHAR">),
-					<cfqueryparam value = "#getTheirEmail.username#" CFSQLType="CF_SQL_VARCHAR">,
-					<cfqueryparam value = "invite operator" CFSQLType="CF_SQL_VARCHAR">,
-					NULL,
-					getagentid(<cfqueryparam value = "#session.username#" CFSQLType="CF_SQL_VARCHAR">),
-					<cfqueryparam value = "#session.username#" CFSQLType="CF_SQL_VARCHAR">
-				)
-			</cfquery>
-			<cfsavecontent variable="msg">
-				Hello, #getTheirEmail.username#.
-				<br>
-				You have been invited to become an Arctos Operator by #session.username#.
-				<br>The next time you log in, your Profile page (#application.serverRootUrl#/myArctos.cfm)
-				will contain an authentication form.
-				<br>You must complete this form. If your password does not meet our rules you may be required
-				to create a new password by following the link from your Profile page.
-				You will then be required to fill out the authentication form again.
-				The form will only be available until you have successfully authenticated.
-				<br>
-				Please email #getMyEmail.EMAIL# if you have any questions, or
-				#Application.bugReportEmail# if you believe you have received this message in error.
-				<br>
-				See <a href="https://doi.org/10.7299/X75B02M5">https://doi.org/10.7299/X75B02M5</a> for Arctos resources.
-			</cfsavecontent>
 
-			<cfinvoke component="/component/functions" method="deliver_notification">
-				<cfinvokeargument name="usernames" value="#username#,#session.username#">
-				<cfinvokeargument name="subject" value="Arctos Operator Invitation">
-				<cfinvokeargument name="message" value="#msg#">
-				<cfinvokeargument name="email_immediate" value="#getTheirEmail.EMAIL#">
-			</cfinvoke>
-			An invitation has been sent, you should have a copy in your Notifications. Email can be flaky, make sure the user has the invitation.
+			<h3>Inviting.....</h3>
+
+			<i class="fa-solid fa-check" style="color:green;"></i>Invitation Sent!
+			<p>
+				An invitation has been sent, you should have a copy in your Notifications. Email can be flaky, make sure the user has the invitation.
+			</p>
 			<p>
 				<a href="AdminUsers.cfm?Action=edit&username=#username#">continue</a>
 			</p>

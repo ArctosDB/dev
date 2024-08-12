@@ -13,7 +13,7 @@
 		<cfdump var=#d#>
 	</cfif>
 
-	<cfset numberNoClass=20>
+	<cfset numberNoClass=60>
 	<cfset numberYesClass=60>
 
 	<cfloop query="d">
@@ -120,24 +120,12 @@
 				</cfloop>
 				<cfset thisPosnInClass=1>
 				<cfloop from="1" to="#numberYesClass#" index="i">
-
-
-
 					<cfset thisT=evaluate("d.class_term_" & i)>
-
-
-
-
-
 					<cfset thisTT=evaluate("d.class_term_type_" & i)>
 					<cfif debug>
 						<br>ins::thisT==#thisT#
 						<br>ins::thisTT==#thisTT#
 					</cfif>
-
-
-
-
 					<cfif len(thisT) gt 0>
 						<!--- NULL type is fine --->
 						<cfif debug is true>

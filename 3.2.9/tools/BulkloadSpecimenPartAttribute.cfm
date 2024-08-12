@@ -23,12 +23,32 @@ create table cf_temp_spec_part_attr (
 );
 
 grant select, insert, update, delete on cf_temp_spec_part_attr to manage_collection;
+
+--https://github.com/ArctosDB/arctos/issues/7372
+grant select, insert, update, delete on cf_temp_spec_part_attr to manage_records;
 grant select, usage on cf_temp_spec_part_attr_key_seq to public;
 
 ALTER TABLE cf_temp_spec_part_attr ALTER COLUMN attribute_value TYPE varchar(4000);
 
 -- the sql loader is happier with varchar, cast as necessary and fail anything that won't cast
 alter table cf_temp_spec_part_attr add part_id varchar;
+
+
+
+
+
+
+
+
+select * from cf_component_loader where data_table='cf_temp_spec_part_attr';
+
+update cf_component_loader set rec_per_run=250,remark='202403: 250 running in ~30s' where data_table='cf_temp_spec_part_attr';
+-- maybe this is killing things, back off
+-- https://github.com/ArctosDB/arctos/issues/7612
+update cf_component_loader set rec_per_run=100,remark='202403: 100 running in ~30s' where data_table='cf_temp_spec_part_attr';
+update cf_component_loader set rec_per_run=25,remark='202403: 50 running in ~40s' where data_table='cf_temp_spec_part_attr';
+
+
 
 ---->
 

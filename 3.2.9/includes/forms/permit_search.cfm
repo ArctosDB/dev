@@ -1,3 +1,5 @@
+<cfinclude template="/includes/_includeCheck.cfm">
+
 	<!--- just in case, cached queries don't cost anything .. --->
 
 	<cfquery name="ctPermitType" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">

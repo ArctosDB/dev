@@ -1,9 +1,22 @@
 <cfif not isdefined("headerwasincluded") or headerwasincluded neq 'true'>
-	<cfinclude template="includes/_header.cfm">
+	<cfinclude template="/includes/_header.cfm">
 	<cfset inclfooter="true">
 </cfif>
 <script src="/includes/sorttable.js"></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/showdown/2.1.0/showdown.min.js'></script>
 <script>
+	jQuery(document).ready(function(){
+		var converter = new showdown.Converter();
+		showdown.setFlavor('github');
+		converter.setOption('strikethrough', 'true');
+		converter.setOption('simplifiedAutoLink', 'true');
+		converter.setOption('openLinksInNewWindow', 'true');
+		$('[id^="markdown_container_"]').each(function () {
+			var raw=$("#" + this.id ).html();
+			var cvh=converter.makeHtml(raw);
+			$("#" + this.id ).html(cvh);
+		});
+    });
 	function setIncludeVerbatim(v){
 		$.ajax({
 			url: "/component/functions.cfc?",
@@ -17,689 +30,553 @@
 			}
 		});
 	}
+	function getAgentIdentifier(id,elem){
+		var tempInput = document.createElement("input");
+		tempInput.style = "position: absolute; left: -1000px; top: -1000px";
+		tempInput.value = id;
+		document.body.appendChild(tempInput);
+		tempInput.select();
+		document.execCommand("copy");
+		document.body.removeChild(tempInput);
+		$('<span class="copyalert">Copied to clipboard</span>').insertAfter('#' + elem).delay(3000).fadeOut();
+	}
+	function getGuidPrefix(){
+		var gps=$("#guid_prefix").val();
+		//console.log(gps);
+		var guts = "/picks/pickMultiGuidPrefix.cfm?gps="+guid_prefix;
+		$("<iframe src='" + guts + "' id='dialog' class='popupDialog' style='width:1200px;height:600px;'></iframe>").dialog({
+			autoOpen: true,
+			closeOnEscape: true,
+			height: 'auto',
+			modal: true,
+			position: ['center', 'top'],
+			title: 'Choose',
+				width:1200,
+	 			height:600,
+			close: function() {
+				$( this ).remove();
+			}
+		}).width(1200-10).height(600-10);
+		$(window).resize(function() {
+			$(".ui-dialog-content").dialog("option", "position", ['center', 'center']);
+		});
+		$(".ui-widget-overlay").click(function(){
+		    $(".ui-dialog-titlebar-close").trigger('click');
+		});
+	}
+	function clearForm(){
+		$(':input','#agnt_srch_frm').not(':button, :submit, :reset, :hidden').val('').prop('checked', false).prop('selected', false);
+	}
+	// stolen from search.cfm modified for here
+	function getParamaterizedURL(){
+		var fary = $("#agnt_srch_frm :input[value!='']").serializeArray();
+		var urlparams='';
+		for (const { name, value } of fary) {
+			urlparams+='&'+ name + '=' + value;
+		}
+		urlparams=urlparams.substring(1);
+		urlparams='/agent.cfm?' + urlparams;
+		window.location=urlparams;
+	}
 </script>
+<style>
+	.other_div{
+		font-size: smaller;
+		max-height: 20em;
+		overflow: auto;
+	}
+	.srchflex{
+		display: flex;
+		flex-wrap: wrap;
+	    justify-content: space-between;
+	}
+	/* some names are crazy long, eg full name and job title and ... - try to cut them off while still slowing 'real' names, use title so hover will reveal any cutoff */
+	.oneName{
+		white-space: nowrap;
+	  	max-width:15em;
+	    overflow: hidden;
+	    text-overflow: ellipsis;
+	    font-size: smaller;
+	}
+	.oneAgntType{
+		white-space: nowrap;
+	  	max-width:15em;
+	    overflow: hidden;
+	    text-overflow: ellipsis;
+	    font-size: smaller;
+
+	}
+	.oneIdentifier{
+		white-space: nowrap;
+	  	max-width:25em;
+	    overflow: hidden;
+	    text-overflow: ellipsis;
+	}
+	.oneRelationship{
+		white-space: nowrap;
+	  	max-width:25em;
+	    overflow: hidden;
+	    text-overflow: ellipsis;
+	}
+	.oneAddress{
+		white-space: nowrap;
+	  	max-width:25em;
+	    overflow: hidden;
+	    text-overflow: ellipsis;
+	}
+	/* these get wrapped and cut because Museum of Vertebrate Zoology, La Sierra University, U. S. Forest Service, Zoological Institute of the Russian Academy of Sciences, Biology Department of Hainan Normal University exists */
+	.prefName{
+		white-space: nowrap;
+		white-space: nowrap;
+	  	max-width:20em;
+	    overflow: hidden;
+	    text-overflow: ellipsis;
+	}
+	.oneCreator{
+		white-space: nowrap;
+		font-size: x-small;
+
+	}
+	#agnt_tbl td{vertical-align: top;}
+	.paired{
+		display: flex;
+		flex-wrap: nowrap;
+	}
+</style>
+
+<cfquery name="ctagent_type" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
+    select agent_type from ctagent_type order by agent_type
+</cfquery>
+<cfquery name="ctagent_attribute_type_raw" datasource="cf_codetables" cachedwithin="#createtimespan(0,0,60,0)#">
+    select attribute_type,public,purpose,vocabulary from ctagent_attribute_type
+</cfquery>
+ <cfquery name="name_type" dbtype="query">
+    select attribute_type from ctagent_attribute_type_raw where purpose=<cfqueryparam value="name" cfsqltype="cf_sql_varchar"> 
+</cfquery>
+ <cfquery name="identifier_type" dbtype="query">
+    select attribute_type from ctagent_attribute_type_raw where purpose=<cfqueryparam value="identifier" cfsqltype="cf_sql_varchar"> 
+</cfquery>
+ <cfquery name="address_type" dbtype="query">
+    select attribute_type from ctagent_attribute_type_raw where purpose=<cfqueryparam value="address" cfsqltype="cf_sql_varchar"> 
+</cfquery>
+ <cfquery name="relationship_type" dbtype="query">
+    select attribute_type from ctagent_attribute_type_raw where purpose=<cfqueryparam value="relationship" cfsqltype="cf_sql_varchar"> 
+</cfquery>
+ <cfquery name="event_type" dbtype="query">
+    select attribute_type from ctagent_attribute_type_raw where purpose=<cfqueryparam value="event" cfsqltype="cf_sql_varchar"> 
+</cfquery>
+ <cfquery name="other_type" dbtype="query">
+    select attribute_type from ctagent_attribute_type_raw where purpose=<cfqueryparam value="other" cfsqltype="cf_sql_varchar"> 
+</cfquery>
+<cfquery name="no_edit_attr_type" dbtype="query">
+	select attribute_type from ctagent_attribute_type_raw where purpose=<cfqueryparam value="history" cfsqltype="cf_sql_varchar">
+</cfquery>
+<!----------- exclude things we don't really want edited from this too---->
+<cfquery name="cats" dbtype="query">
+	select purpose from ctagent_attribute_type_raw 
+	where  attribute_type not in ( <cfqueryparam value="#valuelist(no_edit_attr_type.attribute_type)#" cfsqltype="cf_sql_varchar" list="true"> )
+	group by purpose order by purpose
+</cfquery>
+
+<cfquery name="ctcollection" datasource="user_login" username="#session.dbuser#" password="#decrypt(session.epw,session.sessionKey,'AES/CBC/PKCS5Padding','hex')#" cachedWithin="#CreateTimeSpan(0,1,0,0)#">
+	select guid_prefix from collection order by guid_prefix
+</cfquery>
 <cfoutput>
-	<cfset title = "Agent Activity">
+	<datalist id="guid_prefix_list">
+		<cfloop query="ctcollection">
+			<option value="#guid_prefix#"></option>
+		</cfloop>
+	</datalist>
+	<cfset title = "Agents">
 	<cfparam name="agent_name" default="">
+	<cfparam name="agent_type" default="">
 	<cfparam name="agent_id" default="">
-	<cfparam name="session.include_verbatim" default="no">
+	<cfparam name="attribute_type" default="">
+	<cfparam name="attribute_value" default="">
+	<cfparam name="agent_id" default="">
+	<cfparam name="session.include_verbatim" default="false">
 	<cfparam name="include_verbatim" default="#session.include_verbatim#">
-<!----------------------------Agent Search------------------------------------>
+	<cfparam name="begin_date" default="">
+	<cfparam name="end_date" default="">
+	<cfparam name="determined_date" default="">
+	<cfparam name="related_agent" default="">
+	<cfparam name="determiner" default="">
+	<cfparam name="attribute_method" default="">
+	<cfparam name="remark" default="">
+	<cfparam name="creator" default="">
+	<cfparam name="srch" default="">
+	<cfparam name="create_date" default="">
+	<cfparam name="include_bad_dup" default="false">
+	<cfparam name="guid_prefix" default="">
 	<h2>Agent Search</h2>
-	<p>Agents in Arctos are people or organizations who perform actions related to cataloged items, media, transactions, etc.</p>
-	<p>
-		<b>TIPS</b>
-		<ul>
-			<li>
-				At least three characters are required to search.
-			</li>
-			<li>
-				A generic search, such as only a last name is preferred. This form is searching Agent Preferred Names, so a search for John Smith will not return the agent John H. Smith, but a search for Smith will return both.
-			</li>
-		</ul>
-		</p>
-		<form name="f" method="post" action="/agent.cfm">
-			<label for="agent_name">Agent Name</label>
-			<input type="text" value="#agent_name#" name="agent_name" id="agent_name">
-			<label for="include_verbatim">Include verbatim agent?</label>
-			<select name="include_verbatim" size="1" id="include_verbatim" onchange="setIncludeVerbatim(this.value);">
-				<option value="no">no</option>
-				<option <cfif session.include_verbatim is "yes"> selected="selected" </cfif> value="yes">yes</option>
-			</select>
-			<br><input class="lnkBtn" type="submit" value="search">
-		</form>
-		<!---- if we don't have a name or an ID, abort ---->
-		<!--- if we DO NOT have an ID and we DO have a name,  search ---->
-		<cfif (not isdefined("agent_id") or len(agent_id) is 0) and len(agent_name) gt 0>
-			<cfif len(agent_name) lt 3>
-				At least three characters are required to search.<cfabort>
-			</cfif>
-			<cfquery name="srch" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select agent_id,preferred_agent_name,agent_type from (
-				select
-					agent.agent_id,
-					agent.preferred_agent_name,
-					agent_type
-				from
-					agent
-					left outer join agent_name on agent.agent_id=agent_name.agent_id
-				where
-					(
-						upper(agent.preferred_agent_name) like <cfqueryparam value="%#trim(ucase(agent_name))#%" CFSQLType="CF_SQL_VARCHAR"> or
-						upper(agent_name.agent_name) like <cfqueryparam value="%#trim(ucase(agent_name))#%" CFSQLType="CF_SQL_VARCHAR">
-					)
-				<cfif include_verbatim is "yes">
-	                union 
-	                select
-	                    -1 as agent_id,
-	                    attribute_value as preferred_agent_name,
-	                    'verbatim agent' as agent_type
-	                from
-	                    attributes
-	                where
-	                    attribute_type='verbatim agent' and
-	                    attribute_value ilike <cfqueryparam value="%#trim(agent_name)#%" CFSQLType="CF_SQL_VARCHAR" list="false">
-	            </cfif>
-	            ) x group by agent_id,preferred_agent_name,agent_type
-				order by
-					preferred_agent_name
-			</cfquery>
-			<cfif srch.recordcount is 0>
-				<p>
-					Nothing found.<cfabort>
-				</p>
-			<cfelseif srch.recordcount is 1>
-				<cflocation url="/agent/#srch.agent_id#" addtoken="false">
-			<cfelse>
-				<cfset title = "Agent Activity: Search Results">
-				<p>
-					#srch.recordcount# matches found:
-					<ul>
-						<cfloop query="srch">
-							<li>
-								<cfif srch.agent_type is "verbatim agent">
-									#srch.preferred_agent_name# (#srch.agent_type#) 
-									<a class="newWinLocal" 
-										href="/search.cfm?attribute_type_1=verbatim+agent&attribute_value_1=#EncodeForHTML('=' & srch.preferred_agent_name)#">
-										[ catalog record search ]
-									</a>
-								<cfelse>
-									<a href="/agent/#srch.agent_id#">#srch.preferred_agent_name#</a> (#srch.agent_type#)
-								</cfif>
-							</li>
+
+	<form name="agnt_srch_frm" id="agnt_srch_frm" method="post" action="/agent.cfm">
+		<div class="srchflex">
+			<div>
+				<label for="srch" class="helpLink" data-helplink="agent_search_any">
+					Search Most Anything
+				</label>
+				<input type="text" value="#EncodeForHTML(canonicalize(srch,true,true))#" name="srch" id="srch" size="60" placeholder="This is the search you're looking for.">
+			</div>
+			<div>
+				<label for="agent_name" class="helpLink" data-helplink="agent_search_name">
+					Agent Name
+				</label>
+				<input type="text" value="#EncodeForHTML(canonicalize(agent_name,true,true))#" name="agent_name" id="agent_name">
+			</div>
+
+			<div>
+				<label for="agent_id" class="helpLink" data-helplink="agent_id">
+					Agent ID
+				</label>
+				<input type="text" value="#EncodeForHTML(canonicalize(agent_id,true,true))#" name="agent_id" id="agent_id">
+			</div>
+
+			<div>
+				<label for="agent_type">Agent Type</label>
+				<cfset x=agent_type>
+				<select name="agent_type" id="agent_type">
+					<option></option>
+					<cfloop query="ctagent_type">
+						<option <cfif x is ctagent_type.agent_type> selected="selected" </cfif> value="#ctagent_type.agent_type#">#ctagent_type.agent_type#</option>
+					</cfloop>
+				</select>
+			</div>
+			<div>
+				<label for="include_verbatim">Include verbatim agent?</label>
+				<select name="include_verbatim" size="1" id="include_verbatim" onchange="setIncludeVerbatim(this.value);">
+					<option value="false">no</option>
+					<option <cfif session.include_verbatim is true> selected="selected" </cfif> value="true">yes</option>
+				</select>
+			</div>
+			<!---- keep these grouped ---->
+			<div class="paired">
+				<div>
+					<label for="attribute_type">Attribute</label>
+					<cfset vatyp=attribute_type>
+					<select name="attribute_type" id="attribute_type">
+						<option></option>
+						<cfloop query="cats">
+							<cfquery name="thisVals" dbtype="query">
+								select attribute_type, public from ctagent_attribute_type_raw where purpose=<cfqueryparam value="#purpose#" cfsqltype="cf_sql_varchar">
+								order by attribute_type
+							</cfquery>
+							<optgroup label="#purpose#">
+								<cfloop query="thisVals">
+									<option <cfif vatyp is thisVals.attribute_type> selected="selected" </cfif> value="#thisVals.attribute_type#">
+										#thisVals.attribute_type#
+									</option>
+								</cfloop>
+							</optgroup>
 						</cfloop>
-					</ul>
-				</p>
-			</cfif>
-		</cfif>
-		<!--- If we DO have an ID, show the agent info ---->
-		<cfif isdefined("agent_id") and len(agent_id) gt 0>
-            <a id="agentdetail" name="agentdetail"></a>
-			<script>
-				jQuery(document).ready(function(){
-					var am='/form/inclMedia.cfm?typ=shows_agent&tgt=agentMedia&q=' +  $("##agent_id").val();
-					jQuery.get(am, function(data){
-						jQuery('##agentMedia').html(data);
-					});
-
-
-                    if (document.location.hash.length == 0) {
-                         $('html, body').animate({
-			         		scrollTop: $("##agentdetail").offset().top
-                     		}, 1000);
-                     }
-                });
-			</script>
-			<input type="hidden" id="agent_id" value="#agent_id#">
-			<div align="center">
-				<div class="ui-state-highlight ui-corner-all" style="display:inline-block;margin:1em;padding:1em;">
-					Your login may prevent access to some linked data. The summary data below are accurate, except
-					agent-related encumbrances exclude records.
-					<cfif session.roles contains "manage_agent">
-						<div align="left">
-							<br><a href="/info/agentActivity.cfm?agent_id=#agent_id#">Agent Activity</a>
-							<br><a href="/agents.cfm?agent_id=#agent_id#">Edit Agent</a>
-						</div>
-					</cfif>
+					</select>
+				</div>
+				<div>
+					<label for="attribute_value" class="helpLink" data-helplink="agent_search_attribute_value">Attribute Value</label>
+					<input type="text" value="#EncodeForHTML(canonicalize(attribute_value,true,true))#" name="attribute_value" id="attribute_value">
 				</div>
 			</div>
-			<cfquery name="agent" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select
-					agent.preferred_agent_name,
-					agent.agent_type,
-					agent.agent_remarks,
-					agent_name.agent_name,
-					agent_name.agent_name_type
-				FROM
-					agent,
-					agent_name
-				where
-					agent.agent_id=agent_name.agent_id and
-					agent.agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int">
-				order by agent_name
-			</cfquery>
-			<cfset title = "#agent.preferred_agent_name# - Agent Activity">
-			<!--- control what names are released, order what's left --->
-			<cfset names=structNew()>
-			<!---
-				list of name types that we want to display here in order
-				EXCLUDE:
-					login (nobody cares),
-					preferred (we've already got one)
-			 ---->
-		 	<cfset ordnames=queryNew("name,nametype")>
-			<cfset ant='first name,middle name,last name,full,Kew abbr.,maiden,married,initials plus last,last plus initials,last name first'>
-			<cfset ant=ant&',abbreviation,aka,alternate spelling,initials,labels,job title'>
-			<cfset q=1>
-			<cfloop list="#ant#" index="i">
-				<cfquery name="p" dbtype="query">
-					select agent_name from agent where agent_name_type=<cfqueryparam value="#i#" CFSQLType="CF_SQL_VARCHAR"> order by agent_name
-				</cfquery>
-				<cfloop query="p">
-					<cfset queryaddrow(ordnames,1)>
-					<cfset querysetcell(ordnames,"name",agent_name,q)>
-					<cfset querysetcell(ordnames,"nametype",i,q)>
-					<cfset q=q+1>
-				</cfloop>
-			</cfloop>
+			<div>
+				<label for="begin_date" class="helpLink" data-helplink="agent_search_begin_date">Begin date</label>
+				<input type="datetime" value="#EncodeForHTML(canonicalize(begin_date,true,true))#" name="begin_date" id="begin_date">
+			</div>
+			<div>
+				<label for="end_date" class="helpLink" data-helplink="agent_search_end_date">End date</label>
+				<input type="datetime" value="#EncodeForHTML(canonicalize(end_date,true,true))#" name="end_date" id="end_date">
+			</div>
+			<div>
+				<label for="determined_date" class="helpLink" data-helplink="agent_search_determined_date">Determined Date</label>
+				<input type="datetime" value="#EncodeForHTML(canonicalize(determined_date,true,true))#" name="determined_date" id="determined_date">
+			</div>
+			<div>
+				<label for="determiner" class="helpLink" data-helplink="agent_search_determiner">Attribute Determiner</label>
+				<input type="text" value="#EncodeForHTML(canonicalize(determiner,true,true))#" name="determiner" id="determiner">
+			</div>
+			<div>
+				<label for="related_agent" class="helpLink" data-helplink="agent_search_related">Related Agent</label>
+				<input type="text" value="#EncodeForHTML(canonicalize(related_agent,true,true))#" name="related_agent" id="related_agent">
+			</div>
+			<div>
+				<label for="attribute_method" class="helpLink" data-helplink="agent_search_method">Method</label>
+				<input type="text" value="#EncodeForHTML(canonicalize(attribute_method,true,true))#" name="attribute_method" id="attribute_method">
+			</div>
+			<div>
+				<label for="remark" class="helpLink" data-helplink="agent_search_remark">Remark</label>
+				<input type="text" value="#EncodeForHTML(canonicalize(remark,true,true))#" name="remark" id="remark">
+			</div>
+			<div>
+				<label for="creator" class="helpLink" data-helplink="agent_search_creator">Agent Creator</label>
+				<input type="text" value="#EncodeForHTML(canonicalize(creator,true,true))#" name="creator" id="creator">
+			</div>
+			<div>
+				<label for="create_date" class="helpLink" data-helplink="agent_search_create_date">Agent Create Date</label>
+				<input type="datetime" value="#EncodeForHTML(canonicalize(create_date,true,true))#" name="create_date" id="create_date">
+			</div>
+			<div>
+				<label for="guid_prefix" class="helpLink" data-helplink="agent_search_used_collection">Used By Collection</label>
+				<input type="text" name="guid_prefix" id="guid_prefix" value="#EncodeForHTML(canonicalize(guid_prefix,true,true))#" placeholder="guid_prefix, comma-list" list="guid_prefix_list" class="pickInput">
+				<input type="button" class="picBtn" value="choose" onclick="getGuidPrefix();">
+			</div>
+			<div>
+				<label for="include_bad_dup" class="helpLink" data-helplink="agent_search_duplicates">Include Duplicates</label>
+				<select name="include_bad_dup">
+					<option  <cfif not include_bad_dup> selected="selected" </cfif> value="false">false</option>
+					<option  <cfif include_bad_dup> selected="selected" </cfif> value="true">true</option>
+				</select>
+			</div>
+		</div>
+		<div>
+			<input class="lnkBtn" type="submit" value="search">
+			<input class="clrBtn" type="button" value="clear" onclick="clearForm();">
+			<input class="savBtn" type="button" value="Reload with sharable URL" onclick="getParamaterizedURL();">
+		</div>
+	</form>
+	<cfif listfindnocase(session.roles,'manage_agents')>
+		<p>
+			<input type="button" value="Create Person" class="insBtn" onClick="createAgent('person');">
+			<input type="button" value="Create Agent" class="insBtn" onClick="createAgent('');">
+		</p>
+	</cfif>
+	<!---- if we don't have a name or an ID, abort ---->
+	<!--- if we DO NOT have an ID and we DO have a name,  search ---->
 
-            <!-----------------------Agent Summary----------------------->
-            <h2>
-                Summary for <strong>#agent.preferred_agent_name#</strong> (#agent.agent_type#)
-			</h2>
-            <!-------------------------------------Agent Name Variations----------------------------->
-			<cfif ordnames.recordcount gt 0>
-				<hr>
-                <h3>
-                    Name Variations for #agent.preferred_agent_name#
-                </h3>
-                <p>
-					<ul>
-						<cfloop query="ordnames">
-							<li>
-								#name# (#nametype#) <a href="/agent.cfm?agent_name=#name#" class="infoLink"> [ search ]</a>
-							</li>
-						</cfloop>
-					</ul>
-				</p>
-			</cfif>
-            
-            <!--------------------------Agent Remarks--------------------------------->
-			<cfif len(agent.agent_remarks) gt 0>
-				<hr>
-                <h3>
-                	Profile and Remarks about #agent.preferred_agent_name#
-                </h3>
-                <p>
-					<blockquote>
-						#agent.agent_remarks#
-					</blockquote>
-				</p>
-			</cfif>
+	<cfif 
+		len(agent_type) gt 0 or
+		len(agent_id) gt 0 or
+		(len(agent_name) gt 2 or (left(agent_name,1) is '=' and len(agent_name) gt 1)) or
+		len(attribute_type) gt 0 or 
+		len(attribute_value) gt 2 or 
+		len(begin_date) gt 3 or 
+		len(end_date) gt 3 or 
+		len(determined_date) gt 3 or 
+		len(related_agent) gt 2 or 
+		len(determiner) gt 2 or 
+		len(attribute_method) gt 2 or 
+		len(remark) gt 2 or 
+		len(creator) gt 0 or
+		len(srch) gt 2 or 
+		len(create_date) gt 3 or
+		len(guid_prefix) gt 6
+		>
 
-			<cfif agent_id eq 0>
-				<!----https://github.com/ArctosDB/arctos/issues/4715---->
-				<cfinclude template = "/includes/_footer.cfm">
-				<cfabort>
-			</cfif>
-			<!------------------------------Agent Relationships---------------------------------->
-			<cfquery name="agent_relations" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select
-					AGENT_RELATIONSHIP,
-					agent_name,
-					RELATED_AGENT_ID,
-					relationship_began_date,
-					relationship_end_date,
-					relationship_remarks
-				from
-					agent_relations,
-					preferred_agent_name
-				where
-					agent_relations.RELATED_AGENT_ID=preferred_agent_name.agent_id and
-					agent_relations.agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int">
-			</cfquery>
-            <cfif agent_relations.recordcount gt 0>
-                <hr>
-                <h3>
-                    Relationships From #agent.preferred_agent_name#
-                </h3>
-                <p>
-                   <table border>
-                    <tr>
-                        <th>Relationship</th>
-                        <th>To</th>
-                        <th>Begin</th>
-                        <th>End</th>
-                        <th>Remark</th>
-                    </tr>
-                    <cfloop query="agent_relations">
-                        <tr>
-                            <td>#AGENT_RELATIONSHIP#</td>
-                            <td><a href="/agent/#RELATED_AGENT_ID#">#agent_name#</a></td>
-                            <td>#relationship_began_date#</td>
-                            <td>#relationship_end_date#</td>
-                            <td>#relationship_remarks#</td>
-                        </tr>
-                    </cfloop>
-                </table>
-                </cfif>
+		<cfif listfindnocase(session.roles,'manage_agents')>
+			<!---- 
+				https://github.com/ArctosDB/arctos/issues/7738
+				this form is us and how we make duplicates, no cache 
+			---->
+			<cfset cachetime="0">
+		<cfelse>
+			<cfset cachetime="60">
+			<div class="friendlyNotification">
+				NOTE: Data on this page may be cached for about an hour.
+			</div>
+		</cfif>
 
-			<cfquery name="agent_relationsto" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select
-                    AGENT_RELATIONSHIP,
-                    agent_name,
-                    relationship_began_date,
-                    relationship_end_date,
-                    relationship_remarks,
-                    preferred_agent_name.agent_id
-				from
-                    agent_relations,
-                    preferred_agent_name
-				where
-                    agent_relations.agent_id=preferred_agent_name.agent_id and
-                    RELATED_AGENT_ID=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int">
-			</cfquery>
-			<cfif agent_relationsto.recordcount gt 0>
-                <hr>
-                <h3>
-                    Relationships To #agent.preferred_agent_name#
-                </h3>
-				<p>
-					<table border>
-                        <tr>
-                            <th>From</th>
-                            <th>Relationship</th>
-                            <th>Begin</th>
-                            <th>End</th>
-                            <th>Remark</th>
-                        </tr>
-                        <cfloop query="agent_relationsto">
-                            <tr>
-                                <td><a href="/agent/#agent_id#">#agent_name#</a></td>
-                                <td>#AGENT_RELATIONSHIP#</td>
-                                <td>#relationship_began_date#</td>
-                                <td>#relationship_end_date#</td>
-                                <td>#relationship_remarks#</td>
-                            </tr>
-                        </cfloop>
-                    </table>
-                </p>
-			</cfif>
-            <!------------------------Agent Addresses---------------------------------->    
-			<!--- this is a public page; don't share internal address info --->
-			<cfquery name="address" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select
-					ADDRESS_TYPE,
-					address
-				from
-					address
-				where
-					address.address_type in ('url','ORCID','Wikidata','Library of Congress','collectionID') and
-					address.agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int"> and
-					address.end_date is null
-				order by
-					address
-			</cfquery>
-			<cfif len(address.address) gt 0>
-				<hr>
-                <h3>
-                    Contact Information and Identifiers for #agent.preferred_agent_name#
-                </h3>
-                <p>
-					<ul>
-						<cfloop query="address">
-							<li>
-								#ADDRESS_TYPE#:
-								<cfif ADDRESS_TYPE is "url" or ADDRESS_TYPE is "ORCID" or ADDRESS_TYPE is "Wikidata" or ADDRESS_TYPE is "Library of Congress">
-									<a href="#ADDRESS#" class="external" target="_blank">#ADDRESS#</a>
-								<cfelse>
-									#ADDRESS#
-								</cfif>
-							</li>
-						</cfloop>
-					</ul>
-				</p>
-			</cfif>
+		<cfinvoke component="/component/utilities" method="get_local_api_key" returnvariable="api_key"></cfinvoke>
+		<cfinvoke component="/component/api/agent" method="getAgentData" returnvariable="x">
+			<cfinvokeargument name="api_key" value="#api_key#">
+			<cfinvokeargument name="usr" value="#session.dbuser#">
+			<cfinvokeargument name="pwd" value="#session.epw#">
+			<cfinvokeargument name="pk" value="#session.sessionKey#">
+			<cfinvokeargument name="agent_name" value="#agent_name#">
+			<cfinvokeargument name="attribute_type" value="#attribute_type#">
+			<cfinvokeargument name="attribute_value" value="#attribute_value#">
+			<cfinvokeargument name="begin_date" value="#begin_date#">
+			<cfinvokeargument name="end_date" value="#end_date#">
+			<cfinvokeargument name="determined_date" value="#determined_date#">
+			<cfinvokeargument name="related_agent" value="#related_agent#">
+			<cfinvokeargument name="determiner" value="#determiner#">
+			<cfinvokeargument name="attribute_method" value="#attribute_method#">
+			<cfinvokeargument name="remark" value="#remark#">
+			<cfinvokeargument name="creator" value="#creator#">
+			<cfinvokeargument name="srch" value="#srch#">
+			<cfinvokeargument name="create_date" value="#create_date#">
+			<cfinvokeargument name="guid_prefix" value="#guid_prefix#">
+			<cfinvokeargument name="cachetime" value="#cachetime#">
+		</cfinvoke>
 
-            <!---------------------------------Agent Collection Activity------------------------------>
-			<cfquery name="collector" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select
-					count(distinct(filtered_flat.collection_object_id)) cnt,
-					filtered_flat.guid_prefix,
-			        filtered_flat.collection_id,
-			        collector.collector_role
-				from
-					collector
-					inner join filtered_flat on collector.collection_object_id=filtered_flat.collection_object_id
-				where
-					collector.agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int"> and
-					coalesce(filtered_flat.encumbrances,'NULL') not like '%mask collector%' and
-					coalesce(filtered_flat.encumbrances,'NULL') not like '%mask preparator%'
-				group by
-					filtered_flat.guid_prefix,
-			        filtered_flat.collection_id,
-			        collector.collector_role
-			</cfquery>
-			<cfquery name="ssc" dbtype="query">
-				select sum(cnt) sc from collector
-			</cfquery>
-			<cfquery name="cnorole" dbtype="query">
-				select
-					sum(cnt) cnt,
-					guid_prefix,
-					collection_id
-				from
-					collector
-				where
-					guid_prefix is not null
-				group by
-					guid_prefix,
-					collection_id
-				order by
-					guid_prefix,
-					collection_id
-			</cfquery>
-			<cfquery name="cnorolenc" dbtype="query">
-				select
-					sum(cnt) cnt,
-					collector_role
-				from
-					collector
-				where
-					guid_prefix is not null
-				group by
-					collector_role
-				order by
-					collector_role
-			</cfquery>
-			<cfif collector.recordcount gt 0>
-				<hr>
-                <h3>
-                     Collection Activity by #agent.preferred_agent_name#
-                </h3>
-                <table border id="t" class="sortable">
-					<tr>
-						<th>Role</th>
-						<th>Collection</th>
-						<th>RecordCount</th>
-						<th>Link</th>
-					</tr>
-					<tr>
-						<td>(any)</td>
-						<td>(all)</td>
-						<td>#ssc.sc#</td>
-						<td><a href="/search.cfm?collector_agent_id=#agent_id#">Open Catalog Record Results</a></td>
-					</tr>
-					<CFLOOP query="cnorolenc">
-						<tr>
-							<td>#cnorolenc.collector_role#</td>
-							<td>(all)</td>
-							<td>#cnorolenc.cnt#</td>
-							<td>
-								<a href="/search.cfm?collector_agent_id=#agent_id#&coll_role=#cnorolenc.collector_role#">
-									Open Catalog Record Results
-								</a>
-							</td>
-						</tr>
-					</CFLOOP>
-					<CFLOOP query="cnorole">
-						<tr>
-							<td>(any)</td>
-							<td>#cnorole.guid_prefix#</td>
-							<td>#cnorole.cnt#</td>
-							<td>
-								<a href="/search.cfm?collector_agent_id=#agent_id#&collection_id=#cnorole.collection_id#">
-									Open Catalog Record Results
-								</a>
-							</td>
-						</tr>
-						<cfquery name="crole" dbtype="query">
-							select collector_role,cnt from collector where collection_id=<cfqueryparam value="#collection_id#" CFSQLType="cf_sql_int">
-						</cfquery>
-						<cfloop query="crole">
-							<tr>
-								<td>#crole.collector_role#</td>
-								<td>#cnorole.guid_prefix#</td>
-								<td>#crole.cnt#</td>
-								<td>
-									<a href="/search.cfm?collector_agent_id=#agent_id#&collection_id=#cnorole.collection_id#&coll_role=#crole.collector_role#">
-										Open Catalog Record Results
-									</a>
-								</td>
-							</tr>
-						</cfloop>
-					</CFLOOP>
-				</table>
-			</cfif>
-                
-            <!------------------------------Agent Collection Media------------------------------------------>
-			<div id="agentMedia"></div>
-			<cfquery name="collectormedia" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select count(*) c
-				from
-					collector
-					inner join filtered_flat on collector.collection_object_id=filtered_flat.collection_object_id
-					inner join media_relations on filtered_flat.collection_object_id=media_relations.cataloged_item_id and
-						media_relations.media_relationship='shows cataloged_item'
-				where
-					collector.agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int">
-			</cfquery>
-			<cfif collectormedia.c gt 0>
-				<h4>
-                    Media Associated with #agent.preferred_agent_name# Collection Activity
-                </h4>
-                <p>
-					<ul>
-						<li>
-							<a href="/MediaSearch.cfm?action=search&collected_by_agent_id=#agent_id#">
-								#collectormedia.c#  Media records referencing collected/prepared catalog records
-							</a>
-						</li>
-					</ul>
-				</p>
-			</cfif>
-                
-            <!------------------------Identifications Made by Agent------------------------------------------->
-            <cfquery name="identification" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-                select
-                    count(*) cnt,
-                    count(distinct(identification.collection_object_id)) specs,
-                    filtered_flat.collection_id,
-                    filtered_flat.guid_prefix
-                from
-                    identification
-					inner join filtered_flat on identification.collection_object_id=filtered_flat.collection_object_id
-                    inner join identification_agent on identification.identification_id=identification_agent.identification_id
-                where
-                    identification_agent.agent_id=<cfqueryparam value = "#agent_ID#" CFSQLType = "CF_SQL_INTEGER">
-                group by
-                    filtered_flat.collection_id,
-                    filtered_flat.guid_prefix
-            </cfquery>
-            <cfif identification.cnt gt 0>
-                <hr>
-                <h3>
-                    Identifications Made by #agent.PREFERRED_AGENT_NAME#
-                </h3>
-                <ul>
-                    <cfloop query="identification">
-                        <li>
-                            #cnt# identifications for <a href="/search.cfm?identified_agent_id=#agent_id#&collection_id=#collection_id#">
-                                #specs# #guid_prefix#</a> catalog records
-                        </li>
-                    </cfloop>
-                </ul>
-            </cfif>
+<!----
+		<cfdump var="#x#">
+		---->
 
-            <!------------------------Media Created by Agent------------------------------------------->
-			<cfquery name="createdmedia" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select count(*) c
-				from
-					media_relations
-				where
-					media_relations.media_relationship='created by agent' AND
-					media_relations.agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int">
-			</cfquery>
-			<cfif createdmedia.c gt 0>
-				<hr>
-                <h3>
-                    Media Created by #agent.preferred_agent_name#
-                </h3>
-                <p>
-					<ul>
-						<li>
-							<a href="/MediaSearch.cfm?action=search&created_by_agent_id=#agent_id#">
-								#createdmedia.c#  Media records created
-							</a>
-						</li>
-					</ul>
-				</p>
+		<cfif structKeyExists(x, "error")>
+			<cfif structKeyExists(x, "Message")>
+				<div class="importantNotification">
+					#x.Message#
+				</div>
+				<cfthrow message="#x.Message#" detail="#serialize(x)#">
+			<cfelse>
+				An error has occurred; please file an Issue.
 			</cfif>
-                
-            <!------------------------------Agent Project Activity----------------------------------------->
-			<cfquery name="project_agent" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select
-					project_name,
-					project.project_id
-				from
-					project_agent,
-					project
-				where
-					 project.project_id=project_agent.project_id and
-					 project_agent.agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int">
-				group by
-					project_name,
-					project.project_id
-			</cfquery>
-			<cfif len(project_agent.project_name) gt 0>
-				<hr>
-                <h3>
-                    Project Participation by #agent.preferred_agent_name#
-                </h3>
-                <p>
-					<ul>
-						<cfloop query="project_agent">
-							<li><a href="/project/#project_id#">#project_name#</a></li>
-						</cfloop>
-					</ul>
-				</p>
-			</cfif>
-            <!----------------------------------Agent Publications----------------------------------------------->
-			<cfquery name="publication_agent" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select
-					publication.PUBLICATION_ID,
-					full_citation,
-					doi
-				from
-					publication,
-					publication_agent
-				where
-					publication.publication_id=publication_agent.publication_id and
-					publication_agent.agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int">
-				group by
-					publication.PUBLICATION_ID,
-					full_citation,
-					doi
-				order by
-					full_citation
-			</cfquery>
-			<cfif len(publication_agent.full_citation) gt 0>
-				<hr>
-                <h3>
-                    Publications by #agent.preferred_agent_name#
-                </h3>
-                <p>
-					<ul>
-						<cfloop query="publication_agent">
-							<li>
-								<a href="/publication/#PUBLICATION_ID#">#full_citation#</a>
-								<cfquery name="citn" datasource="uam_god">
-									select count(*) c from citation where publication_id=#publication_id#
-								</cfquery>
-								<ul>
-									<li>
-										<cfif citn.c gt 0>
-											<a href="/search.cfm?publication_id=#publication_id#">#citn.c# citations</a>
-										<cfelse>
-											No citations
-										</cfif>
-									</li>
-									<cfif len(doi) gt 0>
-										<li>
-											<a href="#doi#" target="_blank" class="external">#doi#</a>
-										</li>
+		</cfif>
+		<cfif x.results_truncated>
+			<div class="friendlyNotification">
+				CAUTION: Return limit exceeded, some data may be excluded. Please perform a more specific search to ensure accurate results.
+			</div>
+		</cfif>
+		<cfif x.agent_count is 0>
+			<div class="friendlyNotification">
+        		No agent records found.
+        	</div>
+      <cfelse>
+      	#x.agent_count# records returned.
+      </cfif>
+		<cfif structKeyExists(x, 'verbatim_count') and x.verbatim_count is 0>
+			<div class="friendlyNotification">
+        		No verbatim records found.
+        	</div>
+        </cfif>
+        <script src="/includes/sorttable.js"></script>
+
+		<table border="1" class="sortable" id="agnt_tbl">
+            <tr>
+                <th>Agent Name</th>
+                <th>Agent Type</th>
+                <th>Names</th>
+                <th>Identifiers</th>
+                <th>Relationship</th>
+                <th>Address</th>
+                <th>Event</th>
+                <th>Other</th>
+                <th>Creation</th>
+            </tr>
+            <cfloop from="1" to="#x.agent_count#" index="i">
+            	<cfset thisAgent=x.agents[i]>
+            	<tr>
+            		<td>
+            			<div class="prefName">
+                    		<a href="#thisAgent.agent_id#" class="external" title="#thisAgent.preferred_agent_name#">#thisAgent.preferred_agent_name#</a>
+                    		<cfif len(thisAgent.status_summary) is 0>
+								<i class="fas fa-circle-question" style="color:##A36A00;" title="verification status: no information"></i>
+							<cfelse>
+	                    		<cfloop list="#thisAgent.status_summary#" index="ss">
+						        	<cfif ss is "verified">
+										<i class="fas fa-star" style="color:gold;" title="verification status: verified"></i>
+									<cfelseif ss is "accepted">
+										<i class="fas fa-check" style="color:green;" title="verification status: accepted"></i>
+									<cfelseif ss is "unverified">
+										<i class="fas fa-exclamation-triangle" style="color:##ff8300;" title="verification status: unverified"></i>
+									<cfelseif ss is "duplicate">
+										<span style="font-size: xx-large; color: red;" title="Bad Duplicate run away!"><i class="fas fa-trash"></i></span>
 									</cfif>
-								</ul>
-							</li>
-						</cfloop>
-					</ul>
-				</p>
-			</cfif>
-                
-            <!-----------------------------------------Taxonomy Created by Agent----------------------------------------->
-			<cfquery name="taxon_name" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select name_type, count(*) cnt from taxon_name where created_by_agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int"> group by name_type order by name_type
-			</cfquery>
-			<cfif len(taxon_name.name_type) gt 0>
-				<hr>
-                <h3>
-                    Taxonomy Created by #agent.preferred_agent_name#
-                </h3>
-                <p>
-					<ul>
-						<cfloop query="taxon_name">
-							<li>#taxon_name.cnt# #name_type# names</li>
-						</cfloop>
-					</ul>
-				</p>
-			</cfif>
-
-            <!----------------------Containers Installed by Agent----
-			
-			<cfquery name="container" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select
-					to_char(install_date,'YYYY') yr,
-					count(*) c
-				from
-					container_history
-					inner join agent_name on lower(container_history.username) = lower(agent_name.agent_name) and agent_name_type='login'
-				where 
-					agent_name.agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int">
-				group by to_char(install_date,'YYYY')
-				order by to_char(install_date,'YYYY')
-			</cfquery>
-			<cfif container.recordcount gt 0>
-				<hr>
-                <h3>
-                    Containers Installed by #agent.preferred_agent_name#
-                </h3>
-                <p>
-					<table border>
-						<tr>
-							<th>Year</th>
-							<th>Count</th>
-						</tr>
-						<cfloop query="container">
-							<tr>
-								<td>#yr#</td>
-								<td>#c#</td>
-							</tr>
-						</cfloop>
-					</table>
-				</p>
-			</cfif>-------------------------->
-			<cfquery name="issued_identifier" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select
-					count(*) c
-				from
-					coll_obj_other_id_num
-				where 
-					issued_by_agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int">
-			</cfquery>
-
-			<cfquery name="assigned_identifier" datasource="uam_god" cachedwithin="#createtimespan(0,0,60,0)#">
-				select
-					count(*) c
-				from
-					coll_obj_other_id_num
-				where 
-					assigned_agent_id=<cfqueryparam value="#agent_id#" CFSQLType="cf_sql_int">
-			</cfquery>
-			<cfif issued_identifier.c gt 0 or assigned_identifier.c gt 0>
-				<h4>Issued and Assigned Identifiers</h4>
-				<ul>
-					<cfif issued_identifier.c gt 0>
-						<li>
-							Issued #issued_identifier.c# <a href="/search.cfm?id_issuedby==#encodeforurl(agent.preferred_agent_name)#">Identifiers</a>
-						</li>
-					</cfif>
-					<cfif assigned_identifier.c gt 0>
-						<li>
-							Assigned #assigned_identifier.c# <a href="/search.cfm?id_assignedby==#encodeforurl(agent.preferred_agent_name)#">Identifiers</a>
-						</li>
-					</cfif>
-				</ul>
-			</cfif>
+								</cfloop>
+							</cfif>
+						</div>
+						<cfset rawAgentID=listlast(thisAgent.agent_id,'/')>
+						<input type="button" class="savBtn" value="Copy Stable Identifier" id="agntCopyBtn#rawAgentID#" onclick="getAgentIdentifier('#Application.serverRootURL#/agent/#rawAgentID#','agntCopyBtn#rawAgentID#');">
+                    	<cfif listcontainsnocase(session.roles,'manage_agents')>
+                            <a href="edit_agent.cfm?agent_id=#rawAgentID#" class="external">
+                            	<input type="button" class="lnkBtn" value="edit">
+                            </a>
+                        </cfif>
+            		</td> 
+            		<td>
+                    	<div class="oneAgntType">#thisAgent.agent_type#</div>
+                    </td>
+                    <td>
+                    	<cfif structKeyExists(thisAgent.attributes, "name")>
+                    		<cfset ts=thisAgent.attributes.name>
+                    		<cfloop collection="#ts#" item="key">
+                    			 <div class="oneName" title="#encodeforhtml(ts[key].attribute_value)#">#ts[key].attribute_value#</div>
+                    		</cfloop>
+                    	</cfif>
+                    </td>
+                    <td>
+                    	<cfif structKeyExists(thisAgent.attributes, "identifier")>
+                    		<cfset ts=thisAgent.attributes.identifier>
+                    		<cfloop collection="#ts#" item="key">
+                    			<div class="oneIdentifier" title="#encodeforhtml(ts[key].attribute_value)#">
+	                                <cfif left(ts[key].attribute_value,4) is 'http'>
+	                                    <a href="#ts[key].attribute_value#" class="external">#ts[key].attribute_value#</a>
+	                                <cfelse>
+	                                    #ts[key].attribute_type#: #ts[key].attribute_value#
+	                                </cfif>
+	                            </div>
+                    		</cfloop>
+                    	</cfif>
+                    </td>
+                    <td>
+                    	<cfif structKeyExists(thisAgent.attributes, "relationship")>
+                    		<cfset ts=thisAgent.attributes.relationship>
+                    		<cfloop collection="#ts#" item="key">
+                    			 <div class="oneRelationship" title="#encodeforhtml(ts[key].attribute_value)#">
+	                            	#ts[key].attribute_type#
+	                            	<cfif len(ts[key].attribute_value) gt 0 and ts[key].related_agent neq ts[key].attribute_value>
+	                            		[ #ts[key].attribute_value# ]
+	                            	</cfif>
+	                            	<cfif len(ts[key].related_agent_id) gt 0>
+	                            		<cfset thisRawRelID=listlast(ts[key].related_agent_id,'/')>
+	                            		<a class="external" href="/agent/#thisRawRelID#"># ts[key].related_agent#</a>
+	                            	</cfif> 
+	                            </div>
+                    		</cfloop>
+                    	</cfif>
+                    </td>
+                    <td>
+                    	<cfif structKeyExists(thisAgent.attributes, "address")>
+                    		<cfset ts=thisAgent.attributes.address>
+                    		<cfloop collection="#ts#" item="key">
+	                            <div class="oneAddress" title="#encodeforhtml(ts[key].attribute_value)#">
+	                                <cfif left(ts[key].attribute_value,4) is 'http'>
+	                                    <a href="#ts[key].attribute_value#" class="external">#ts[key].attribute_value#</a>
+	                                <cfelse>
+	                                    #ts[key].attribute_type#: #ts[key].attribute_value#
+	                                </cfif>
+	                            </div>
+	                        </cfloop>
+                    	</cfif>
+                    </td>
+                    <td>
+                    	<cfif structKeyExists(thisAgent.attributes, "event")>
+                    		<cfset ts=thisAgent.attributes.event>
+                    		<cfloop collection="#ts#" item="key">
+	                            <div>
+	                            	#ts[key].attribute_value# <cfif len(ts[key].begin_date) gt 0 or len(ts[key].end_date) gt 0>#ts[key].begin_date# - #ts[key].end_date#</cfif>
+	                            </div>
+	                        </cfloop>
+	                    </cfif>
+	                </td>
+                    <td>
+                    	<cfif structKeyExists(thisAgent.attributes, "other")>
+                    		<cfset ts=thisAgent.attributes.other>
+                    		<cfloop collection="#ts#" item="key">
+	                            <div class="other_div" id="markdown_container_#ts[key].attribute_id#">#ts[key].attribute_value# <cfif len(ts[key].begin_date) gt 0 or len(ts[key].end_date) gt 0>#ts[key].begin_date# - #ts[key].end_date#</cfif></div>
+	                        </cfloop>
+	                    </cfif>
+	                </td>
+	                <td>
+                    	<cfif len(thisAgent.created_by_agent_id) gt 0 and thisAgent.created_by_agent_id neq 0>
+							<cfset rawCID=listlast(thisAgent.created_by_agent_id,'/')>
+                    		<div class="oneCreator">
+                    			<a class="external" href="/agent/#rawCID#">#thisAgent.created_by_agent#</a> on #thisAgent.created_date#
+                    		</div>
+                    	</cfif>
+                    </td>
+            	</tr>
+            </cfloop>
+            <cfif structKeyExists(x, "verbatim")>
+            	<cfloop from="1" to="#arrayLen(x.verbatim)#" index="i">
+            		<tr>
+            			<td>
+            				#x.verbatim[i]#
+            				<br><a class="newWinLocal" 
+								href="/search.cfm?attribute_type_1=verbatim+agent&attribute_value_1=#EncodeForURL('=' & x.verbatim[i])#">
+								[ catalog record search ]
+							</a>
+						</td>
+						<td>
+							verbatim agent
+						</td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td></td>
+						<td></td>
+					</tr>
+				</cfloop>
+            </cfif>
+        </table>
 	</cfif>
 </cfoutput>
 <!---- include this only if it's not already included by missing ---->

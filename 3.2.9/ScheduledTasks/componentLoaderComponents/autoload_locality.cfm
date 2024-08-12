@@ -216,6 +216,8 @@
 						locality_remarks,
 						georeference_protocol,
 						primary_spatial_data,
+						last_usr,
+						last_chg,
 						locality_footprint
 					) values (
 						nextval('sq_locality_id'),
@@ -236,6 +238,8 @@
 						<cfqueryparam value="#d.locality_remarks#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.locality_remarks))#">,
 						<cfqueryparam value="#d.georeference_protocol#" CFSQLType="CF_SQL_VARCHAR" null="#Not Len(Trim(d.georeference_protocol))#">,
 						<cfqueryparam value="#c_psd#" CFSQLType="cf_sql_varchar" null="#Not Len(Trim(c_psd))#">,
+						<cfqueryparam value="#d.username#" CFSQLType="CF_SQL_VARCHAR">,
+						<cfqueryparam value="#DateConvert('local2Utc',now())#" cfsqltype="cf_sql_timestamp">,
 						<cfif c_psd is "polygon">
 							(
 								select spatial_footprint from geog_auth_rec where geog_auth_rec_id=<cfqueryparam value="#gid#" CFSQLType="cf_sql_int">
@@ -243,6 +247,7 @@
 						<cfelse>
 							null
 						</cfif>
+
 					)
 				</cfquery>
 				<cfquery name="cleanup" datasource="uam_god">

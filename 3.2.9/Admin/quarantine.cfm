@@ -12,7 +12,6 @@ select
 	taxon_name.scientific_name as _taxon_name,
 	flat.guid_prefix,
 	identification.scientific_name as scientific_name,
-	identification.nature_of_id,
 	identification.made_date,
 	identification.accepted_id_fg,
 	identification.identification_remarks,
@@ -221,9 +220,9 @@ Data Quality Users:
 				identification.scientific_name as _identification_scientific_name,
 				identification.taxa_formula as _taxa_formula,
 				taxon_name.scientific_name as _taxon_name,
+				flat.previousidentifications::text as _full_identification_information,
 				flat.guid,
 				identification.scientific_name as scientific_name,
-				identification.nature_of_id,
 				identification.made_date,
 				identification.identification_order,
 				identification.identification_remarks,
@@ -234,7 +233,28 @@ Data Quality Users:
 				getPreferredAgentName(a3.agent_id) as agent_3,
 				getPreferredAgentName(a4.agent_id) as agent_4,
 				getPreferredAgentName(a5.agent_id) as agent_5,
-				getPreferredAgentName(a6.agent_id) as agent_6
+				getPreferredAgentName(a6.agent_id) as agent_6,
+				idc.attribute_type as attribute_type_1,
+				idc.attribute_value as attribute_value_1,
+				idc.attribute_units as attribute_units_1,
+				idc.attribute_remark as attribute_remark_1,
+				idc.determination_method as attribute_method_1,
+				idc.determined_date as attribute_date_1,
+				getPreferredAgentName(idc.determined_by_agent_id) as attribute_determiner_1,
+				noi.attribute_type as attribute_type_2,
+				noi.attribute_value as attribute_value_2,
+				noi.attribute_units as attribute_units_2,
+				noi.attribute_remark as attribute_remark_2,
+				noi.determination_method as attribute_method_2,
+				noi.determined_date as attribute_date_2,
+				getPreferredAgentName(noi.determined_by_agent_id) as attribute_determiner_2,
+				vid.attribute_type as attribute_type_3,
+				vid.attribute_value as attribute_value_3,
+				vid.attribute_units as attribute_units_3,
+				vid.attribute_remark as attribute_remark_3,
+				vid.determination_method as attribute_method_3,
+				vid.determined_date as attribute_date_3,
+				getPreferredAgentName(vid.determined_by_agent_id) as attribute_determiner_3
 			from
 				flat
 				inner join identification on flat.collection_object_id=identification.collection_object_id
@@ -246,6 +266,9 @@ Data Quality Users:
 				left outer join identification_agent a4 on identification.identification_id=a4.identification_id and a4.identifier_order=4
 				left outer join identification_agent a5 on identification.identification_id=a5.identification_id and a5.identifier_order=5
 				left outer join identification_agent a6 on identification.identification_id=a6.identification_id and a6.identifier_order=6
+				left outer join identification_attributes idc on identification.identification_id=idc.identification_id and idc.attribute_type='identification confidence'
+				left outer join identification_attributes noi on identification.identification_id=noi.identification_id and noi.attribute_type='nature of identification'
+				left outer join identification_attributes vid on identification.identification_id=vid.identification_id and vid.attribute_type='verbatim identification'
 			where taxon_name.scientific_name=<cfqueryparam CFSQLType="CF_SQL_varchar" value='#qname#'>
 		</cfquery>
 			<cfquery name="f"  datasource="uam_god">
@@ -270,7 +293,6 @@ Data Quality Users:
 	</cfoutput>
 </cfif>
 <cfif action is "step4">
-
 	<cfif not listfindnocase(session.roles,'global_admin')>
 		no<cfabort>
 	</cfif>
