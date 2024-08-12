@@ -1,1 +1,0 @@
-An error has occurred. You may check Arctos Status at https://arctosdb.org/status/ or file an Issue at https://github.com/ArctosDB/arctos/issues/new?assignees=&labels=contact&template=contact-arctos.md&title=%5BCONTACT%5D
