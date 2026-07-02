@@ -1,6 +1,8 @@
 # Arctos Collection Management System
 Current public releases for the Arctos collection management platform and [list of next implementation tasks](https://github.com/ArctosDB/arctos-dev/issues). We aim to summarize discussion of issues and prioritize implementations as milestones.
 
+### [Recent Updates from Dev List](https://github.com/ArctosDB/dev/issues?q=is%3Aissue%20state%3Aclosed%20sort%3Acreated-desc)
+
 ## Usage
 
 After an issue has been discussed in the community ([Issues](https://github.com/ArctosDB/arctos/issues) and in Meetings), reviewed and evaluated, and is ready for implementation, it will be summarized here and scheduled. (Do not move Issues.)
